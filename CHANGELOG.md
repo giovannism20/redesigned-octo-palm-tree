@@ -71,3 +71,14 @@ All notable user-visible changes are documented here. The format follows
   duplicates are detected and files are verified by their content.
 - Repository foundation: secret guard (pre-commit hook and CI scan),
   security policy, AI-first documentation and architecture decisions.
+
+### Changed
+
+- EPUB books that keep many chapters in a few large files, as most Project
+  Gutenberg books in the Explore tab do, now have their real chapters, each
+  with its title, in the chapter list, for next and previous and for the time
+  left in the chapter: Dom Casmurro has its 148 chapters instead of 3. A
+  chapter number printed above the title stays with its chapter, and title
+  pages and part titles are read at the start of the chapter that follows
+  them. Books already in the library keep their chapters until they are
+  removed and added again.

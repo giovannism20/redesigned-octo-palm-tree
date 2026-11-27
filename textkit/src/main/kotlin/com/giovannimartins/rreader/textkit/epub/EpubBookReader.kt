@@ -1,6 +1,5 @@
 package com.giovannimartins.rreader.textkit.epub
 
-import com.giovannimartins.rreader.textkit.gutenberg.GutenbergBoilerplate
 import com.giovannimartins.rreader.textkit.model.CoverImage
 import com.giovannimartins.rreader.textkit.model.NormalizedBook
 
@@ -12,8 +11,7 @@ internal class EpubBookReader(
         if (DrmDetector.isProtected(archive)) abortParse(EpubError.DrmProtected)
         val packageDocument = PackageDocument.read(archive, OcfContainer.packagePath(archive))
         val documents = packageDocument.readingOrder.mapNotNull(::readSpineDocument)
-        val chapters =
-            GutenbergBoilerplate.strip(ChapterAssembler.assemble(documents, tablesOfContents(packageDocument)))
+        val chapters = ChapterAssembler.assemble(documents, tablesOfContents(packageDocument))
         if (chapters.isEmpty()) abortParse(EpubError.NoReadableText)
         return NormalizedBook(packageDocument.metadata(fallbackTitle), chapters, readCover(packageDocument))
     }

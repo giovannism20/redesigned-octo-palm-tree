@@ -40,6 +40,42 @@ class GutenbergEpubTest {
             ).inOrder()
     }
 
+    @Test
+    fun `reads a Gutenberg book split into files at anchors, with chapter numbers above the titles`() {
+        val fixture =
+            EpubFixture().apply {
+                document(
+                    "h-0.xhtml",
+                    HEADER + "<h1 id=\"t\">LIVRO DE TESTE</h1><hr/>" +
+                        "<h5> <a id=\"I\">I</a></h5><h4 id=\"c1\">Do título.</h4>${prose("o título")}<hr/>" +
+                        "<h5> <a id=\"II\">II</a></h5><h4 id=\"c2\">Do livro.</h4>${prose("o livro")}",
+                )
+                document(
+                    "h-1.xhtml",
+                    "<p>Ainda do livro.</p><hr/><h5> <a id=\"III\">III</a></h5><h4 id=\"c3\">A denúncia.</h4>" +
+                        "${prose("a denúncia")}<h4 id=\"fim\">FIM</h4>",
+                )
+                document("h-2.xhtml", FOOTER)
+                tableOfContents(
+                    navItem("LIVRO DE TESTE", "h-0.xhtml#t"),
+                    navItem("Do título.", "h-0.xhtml#c1"),
+                    navItem("Do livro.", "h-0.xhtml#c2"),
+                    navItem("A denúncia.", "h-1.xhtml#c3"),
+                    navItem("FIM", "h-1.xhtml#fim"),
+                    navItem("THE FULL PROJECT GUTENBERG™ LICENSE", "h-2.xhtml#pg-footer-heading"),
+                )
+            }
+
+        val book = parseBook(fixture.writeTo(File(directory, "pg12345-images-3.epub")))
+
+        assertThat(book.chapters.map { it.title }).containsExactly("Do título.", "Do livro.", "A denúncia.").inOrder()
+        assertThat(book.chapters[0].text).startsWith("LIVRO DE TESTE\n\nI\n\nDo título.\n\n")
+        assertThat(book.chapters[1].text).startsWith("II\n\nDo livro.\n\n")
+        assertThat(book.chapters[1].text).endsWith("\n\nAinda do livro.")
+        assertThat(book.chapters[2].text).startsWith("III\n\nA denúncia.\n\n")
+        assertThat(book.chapters[2].text).endsWith("acabar.\n\nFIM")
+    }
+
     private companion object {
         const val HEADER =
             "<header class=\"pg-boilerplate pgheader\" id=\"pg-header\" lang=\"en\">" +

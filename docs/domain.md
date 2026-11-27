@@ -11,7 +11,8 @@ Names used in code and docs. Add a term here when you introduce it.
 | **Import progress** | How far a running import got, when a long stage reports it (`ImportProgress`): today, text recognition reading page X of Y. Published through WorkManager and shown on the book's row and in the import notification; not stored. |
 | **Intake** | The synchronous first half of an import (`BookIntake`): verify the signature, copy with a size limit while hashing, reject duplicates, create the book row and queue the import job. |
 | **Normalized book** | The cleaned, speakable text of a book split into chapters and paragraphs. Immutable after import. |
-| **Chapter** | An ordered section of a book with a title and normalized text. From the EPUB table of contents, the PDF outline, detected headings, or page ranges as a fallback. |
+| **Chapter** | An ordered section of a book with a title and normalized text. From the EPUB table of contents (whole files, or the anchors its entries point to inside them), the PDF outline, detected headings, or page ranges as a fallback. In EPUB books, very short sections (title-page lines, part titles, "FIM") join a neighbouring chapter of the same file. |
+| **Anchor** | An element of an EPUB content file named by its `id` that a table-of-contents entry points to (`chapter.xhtml#chap02`). A chapter starts at the paragraph the anchor opens, so one file can hold many chapters. |
 | **Paragraph** | A block of chapter text separated by a blank line in normalized form. |
 | **Sentence** | A unit produced by the sentence segmenter: pt-BR aware (abbreviations, initials, decimals, dialogue dashes) and never across a line break or paragraph. Sentences longer than 280 characters are split at punctuation. |
 | **Segment** | One or more consecutive sentences rendered as a single audio clip. The unit of rendering, playback items and highlighting. |

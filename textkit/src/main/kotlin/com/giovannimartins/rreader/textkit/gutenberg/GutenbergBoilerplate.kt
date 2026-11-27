@@ -49,14 +49,20 @@ public object GutenbergBoilerplate {
     private val GUTENBERG_TITLE = marker("PROJECT\\s+GUTENBERG")
 
     /** [chapters] without Project Gutenberg's header, credits and license, as described on [GutenbergBoilerplate]. */
-    public fun strip(chapters: List<Chapter>): List<Chapter> {
+    public fun strip(chapters: List<Chapter>): List<Chapter> = stripIndexed(chapters)?.map { it.value } ?: chapters
+
+    /**
+     * Like [strip], but each remaining chapter comes with the index in [chapters] of the chapter it was taken from.
+     * Null when [chapters] are returned unchanged.
+     */
+    internal fun stripIndexed(chapters: List<Chapter>): List<IndexedValue<Chapter>>? {
         val paragraphs = chapters.flatMapIndexed { index, chapter -> chapter.paragraphs().map { Paragraph(index, it) } }
         val start = paragraphs.take(HEADER_PARAGRAPHS).indexOfFirst { START.containsMatchIn(it.text) }
         val end = (start + 1 until paragraphs.size).firstOrNull { isEnd(paragraphs[it].text) } ?: NOT_FOUND
-        if (start == NOT_FOUND && end == NOT_FOUND) return chapters
+        if (start == NOT_FOUND && end == NOT_FOUND) return null
         val kept = paragraphs.mapIndexedNotNull { index, paragraph -> keep(paragraph, index, start, end) }
         val body = if (start == NOT_FOUND) kept else kept.dropLeadingCredits()
-        return rebuild(chapters, body).ifEmpty { chapters }
+        return rebuild(chapters, body).ifEmpty { null }
     }
 
     private fun isEnd(text: String): Boolean = END.containsMatchIn(text) || END_LINE.containsMatchIn(text)
@@ -90,11 +96,12 @@ public object GutenbergBoilerplate {
     private fun rebuild(
         chapters: List<Chapter>,
         body: List<Paragraph>,
-    ): List<Chapter> {
+    ): List<IndexedValue<Chapter>> {
         val byChapter = body.groupBy({ it.chapter }, { it.text })
         return chapters.mapIndexedNotNull { index, chapter ->
             byChapter[index]?.let { texts ->
-                Chapter.fromParagraphs(chapter.title?.takeUnless(GUTENBERG_TITLE::containsMatchIn), texts)
+                val title = chapter.title?.takeUnless(GUTENBERG_TITLE::containsMatchIn)
+                IndexedValue(index, Chapter.fromParagraphs(title, texts))
             }
         }
     }

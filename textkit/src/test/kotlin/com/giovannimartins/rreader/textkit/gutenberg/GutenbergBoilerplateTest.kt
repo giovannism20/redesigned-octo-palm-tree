@@ -191,6 +191,22 @@ class GutenbergBoilerplateTest {
     }
 
     @Test
+    fun `tells which chapter each remaining chapter comes from`() {
+        val book =
+            listOf(
+                chapter("Rosto", *HEADER, START_LINE),
+                chapter("I", "Era uma vez."),
+                chapter("II", "Fim.", END_LINE),
+                chapter("Licença", *LICENSE),
+            )
+
+        assertThat(GutenbergBoilerplate.stripIndexed(book))
+            .containsExactly(IndexedValue(1, chapter("I", "Era uma vez.")), IndexedValue(2, chapter("II", "Fim.")))
+            .inOrder()
+        assertThat(GutenbergBoilerplate.stripIndexed(listOf(chapter("I", "Sem marcas.")))).isNull()
+    }
+
+    @Test
     fun `keeps the book's own paragraphs exactly as they were`() {
         val dialogue = "—Continue, disse eu accordando. «Dom Casmurro, domingo vou jantar com você.»"
         val book = listOf(chapter(null, *HEADER, START_LINE, dialogue, "Não consultes diccionarios.", END_LINE))

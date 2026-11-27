@@ -11,7 +11,7 @@ KDoc.
 |---------|----------|--------|
 | `com.giovannimartins.rreader.textkit` | `BookFormat` detection from file signatures | implemented |
 | `...textkit.model` | `NormalizedBook`, `Chapter` (with `Chapter.paragraphRangesOf` for any chapter text), `BookMetadata`, `CoverImage`, `TextRange`, `ReadingPosition` | implemented |
-| `...textkit.epub` | `EpubParser`: EPUB 2/3 container, OPF metadata, spine, nav/NCX chapter titles, cover and DRM detection, with safe ZIP and XML handling | implemented |
+| `...textkit.epub` | `EpubParser`: EPUB 2/3 container, OPF metadata, spine, chapters from the nav/NCX table of contents (whole files or the anchors its entries point to inside them, nested levels chosen by length, short sections joined), cover and DRM detection, with safe ZIP and XML handling | implemented |
 | `...textkit.text` | `SentenceSegmenter` splits text into pt-BR aware sentence ranges (abbreviations, initials, dialogue dashes; never across paragraphs); `SegmentPlanner` groups them into rendered segments and finds the segment to resume from; `SpeechNormalizer.toSpeech` rewrites a segment or heading for voices at render time | implemented |
 | `...textkit.layout` | `LayoutBookBuilder`: PDF/OCR layout lines → `NormalizedBook` (running headers, footers and page numbers removed, hyphenation joined keeping Portuguese enclisis, paragraphs rebuilt, chapters from outline, headings or page ranges); `OcrPageLayout`: OCR boxes in pixels → layout lines in page units with estimated font sizes; `ScannedDocumentDetector`: pages without a usable text layer, scanned documents; `DocumentInfoCleaner` | implemented |
 | `...textkit.gutenberg` | Project Gutenberg: `GutenbergBoilerplate` removes the English header, production credits and license Gutenberg adds around a book (applied by `EpubParser`); `GutenbergFeedParser` reads its OPDS catalogue feeds (search results) into `FeedPage`s of `FeedBook`s | implemented |
@@ -35,10 +35,8 @@ when (val result = EpubParser().parse(file, fallbackTitle = file.nameWithoutExte
   by exact name, never written to disk, and XML goes through jsoup's parser,
   which loads no DTDs or external entities (SR-1 to SR-3 in
   [docs/security.md](../docs/security.md)).
-- Chapters follow the spine, skipping `linear="no"` items. Titles come from
-  the EPUB 3 `nav` (`epub:type="toc"`), else the EPUB 2 NCX; a file the table
-  of contents does not point to joins the chapter before it. Without a usable
-  table of contents, each file is a chapter titled by its first `h1`–`h3`.
+- Chapters come from the table of contents, down to the elements its entries
+  point to inside files (see [EPUB chapters](#epub-chapters)).
 - Chapter text keeps paragraphs and leaves out scripts, styles, navigation,
   ruby annotations and footnotes; whitespace is collapsed, soft hyphens and
   zero-width characters are removed and accents are composed (NFC).
@@ -46,6 +44,49 @@ when (val result = EpubParser().parse(file, fallbackTitle = file.nameWithoutExte
   `<meta name="cover">`, images only.
 - Project Gutenberg's header and license are left out of the chapters (see
   below).
+
+## EPUB chapters
+
+Chapters follow the spine, skipping `linear="no"` items, and the first table
+of contents that points to a spine file: the EPUB 3 `nav`
+(`epub:type="toc"`), else the EPUB 2 NCX. `ChapterAssembler` applies these
+rules:
+
+- **Files and anchors.** An entry for a whole file starts a chapter at the
+  file's first paragraph, and files the table of contents does not point to
+  join the chapter before them. An entry for an element
+  (`chapter.xhtml#chap02`) starts a chapter at that element, so books that
+  keep many chapters in a few large files, as Project Gutenberg's do, get
+  their real chapters. On an inline or empty element the chapter starts at
+  the paragraph the element opens, or at the next one when text comes before
+  it. Text before the first anchor of a file stays with the chapter before
+  it, and an entry whose element the file lacks points to the start of the
+  file.
+- **Headings before an anchor.** The headings right before an anchored
+  element join its chapter when they follow body text or open the file, so a
+  number printed above the title (`<h5>II</h5><h4 id="c2">Do livro.</h4>`)
+  starts chapter II instead of ending chapter I.
+- **Nested tables of contents.** Going down from the top level, the next
+  level of anchors is used when the current one is too coarse (one section,
+  or the sections longer than 50,000 characters, about an hour of listening,
+  hold half of the text) or when the sections the next level adds are at
+  least 3,000 characters (about 3.5 minutes) long in the median. So chapters
+  nested under parts or under a title-page entry are used even when they are
+  short, while numbered sub-sections inside chapters, title-page lines and
+  "FIM" entries nested below chapters are not. Entries for whole files
+  always count.
+- **Titles.** A chapter is titled by its table-of-contents label, else by its
+  first `h1`–`h3` heading. Text before
+  the first start forms a leading chapter, and chapters without text are
+  dropped. Without a table of contents that points to a spine file, each file
+  starts a chapter.
+- **Short chapters.** Once Project Gutenberg's header and license are removed
+  (below), a chapter shorter than 300 characters, such as title-page lines, a
+  part title or a closing "FIM", joins the next chapter when that one starts
+  in the same file, else the chapter before it in the same file. The joined
+  chapter keeps the title of the part that is not short, or of the first part
+  when both are. Chapters never join across files, so a book with one file
+  per chapter keeps every chapter.
 
 ## Project Gutenberg books
 
