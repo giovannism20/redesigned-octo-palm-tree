@@ -5,6 +5,7 @@ import com.giovannimartins.rreader.textkit.model.ReadingPosition
 import kotlinx.coroutines.flow.StateFlow
 
 /** The UI's handle on playback, implemented by [PlaybackConnection]. Called on the main thread. */
+@Suppress("TooManyFunctions") // One function per command the UI sends to playback.
 interface PlaybackControls {
     /** The book open in the player, or null when none is. */
     val nowPlaying: StateFlow<NowPlaying?>
@@ -36,4 +37,11 @@ interface PlaybackControls {
     fun setSleepTimer(setting: SleepTimerSetting)
 
     fun cancelSleepTimer()
+
+    /**
+     * Tells the playback service that the voice of the open book may have changed (its own voice or the default one
+     * was chosen, or a voice was deleted), so listening goes on with the voice that reads it now. Nothing happens
+     * while no book is open.
+     */
+    fun refreshVoice()
 }

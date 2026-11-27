@@ -1,5 +1,6 @@
 package com.giovannimartins.rreader.playback
 
+import com.giovannimartins.rreader.tts.VoiceIds
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import java.util.Locale
@@ -31,6 +32,37 @@ class VoiceSelectorTest {
     fun `otherwise the first offline Portuguese voice is chosen, preferring Brazilian Portuguese`() {
         assertThat(VoiceSelector.select(null, null, installed)).isEqualTo(brazil)
         assertThat(VoiceSelector.select(null, "uninstalled", listOf(english, portugal))).isEqualTo(portugal)
+    }
+
+    @Test
+    fun `the phone's voice is the best offline Portuguese voice of the phone's engines`() {
+        val dora = voice(id = "neural:dora", locale = Locale.forLanguageTag("pt-BR"))
+        val phoneBrazil = voice(id = "system:engine:pt-br", locale = Locale.forLanguageTag("pt-BR"))
+        val phonePortugal = voice(id = "system:engine:pt-pt", locale = Locale.forLanguageTag("pt-PT"))
+        val voices = listOf(dora, phonePortugal, phoneBrazil)
+
+        assertThat(VoiceSelector.phoneVoice(voices)).isEqualTo(phoneBrazil)
+        assertThat(VoiceSelector.select(VoiceIds.PHONE, "neural:dora", voices)).isEqualTo(phoneBrazil)
+        assertThat(VoiceSelector.select(null, VoiceIds.PHONE, voices)).isEqualTo(phoneBrazil)
+        // Nothing chosen: the phone's voice, not a neural voice that happens to be installed.
+        assertThat(VoiceSelector.select(null, null, voices)).isEqualTo(phoneBrazil)
+    }
+
+    @Test
+    fun `a deleted neural voice gives way to the default voice, then to the phone's`() {
+        val alex = voice(id = "neural:alex", locale = Locale.forLanguageTag("pt-BR"))
+        val phoneVoice = voice(id = "system:engine:pt-br", locale = Locale.forLanguageTag("pt-BR"))
+
+        assertThat(VoiceSelector.select("neural:dora", "neural:alex", listOf(alex, phoneVoice))).isEqualTo(alex)
+        assertThat(VoiceSelector.select("neural:dora", "neural:dora", listOf(alex, phoneVoice))).isEqualTo(phoneVoice)
+        assertThat(VoiceSelector.select(null, "neural:dora", listOf(phoneVoice))).isEqualTo(phoneVoice)
+    }
+
+    @Test
+    fun `a phone without Portuguese voices reads with an installed neural voice`() {
+        val dora = voice(id = "neural:dora", locale = Locale.forLanguageTag("pt-BR"))
+
+        assertThat(VoiceSelector.select(null, VoiceIds.PHONE, listOf(english, dora))).isEqualTo(dora)
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.giovannimartins.rreader.playback
 
 import com.giovannimartins.rreader.textkit.model.ReadingPosition
+import com.giovannimartins.rreader.tts.Voice
 
 /** Result of [PlaybackContent.load]. */
 sealed interface BookLoad {
@@ -33,4 +34,10 @@ interface PlaybackContent {
     )
 
     suspend fun saveSpeed(speed: Float)
+
+    /**
+     * The voice that reads book [bookId] now, as [VoiceSelector] chooses it from the book's own voice, the default
+     * voice and the installed voices; null when no usable voice is installed or the book is gone.
+     */
+    suspend fun voiceFor(bookId: String): Voice?
 }

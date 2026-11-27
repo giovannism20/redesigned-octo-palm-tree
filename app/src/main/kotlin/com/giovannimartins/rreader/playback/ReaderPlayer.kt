@@ -67,7 +67,8 @@ data class ReaderPlayerDependencies
  * Controllers open a book with `setMediaItem(MediaItem.Builder().setMediaId(bookId).build())`, then `prepare()`
  * and `play()`; it resumes at the start of the segment that holds the saved position. The position is saved
  * on every segment change, pause, stop and seek (throttled). The segment being spoken and the [SleepTimer] are
- * published in [ListeningStatus], and [handle] runs the app's custom commands ([ReaderCommands]).
+ * published in [ListeningStatus], and [handle] runs the app's custom commands ([ReaderCommands]), among them a voice
+ * change, which takes effect at the segment being spoken without reopening the book.
  */
 @OptIn(UnstableApi::class)
 class ReaderPlayer internal constructor(
@@ -97,6 +98,7 @@ class ReaderPlayer internal constructor(
     private val sleepHost = SleepTimerHost()
     private val sleepTimer = SleepTimer(clock, looper, sleepHost, sleepFade)
     private val pauses = PauseClock(clock)
+    private val voiceSwitch = VoiceSwitch()
 
     private var book: PlaybackBook? = null
     private var playlist: List<MediaItemData> = emptyList()
@@ -315,6 +317,12 @@ class ReaderPlayer internal constructor(
                 sleepTimer.cancel()
                 true
             }
+
+            ReaderCommand.RefreshVoice -> {
+                val open = book
+                if (open != null) scope.launch { voiceSwitch.apply(open.id, deps.content.voiceFor(open.id)) }
+                open != null
+            }
         }
 
     private fun openBook(
@@ -518,6 +526,42 @@ class ReaderPlayer internal constructor(
         }
     }
 
+    /** Changes the voice of the open book while it is listened to (see [ReaderCommand.RefreshVoice]). */
+    private inner class VoiceSwitch {
+        /**
+         * Book [bookId], when it is still the open one, is now read by [voice]: when that is another voice, listening
+         * goes on with it from the start of the segment being spoken, keeping the position, also when the player is
+         * paused (it renders ahead with the new voice). A failure the voice caused (it was deleted, or failed to
+         * speak) is cleared, so listening continues; without any voice, the player asks for one.
+         */
+        fun apply(
+            bookId: String,
+            voice: Voice?,
+        ) {
+            val open = book?.takeIf { it.id == bookId } ?: return
+            val voiceFailed = error?.errorCode in VOICE_ERRORS
+            if (voice?.id != open.voice?.id || voiceFailed) switchTo(open.copy(voice = voice), voiceFailed)
+        }
+
+        private fun switchTo(
+            changed: PlaybackBook,
+            voiceFailed: Boolean,
+        ) {
+            book = changed
+            if (changed.voice == null) {
+                fail(PlaybackErrors.noVoice())
+            } else {
+                if (voiceFailed) error = null
+                if (error == null && prepared) {
+                    position.anchor = position.current()
+                    discontinuity = Player.DISCONTINUITY_REASON_INTERNAL
+                    start()
+                }
+                invalidateState()
+            }
+        }
+    }
+
     /** Gives the sleep timer what it needs from the player, and tells it when audio starts or stops. */
     private inner class SleepTimerHost :
         SleepTimer.Host,
@@ -564,6 +608,9 @@ class ReaderPlayer internal constructor(
         const val CLOCK_TOLERANCE = 0.02
 
         val MAX_REWIND_MS = ResumeRewind.MAX_REWIND.inWholeMilliseconds
+
+        /** Failures a voice causes, which another voice can end. */
+        val VOICE_ERRORS = setOf(PlaybackErrors.NO_VOICE, PlaybackErrors.SPEECH_FAILED)
 
         val COMMANDS: Player.Commands =
             Player.Commands

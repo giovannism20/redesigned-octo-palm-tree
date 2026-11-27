@@ -56,7 +56,13 @@ internal class FakeSpeechEngine(
     private val millisPerChar: Long = 10,
 ) : SpeechEngine {
     val spoken = mutableListOf<String>()
+
+    /** The voice of each segment rendered, in order. */
+    val voicesUsed = mutableListOf<String>()
     var failure: SynthesisFailure? = null
+
+    /** Voices that fail as unavailable, as a deleted voice does. */
+    var unavailableVoices: Set<String> = emptySet()
 
     /** When set, renders after the first [rendersBeforeGate] wait until it completes. */
     var gate: CompletableDeferred<Unit>? = null
@@ -71,7 +77,8 @@ internal class FakeSpeechEngine(
     ): SynthesisResult {
         if (spoken.size >= rendersBeforeGate) gate?.await()
         spoken += text
-        val failure = failure
+        voicesUsed += voice.id
+        val failure = failure ?: SynthesisFailure.VOICE_UNAVAILABLE.takeIf { voice.id in unavailableVoices }
         return if (failure != null) {
             SynthesisResult.Failed(failure)
         } else {
@@ -111,4 +118,9 @@ internal class FakePlaybackContent(
     override suspend fun saveSpeed(speed: Float) {
         savedSpeed = speed
     }
+
+    /** The voice of [book]: tests change it (or set [voice]) to change the voice of the open book. */
+    var voice: Voice? = null
+
+    override suspend fun voiceFor(bookId: String): Voice? = voice ?: book?.takeIf { it.id == bookId }?.voice
 }

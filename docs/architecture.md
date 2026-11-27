@@ -213,7 +213,9 @@ flowchart LR
   name for as custom session commands: `READ_FROM` carries a reading
   position (chapter, offset) and plays from the start of the segment that
   holds it; `SET_SLEEP_TIMER` carries a duration (up to 12 hours) or "end of
-  chapter", and `CANCEL_SLEEP_TIMER` turns the timer off. `ReaderSessionCallback` grants them only to controllers that run
+  chapter", and `CANCEL_SLEEP_TIMER` turns the timer off; `REFRESH_VOICE`
+  says that the voice of the open book may have changed (see
+  [Voice changes](#voice-changes)). `ReaderSessionCallback` grants them only to controllers that run
   as this app (same uid, which the system reports), except Media3's media
   notification controller, which relays notification actions that any app
   can send to the exported service; it validates the arguments and passes a
@@ -223,6 +225,30 @@ flowchart LR
   `ERROR_INVALID_STATE`. The session has a random id and the service hands it
   to trusted controllers only, so media buttons and notification actions that
   other apps send as start intents are ignored (SR-7).
+
+### Voice changes
+
+A voice chosen while a book is open takes effect at once, at the segment being
+spoken, without reopening the book:
+
+1. The UI saves the choice first: the default voice in the settings (Voices
+   tab, or "for all books" in the player's voice chooser, which also makes the
+   book follow the default), or the book's own voice (`books.voice_id`, "this
+   book only"). Deleting a neural voice resets a default that named it.
+2. It then sends `REFRESH_VOICE` through `PlaybackControls.refreshVoice`
+   (only while a book is open).
+3. `ReaderPlayer` asks `PlaybackContent.voiceFor(bookId)`, which applies
+   `VoiceSelector` to the saved choices and the installed voices: the book's
+   own voice, else the default voice, else the phone's voice (`phone`, the
+   best offline Portuguese voice of the system engines), else any offline
+   Portuguese voice. A voice that is not installed (a deleted neural voice)
+   is skipped, so listening falls back to the default and then to the phone.
+4. When the voice differs, the player re-anchors at the current position and
+   restarts the feeder from the start of the segment that holds it with the
+   new voice (a playing book keeps playing, a paused one renders ahead), and
+   adopts the new voice's speaking rate for chapter durations. A failure the
+   old voice caused (`NO_VOICE`, `SPEECH_FAILED`) is cleared, so listening
+   continues; with no voice left at all, the player fails with `NO_VOICE`.
 
 ### Follow-along reader
 

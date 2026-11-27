@@ -113,6 +113,17 @@ interface BookDao {
         authors: String,
     )
 
+    /** Gives the book its own voice, or makes it follow the default voice again (null). */
+    @Query("UPDATE books SET voice_id = :voiceId WHERE id = :id")
+    suspend fun setVoice(
+        id: String,
+        voiceId: String?,
+    )
+
+    /** The book's own voice, or null when it follows the default voice (or does not exist). */
+    @Query("SELECT voice_id FROM books WHERE id = :id")
+    fun observeVoice(id: String): Flow<String?>
+
     @Query("UPDATE books SET archived = :archived WHERE id = :id")
     suspend fun setArchived(
         id: String,

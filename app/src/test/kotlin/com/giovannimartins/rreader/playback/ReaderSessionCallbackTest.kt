@@ -127,6 +127,22 @@ class ReaderSessionCallbackTest {
             .isEqualTo(SessionError.ERROR_BAD_VALUE)
     }
 
+    @Test
+    fun `a voice change reaches the player from the app only, and needs an open book`() {
+        val (command, args) = ReaderCommands.encode(ReaderCommand.RefreshVoice)
+        assertThat(callback.onCustomCommand(session, appController(), command, args).get().resultCode)
+            .isEqualTo(SessionError.ERROR_INVALID_STATE)
+
+        fixture.open()
+        advance(fixture.player).untilState(Player.STATE_READY)
+
+        assertThat(callback.onCustomCommand(session, appController(), command, args).get().resultCode)
+            .isEqualTo(SessionResult.RESULT_SUCCESS)
+        assertThat(
+            callback.onCustomCommand(session, appController(notification = true), command, args).get().resultCode,
+        ).isEqualTo(SessionError.ERROR_PERMISSION_DENIED)
+    }
+
     /** A Media3 controller of this app: the UI's, or with [notification] the media notification's. */
     private fun appController(notification: Boolean = false) =
         MediaSession.ControllerInfo.createTestOnlyControllerInfo(

@@ -23,12 +23,13 @@ class ReaderCommandsTest {
     }
 
     @Test
-    fun `sleep timer commands carry a duration or the end of the chapter`() {
+    fun `sleep timer and voice commands travel as granted session commands`() {
         val commands =
             listOf(
                 ReaderCommand.SetSleepTimer(SleepTimerSetting.After(30.minutes)),
                 ReaderCommand.SetSleepTimer(SleepTimerSetting.EndOfChapter),
                 ReaderCommand.CancelSleepTimer,
+                ReaderCommand.RefreshVoice,
             )
 
         commands.forEach { readerCommand ->

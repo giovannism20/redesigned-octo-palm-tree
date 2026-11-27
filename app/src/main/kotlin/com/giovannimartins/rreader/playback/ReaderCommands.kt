@@ -20,6 +20,12 @@ sealed interface ReaderCommand {
     ) : ReaderCommand
 
     data object CancelSleepTimer : ReaderCommand
+
+    /**
+     * The listener chose another voice for the open book (its own, or the default voice it follows): the player
+     * asks which voice reads it now and, when it changed, continues with it from the segment being spoken.
+     */
+    data object RefreshVoice : ReaderCommand
 }
 
 /**
@@ -30,6 +36,7 @@ object ReaderCommands {
     private const val READ_FROM = "com.giovannimartins.rreader.command.READ_FROM"
     private const val SET_SLEEP_TIMER = "com.giovannimartins.rreader.command.SET_SLEEP_TIMER"
     private const val CANCEL_SLEEP_TIMER = "com.giovannimartins.rreader.command.CANCEL_SLEEP_TIMER"
+    private const val REFRESH_VOICE = "com.giovannimartins.rreader.command.REFRESH_VOICE"
     private const val KEY_CHAPTER = "chapter"
     private const val KEY_OFFSET = "offset"
     private const val KEY_DURATION_MS = "duration_ms"
@@ -46,6 +53,7 @@ object ReaderCommands {
                 .add(command(READ_FROM))
                 .add(command(SET_SLEEP_TIMER))
                 .add(command(CANCEL_SLEEP_TIMER))
+                .add(command(REFRESH_VOICE))
                 .build()
 
     /** The session command and its arguments for [command]. */
@@ -72,6 +80,10 @@ object ReaderCommands {
             ReaderCommand.CancelSleepTimer -> {
                 command(CANCEL_SLEEP_TIMER) to Bundle()
             }
+
+            ReaderCommand.RefreshVoice -> {
+                command(REFRESH_VOICE) to Bundle()
+            }
         }
 
     /** The command sent as [action] with [args], or null when it is unknown or its arguments are invalid. */
@@ -83,6 +95,7 @@ object ReaderCommands {
             READ_FROM -> readingPosition(args)?.let(ReaderCommand::ReadFrom)
             SET_SLEEP_TIMER -> sleepTimerSetting(args)?.let(ReaderCommand::SetSleepTimer)
             CANCEL_SLEEP_TIMER -> ReaderCommand.CancelSleepTimer
+            REFRESH_VOICE -> ReaderCommand.RefreshVoice
             else -> null
         }
 

@@ -11,6 +11,7 @@ import com.giovannimartins.rreader.di.IoDispatcher
 import com.giovannimartins.rreader.textkit.estimate.ReadingEstimates
 import com.giovannimartins.rreader.textkit.model.ReadingPosition
 import com.giovannimartins.rreader.tts.SpeakingRateTracker
+import com.giovannimartins.rreader.tts.Voice
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -73,6 +74,18 @@ class PlaybackRepository
                 Diagnostics.recordHandled("save playback speed", e)
             }
         }
+
+        override suspend fun voiceFor(bookId: String): Voice? =
+            try {
+                withContext(io) { bookDao.findById(bookId) }?.let { preferences.voiceFor(it.voiceId) }
+            } catch (e: SQLiteException) {
+                Diagnostics.recordHandled("find the voice of a book", e)
+                null
+            } catch (e: IOException) {
+                // The settings could not be read.
+                Diagnostics.recordHandled("find the voice of a book", e)
+                null
+            }
 
         private suspend fun loadReadyBook(bookId: String): BookLoad {
             val book = bookDao.findById(bookId)?.takeIf { it.status == BookStatus.READY }

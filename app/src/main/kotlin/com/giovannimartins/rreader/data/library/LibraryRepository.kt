@@ -39,6 +39,15 @@ class LibraryRepository
             bookDao.rename(bookId, title.trim(), Converters().authorsToColumn(authors.map(String::trim)))
         }
 
+        /** Gives book [bookId] its own voice, or makes it follow the default voice again (null). */
+        suspend fun setVoice(
+            bookId: String,
+            voiceId: String?,
+        ) = withContext(io) { bookDao.setVoice(bookId, voiceId) }
+
+        /** Book [bookId]'s own voice; null while it follows the default voice. */
+        fun voiceOf(bookId: String): Flow<String?> = bookDao.observeVoice(bookId)
+
         suspend fun setArchived(
             bookId: String,
             archived: Boolean,

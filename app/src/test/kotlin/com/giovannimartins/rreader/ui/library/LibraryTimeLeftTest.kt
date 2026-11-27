@@ -6,6 +6,7 @@ import com.giovannimartins.rreader.data.library.LibraryBook
 import com.giovannimartins.rreader.data.settings.AppSettings
 import com.giovannimartins.rreader.textkit.estimate.SpeakingRate
 import com.giovannimartins.rreader.tts.SpeakingRates
+import com.giovannimartins.rreader.tts.VoiceIds
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import kotlin.time.Duration.Companion.hours
@@ -40,6 +41,16 @@ class LibraryTimeLeftTest {
         assertThat(LibraryTimeLeft.of(book, withDefault, rates)).isEqualTo(30.minutes)
         assertThat(LibraryTimeLeft.of(book, AppSettings(), rates)).isEqualTo(24.minutes)
         assertThat(LibraryTimeLeft.of(book, AppSettings(), SpeakingRates())).isEqualTo((36_000 / 14.5).seconds)
+    }
+
+    @Test
+    fun `the phone's voice, chosen automatically, is estimated with the voice that read last`() {
+        val phone = AppSettings(defaultVoiceId = VoiceIds.PHONE)
+
+        assertThat(LibraryTimeLeft.of(book, phone, rates)).isEqualTo(24.minutes)
+        assertThat(
+            LibraryTimeLeft.of(book.copy(voiceId = VoiceIds.PHONE), AppSettings(defaultVoiceId = "default"), rates),
+        ).isEqualTo(24.minutes)
     }
 
     @Test

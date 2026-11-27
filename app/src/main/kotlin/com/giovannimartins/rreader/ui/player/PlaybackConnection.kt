@@ -129,6 +129,10 @@ class PlaybackConnection
 
         override fun cancelSleepTimer() = send(ReaderCommand.CancelSleepTimer)
 
+        override fun refreshVoice() {
+            if (state.value != null) send(ReaderCommand.RefreshVoice)
+        }
+
         /** Sends a custom [command]; the service may refuse it, for example when no book is open anymore. */
         private fun send(command: ReaderCommand) =
             withController { player ->

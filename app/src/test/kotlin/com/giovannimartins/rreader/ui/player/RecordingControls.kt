@@ -54,4 +54,8 @@ internal class RecordingControls : PlaybackControls {
     override fun cancelSleepTimer() {
         calls += "cancelSleepTimer"
     }
+
+    override fun refreshVoice() {
+        calls += "refreshVoice"
+    }
 }
