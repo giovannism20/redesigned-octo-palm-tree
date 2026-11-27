@@ -2,8 +2,6 @@ package com.giovannimartins.rreader.ui.voices
 
 import android.text.format.Formatter
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -16,6 +14,7 @@ import com.giovannimartins.rreader.R
 import com.giovannimartins.rreader.tts.Voice
 import com.giovannimartins.rreader.tts.neural.NeuralVoice
 import com.giovannimartins.rreader.tts.neural.NeuralVoices
+import com.giovannimartins.rreader.ui.components.AppAlertDialog
 
 @Composable
 internal fun MobileDataDialog(
@@ -23,7 +22,7 @@ internal fun MobileDataDialog(
     onAnswer: (Boolean?) -> Unit,
 ) {
     val size = Formatter.formatShortFileSize(LocalContext.current, voice.pkg.archiveBytes)
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = { onAnswer(null) },
         title = { Text(stringResource(R.string.voices_mobile_title)) },
         text = { Text(stringResource(R.string.voices_mobile_body, size), style = MaterialTheme.typography.bodyLarge) },
@@ -54,7 +53,7 @@ internal fun DeleteDialog(
         } else {
             stringResource(R.string.voices_delete_body_shared, size, joinedNames(others))
         }
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.voices_delete_title, voice.name)) },
         text = { Text(body, style = MaterialTheme.typography.bodyLarge) },

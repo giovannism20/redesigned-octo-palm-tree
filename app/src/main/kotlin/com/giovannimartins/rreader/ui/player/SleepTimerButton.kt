@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.giovannimartins.rreader.R
 import com.giovannimartins.rreader.playback.SleepTimerSetting
 import com.giovannimartins.rreader.playback.SleepTimerState
+import com.giovannimartins.rreader.ui.components.AppDropdownMenu
 import kotlin.time.Duration.Companion.minutes
 
 /**
@@ -63,7 +63,7 @@ internal fun SleepTimerButton(
             Spacer(Modifier.width(8.dp))
             Text(label, style = MaterialTheme.typography.labelLarge)
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        AppDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             Text(
                 text = stringResource(R.string.player_sleep_timer_title),
                 style = MaterialTheme.typography.titleMedium,

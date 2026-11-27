@@ -22,10 +22,12 @@ import com.giovannimartins.rreader.tts.Voice
 import com.giovannimartins.rreader.tts.neural.NeuralVoice
 import com.giovannimartins.rreader.tts.neural.NeuralVoices
 import com.giovannimartins.rreader.tts.neural.VoiceDownloadFailure
+import com.giovannimartins.rreader.ui.assertAllTextReadableIn
 import com.giovannimartins.rreader.ui.assertAllTextReadableOn
 import com.giovannimartins.rreader.ui.components.ScreenSurface
 import com.giovannimartins.rreader.ui.theme.Ink
 import com.giovannimartins.rreader.ui.theme.OnSeal
+import com.giovannimartins.rreader.ui.theme.RReaderLightColorScheme
 import com.giovannimartins.rreader.ui.theme.RReaderTheme
 import com.giovannimartins.rreader.ui.theme.Seal
 import com.google.common.truth.Truth.assertThat
@@ -170,6 +172,18 @@ class VoicesScreenTest {
         compose.assertAllTextReadableOn(Ink, containers = mapOf(OnSeal to Seal))
     }
 
+    @Test
+    fun `all text is readable in the light theme`() {
+        val status =
+            mapOf(
+                "faber" to NeuralVoiceStatus.Downloading(0.2f),
+                "dora" to NeuralVoiceStatus.Failed(VoiceDownloadFailure.STORAGE),
+            )
+        show(state(ready = setOf("cadu"), inUse = "cadu", status = status), darkTheme = false)
+
+        compose.assertAllTextReadableIn(RReaderLightColorScheme)
+    }
+
     private fun androidx.compose.ui.test.SemanticsNodeInteractionsProvider.onAllNodesWithContentDescriptionText(
         description: String,
     ) = onAllNodes(
@@ -201,10 +215,13 @@ class VoicesScreenTest {
         voice(id = "system:com.google.android.tts:$name", locale = Locale.forLanguageTag("pt-BR"))
             .copy(engine = "com.google.android.tts", name = name)
 
-    private fun show(state: VoicesUiState) {
+    private fun show(
+        state: VoicesUiState,
+        darkTheme: Boolean = true,
+    ) {
         compose.setContent {
             // The app shell draws the tabs on the screen surface.
-            RReaderTheme {
+            RReaderTheme(darkTheme = darkTheme) {
                 ScreenSurface {
                     VoicesScreen(
                         state = state,

@@ -16,7 +16,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -36,6 +35,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.giovannimartins.rreader.R
+import com.giovannimartins.rreader.ui.components.AppModalBottomSheet
 import com.giovannimartins.rreader.ui.voices.VoiceEmblem
 import com.giovannimartins.rreader.ui.voices.VoiceLooks
 
@@ -84,7 +84,7 @@ internal fun VoiceChooserSheet(
     modifier: Modifier = Modifier,
 ) {
     var pending by rememberSaveable { mutableStateOf<String?>(null) }
-    ModalBottomSheet(onDismissRequest = onDismiss, modifier = modifier) {
+    AppModalBottomSheet(onDismissRequest = onDismiss, modifier = modifier) {
         val choice = menu.choices.firstOrNull { it.voiceId == pending }
         if (choice == null) {
             VoiceList(menu = menu, onPick = { pending = it.voiceId }, onMoreVoices = onMoreVoices)

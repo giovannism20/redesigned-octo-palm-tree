@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.giovannimartins.rreader.R
 import com.giovannimartins.rreader.playback.SleepTimerSetting
 import com.giovannimartins.rreader.playback.SleepTimerState
+import com.giovannimartins.rreader.ui.components.AppDropdownMenu
 
 /** Speed, sleep timer, chapters, the follow-along text and the voice, wrapping onto lines as the text grows. */
 @OptIn(ExperimentalLayoutApi::class)
@@ -87,7 +87,7 @@ private fun SpeedButton(
             Spacer(Modifier.width(8.dp))
             Text(stringResource(R.string.player_speed_value, value), style = MaterialTheme.typography.labelLarge)
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        AppDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             PlayerFormat.SPEEDS.forEach { option ->
                 val optionText = PlayerFormat.speed(option, locale)
                 val optionDescription = stringResource(R.string.player_speed_description, optionText)

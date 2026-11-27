@@ -11,7 +11,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -23,6 +22,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.giovannimartins.rreader.R
+import com.giovannimartins.rreader.ui.components.AppModalBottomSheet
 
 /** The book's chapters; the current one is marked and choosing one starts it. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,7 +33,7 @@ internal fun ChapterSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss, modifier = modifier) {
+    AppModalBottomSheet(onDismissRequest = onDismiss, modifier = modifier) {
         Text(
             text = stringResource(R.string.player_chapters),
             style = MaterialTheme.typography.titleLarge,
