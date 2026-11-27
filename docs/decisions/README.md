@@ -21,3 +21,4 @@ record supersedes an old one, and the old one is marked
 | [0012](0012-no-accounts-local-only-data.md) | No accounts, local-only data | Accepted |
 | [0013](0013-layered-secret-protection.md) | Layered secret protection | Accepted |
 | [0014](0014-target-android-17.md) | Target Android 17 (API 37) and test on it first | Accepted |
+| [0016](0016-in-process-listening-state.md) | Share the spoken segment in-process; reader commands through the session | Accepted |

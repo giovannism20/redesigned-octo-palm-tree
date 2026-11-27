@@ -37,7 +37,7 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 - [x] Data: settings (DataStore: default voice, speed, text size)
 - [x] Library screen with "Continue listening", progress, failures and removal
 - [x] Library: tap a book to play it and open the player
-- [ ] Library and player: time left from `ReadingEstimates` and persisted speaking rates
+- [x] Library and player: time left from `ReadingEstimates` and persisted speaking rates
 - [x] Wire the EPUB parser into `ImporterModule`
 - [ ] EPUB: split chapters at TOC fragment anchors inside a single file (books shipped as one big XHTML)
 - [x] `SystemTtsEngine` (multi-engine, offline-first voices) + audio cache
@@ -58,9 +58,10 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 
 ## Phase 3 — Comfort
 
-- [ ] Follow-along reader: highlighted sentence, auto-scroll, tap to read from here, text size
-- [ ] Sleep timer (minutes or end of chapter, fade-out)
-- [ ] Small automatic rewind when resuming after a long pause
+- [x] Follow-along reader: highlighted sentence, auto-scroll, tap to read from here, text size
+- [x] Sleep timer (minutes or end of chapter, fade-out)
+- [x] Small automatic rewind when resuming after a long pause
+- [ ] Fix the latent audio-focus race in `ReaderPlayerTest`'s phone-call test (wait for the focus request)
 
 ## Phase 4 — Scanned PDFs (OCR)
 
