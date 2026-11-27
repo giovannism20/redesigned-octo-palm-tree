@@ -19,6 +19,10 @@
     <string name="library_remove_title">Remove this book?</string>
     <string name="library_remove_body">The book and your progress will be deleted from this phone.</string>
     <string name="library_listen">Listen</string>
+    <plurals name="library_time_left">
+        <item quantity="one">%1$s left</item>
+        <item quantity="other">%1$s left</item>
+    </plurals>
     <string name="cover_description">Cover of %1$s</string>
 
     <!-- Import -->
@@ -82,6 +86,20 @@
     <string name="player_error_other">Listening stopped because of a problem. Try again.</string>
     <string name="player_open_voices">Open voices</string>
     <string name="player_retry">Try again</string>
+    <plurals name="player_chapter_time_left">
+        <item quantity="one">%1$s left in this chapter</item>
+        <item quantity="other">%1$s left in this chapter</item>
+    </plurals>
+    <plurals name="player_book_time_left">
+        <item quantity="one">%1$s left in the book</item>
+        <item quantity="other">%1$s left in the book</item>
+    </plurals>
+
+    <!-- Durations, shown inside the time-left sentences -->
+    <string name="duration_hours_minutes" translatable="false">%1$d h %2$d min</string>
+    <string name="duration_hours" translatable="false">%1$d h</string>
+    <string name="duration_minutes" translatable="false">%1$d min</string>
+    <string name="duration_under_a_minute">less than 1 min</string>
 
     <!-- Common -->
     <string name="action_cancel">Cancel</string>

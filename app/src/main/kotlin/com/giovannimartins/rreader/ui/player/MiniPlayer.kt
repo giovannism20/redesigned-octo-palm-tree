@@ -101,6 +101,7 @@ internal fun previewNowPlaying(): NowPlaying =
         isEnded = false,
         positionMs = 95_000,
         durationMs = 412_000,
+        bookRemainingMs = 12_317_000,
         speed = 1.25f,
         problem = null,
     )

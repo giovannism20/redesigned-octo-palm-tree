@@ -21,7 +21,7 @@ Names used in code and docs. Add a term here when you introduce it.
 | **Reading position** | `(chapterIndex, charOffset)` into normalized chapter text. The single source of truth for "where am I". |
 | **Progress** | Fraction of the book's characters before the reading position. Shown as a percentage. |
 | **Speaking rate** | Characters per second for a voice at 1.0×, learned from rendered segments with an exponential moving average (14.5 until measured) and used for time estimates. Kept per voice across restarts, with the voice that read last. |
-| **Time left** | Estimate: remaining characters ÷ speaking rate ÷ playback speed. |
+| **Time left** | Estimate: remaining characters ÷ speaking rate ÷ playback speed, rounded to the minute for display ("Faltam 3 h 20 min", "Falta menos de 1 min"). The library uses the rate of the book's voice, else the default voice, else the voice that read last; the full player shows it for the chapter and the book from the facade's timeline. |
 | **Playback speed** | User-chosen multiplier (0.75–2.0×), applied by the player with pitch preserved. |
 | **Voice** | A selectable speaker, identified by engine + voice id + locale. |
 | **Speech engine** | Implementation of `SpeechEngine` that renders a segment to audio: `SystemTtsEngine` (Android TTS) or `SherpaOnnxEngine` (on-device neural models). |

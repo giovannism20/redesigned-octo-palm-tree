@@ -17,6 +17,7 @@ internal fun Player.toNowPlaying(chapterTitles: List<String>): NowPlaying? {
     val bookId = currentMediaItem?.mediaId?.let(BookMediaItems::parse)?.bookId ?: return null
     val metadata = mediaMetadata
     val duration = contentDuration.takeIf { it != C.TIME_UNSET }?.coerceAtLeast(0) ?: 0
+    val position = contentPosition.coerceIn(0, duration)
     return NowPlaying(
         bookId = bookId,
         title = metadata.title?.toString().orEmpty(),
@@ -33,11 +34,25 @@ internal fun Player.toNowPlaying(chapterTitles: List<String>): NowPlaying? {
         isPlaying = playWhenReady && playbackState != Player.STATE_ENDED && playbackState != Player.STATE_IDLE,
         isBuffering = playbackState == Player.STATE_BUFFERING,
         isEnded = playbackState == Player.STATE_ENDED,
-        positionMs = contentPosition.coerceIn(0, duration),
+        positionMs = position,
         durationMs = duration,
+        bookRemainingMs = duration - position + laterChaptersMillis(),
         speed = playbackParameters.speed,
         problem = playerError?.let { problemOf(it.errorCode) },
     )
+}
+
+/** Estimated length of the chapters after the current one, from [this] player's timeline. */
+private fun Player.laterChaptersMillis(): Long {
+    val timeline = currentTimeline
+    val window = Timeline.Window()
+    return (currentMediaItemIndex + 1 until timeline.windowCount).sumOf { index ->
+        timeline
+            .getWindow(index, window)
+            .durationMs
+            .takeIf { it != C.TIME_UNSET }
+            ?.coerceAtLeast(0) ?: 0
+    }
 }
 
 /** The display title of every chapter in [this] player's timeline. */

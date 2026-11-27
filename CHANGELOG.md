@@ -10,6 +10,10 @@ All notable user-visible changes are documented here. The format follows
 
 - Importing a file that failed before (for example a format added in a later
   version) prepares it again instead of saying it is already in the library.
+- Time left: the library and "Continue listening" show how long the rest of
+  each book takes at your speed ("Faltam 3 h 20 min"), and the player shows
+  the time left in the chapter and in the book. How fast each voice speaks is
+  remembered between sessions, so the estimates stay accurate.
 - Listening: books are read aloud with the phone's voice and keep playing with
   the screen locked, controlled from the notification, the lock screen and
   headsets (−15 s, play/pause, +15 s; headset next/previous also move 15 s).

@@ -57,6 +57,7 @@ class LibraryRepository
                 coverFile = cover,
                 charsRead = row.charsRead,
                 totalChars = book.totalChars,
+                voiceId = book.voiceId,
             )
         }
     }

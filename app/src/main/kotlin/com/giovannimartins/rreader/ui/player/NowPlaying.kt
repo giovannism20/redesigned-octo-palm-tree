@@ -1,6 +1,8 @@
 package com.giovannimartins.rreader.ui.player
 
 import java.io.File
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 /** Why listening stopped, as the player explains it. */
 enum class PlaybackProblem {
@@ -34,10 +36,20 @@ data class NowPlaying(
     val positionMs: Long,
     /** Estimated length of the chapter. */
     val durationMs: Long,
+    /** Estimated time from the position to the end of the book at 1.0×, in the same time as [durationMs]. */
+    val bookRemainingMs: Long,
     val speed: Float,
     val problem: PlaybackProblem?,
 ) {
     /** Fraction of the chapter already heard, from 0 to 1. */
     val progress: Float
         get() = if (durationMs <= 0) 0f else (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
+
+    /** Listening time left in the chapter at the current speed. */
+    val chapterTimeLeft: Duration get() = atSpeed(durationMs - positionMs)
+
+    /** Listening time left in the book at the current speed. */
+    val bookTimeLeft: Duration get() = atSpeed(bookRemainingMs)
+
+    private fun atSpeed(millis: Long): Duration = (millis.coerceAtLeast(0) / speed.toDouble()).milliseconds
 }

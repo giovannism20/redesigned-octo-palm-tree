@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -52,6 +53,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.giovannimartins.rreader.R
 import com.giovannimartins.rreader.ui.components.BookCover
+import com.giovannimartins.rreader.ui.components.timeLeft
 import com.giovannimartins.rreader.ui.theme.RReaderTheme
 
 /** Stateful full player bound to [PlayerViewModel]; shows nothing while no book is open. */
@@ -123,6 +125,7 @@ fun PlayerScreen(
         BookCover(title = title, coverFile = nowPlaying.coverFile, modifier = Modifier.widthIn(max = 200.dp))
         BookHeading(nowPlaying = nowPlaying, title = title)
         ChapterProgress(nowPlaying = nowPlaying, onSeekTo = onSeekTo)
+        TimeLeftLines(nowPlaying = nowPlaying)
         TransportControls(
             nowPlaying = nowPlaying,
             onSeekBack = onSeekBack,
@@ -236,6 +239,30 @@ private fun ChapterProgress(
                 text = stringResource(R.string.player_time_left_short, left),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.clearAndSetSemantics { contentDescription = leftLabel },
+            )
+        }
+    }
+}
+
+/** How long listening to the rest of the chapter and of the book takes at the current speed. */
+@Composable
+private fun TimeLeftLines(
+    nowPlaying: NowPlaying,
+    modifier: Modifier = Modifier,
+) {
+    val resources = LocalResources.current
+    val lines =
+        listOfNotNull(
+            resources.timeLeft(R.plurals.player_chapter_time_left, nowPlaying.chapterTimeLeft),
+            resources.timeLeft(R.plurals.player_book_time_left, nowPlaying.bookTimeLeft),
+        )
+    Column(modifier = modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        lines.forEach { line ->
+            Text(
+                text = line,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
             )
         }
     }

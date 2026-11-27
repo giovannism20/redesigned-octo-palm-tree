@@ -57,6 +57,14 @@ class PlayerScreenTest {
     }
 
     @Test
+    fun `shows the time left in the chapter and in the book at the current speed`() {
+        show(previewNowPlaying())
+
+        compose.onNodeWithText("4 min left in this chapter").assertExists()
+        compose.onNodeWithText("2 h 44 min left in the book").assertExists()
+    }
+
+    @Test
     fun `choosing a speed applies it`() {
         show(previewNowPlaying())
 

@@ -17,6 +17,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.File
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(UnstableApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -40,9 +41,27 @@ class NowPlayingMapperTest {
         assertThat(nowPlaying.isBuffering).isTrue()
         assertThat(nowPlaying.positionMs).isEqualTo(30_000)
         assertThat(nowPlaying.durationMs).isEqualTo(120_000)
+        assertThat(nowPlaying.bookRemainingMs).isEqualTo(90_000)
         assertThat(nowPlaying.progress).isEqualTo(0.25f)
         assertThat(nowPlaying.speed).isEqualTo(1.5f)
         assertThat(nowPlaying.problem).isNull()
+    }
+
+    @Test
+    fun `time left covers the later chapters and passes faster at a higher speed`() {
+        val player =
+            FixedPlayer(
+                state(
+                    playWhenReady = true,
+                    playbackState = Player.STATE_READY,
+                ).buildUpon().setCurrentMediaItemIndex(0).build(),
+            )
+
+        val nowPlaying = checkNotNull(player.toNowPlaying(player.chapterTitles()))
+
+        assertThat(nowPlaying.bookRemainingMs).isEqualTo(90_000 + 120_000)
+        assertThat(nowPlaying.chapterTimeLeft).isEqualTo(60.seconds)
+        assertThat(nowPlaying.bookTimeLeft).isEqualTo(140.seconds)
     }
 
     @Test

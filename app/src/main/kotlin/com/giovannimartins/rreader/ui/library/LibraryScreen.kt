@@ -28,6 +28,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
@@ -42,9 +43,13 @@ import com.giovannimartins.rreader.data.db.BookStatus
 import com.giovannimartins.rreader.data.db.ImportFailure
 import com.giovannimartins.rreader.data.library.LibraryBook
 import com.giovannimartins.rreader.ui.components.BookCover
+import com.giovannimartins.rreader.ui.components.timeLeft
 import com.giovannimartins.rreader.ui.importer.messageRes
 import com.giovannimartins.rreader.ui.theme.RReaderTheme
 import kotlin.math.roundToInt
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 
 /** Stateful library screen bound to [LibraryViewModel]; starting a book opens the player. */
 @Composable
@@ -109,11 +114,18 @@ fun LibraryScreen(
                     item { LibraryEmptyState(onAddBook = onAddBook) }
                 }
                 state.continueListening?.let { book ->
-                    item { ContinueListeningCard(book = book, onPlay = { onPlay(book.id) }) }
+                    item {
+                        ContinueListeningCard(
+                            book = book,
+                            timeLeft = state.timeLeft[book.id],
+                            onPlay = { onPlay(book.id) },
+                        )
+                    }
                 }
                 items(state.books, key = { it.id }) { book ->
                     LibraryBookRow(
                         book = book,
+                        timeLeft = state.timeLeft[book.id],
                         onPlay = { onPlay(book.id) }.takeIf { book.status == BookStatus.READY },
                         onRemove = { pendingRemoval = book.id },
                     )
@@ -162,6 +174,7 @@ private fun LibraryEmptyState(
 @Composable
 private fun ContinueListeningCard(
     book: LibraryBook,
+    timeLeft: Duration?,
     onPlay: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -181,7 +194,7 @@ private fun ContinueListeningCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                ProgressLine(book)
+                ProgressLine(book = book, timeLeft = timeLeft)
                 Button(onClick = onPlay, modifier = Modifier.heightIn(min = 56.dp)) {
                     Icon(painterResource(R.drawable.ic_play), contentDescription = null)
                     Spacer(Modifier.width(8.dp))
@@ -195,6 +208,7 @@ private fun ContinueListeningCard(
 @Composable
 private fun LibraryBookRow(
     book: LibraryBook,
+    timeLeft: Duration?,
     onPlay: (() -> Unit)?,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
@@ -227,7 +241,7 @@ private fun LibraryBookRow(
                 }
 
                 BookStatus.READY -> {
-                    ProgressLine(book)
+                    ProgressLine(book = book, timeLeft = timeLeft)
                 }
 
                 BookStatus.FAILED -> {
@@ -245,9 +259,11 @@ private fun LibraryBookRow(
     }
 }
 
+/** The book's progress, and how long listening to the rest takes at the listener's speed. */
 @Composable
 private fun ProgressLine(
     book: LibraryBook,
+    timeLeft: Duration?,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -263,6 +279,14 @@ private fun ProgressLine(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        val left = timeLeft?.let { LocalResources.current.timeLeft(R.plurals.library_time_left, it) }
+        if (left != null) {
+            Text(
+                text = left,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -301,7 +325,12 @@ private fun LibraryScreenPreview() {
         )
     RReaderTheme {
         LibraryScreen(
-            state = LibraryUiState.Content(continueListening = book, books = listOf(book)),
+            state =
+                LibraryUiState.Content(
+                    continueListening = book,
+                    books = listOf(book),
+                    timeLeft = mapOf(book.id to 3.hours + 20.minutes),
+                ),
             onAddBook = {},
             onPlay = {},
             onRemove = {},

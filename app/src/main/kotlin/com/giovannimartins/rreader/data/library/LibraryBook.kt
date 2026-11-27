@@ -15,6 +15,8 @@ data class LibraryBook(
     val coverFile: File?,
     val charsRead: Long,
     val totalChars: Long,
+    /** The book's own voice, or null when it reads with the default voice. */
+    val voiceId: String? = null,
 ) {
     /** Fraction of the book already listened to, between 0 and 1. */
     val progress: Float

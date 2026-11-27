@@ -17,6 +17,11 @@
     <string name="library_remove_title">Remover este livro?</string>
     <string name="library_remove_body">O livro e o seu progresso serão apagados deste celular.</string>
     <string name="library_listen">Ouvir</string>
+    <plurals name="library_time_left">
+        <item quantity="one">Falta %1$s</item>
+        <item quantity="many">Faltam %1$s</item>
+        <item quantity="other">Faltam %1$s</item>
+    </plurals>
     <string name="cover_description">Capa de %1$s</string>
 
     <!-- Import -->
@@ -78,6 +83,19 @@
     <string name="player_error_other">A leitura parou por causa de um problema. Tente de novo.</string>
     <string name="player_open_voices">Abrir vozes</string>
     <string name="player_retry">Tentar de novo</string>
+    <plurals name="player_chapter_time_left">
+        <item quantity="one">Falta %1$s neste capítulo</item>
+        <item quantity="many">Faltam %1$s neste capítulo</item>
+        <item quantity="other">Faltam %1$s neste capítulo</item>
+    </plurals>
+    <plurals name="player_book_time_left">
+        <item quantity="one">Falta %1$s no livro</item>
+        <item quantity="many">Faltam %1$s no livro</item>
+        <item quantity="other">Faltam %1$s no livro</item>
+    </plurals>
+
+    <!-- Durations, shown inside the time-left sentences -->
+    <string name="duration_under_a_minute">menos de 1 min</string>
 
     <!-- Common -->
     <string name="action_cancel">Cancelar</string>
