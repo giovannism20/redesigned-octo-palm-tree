@@ -132,13 +132,25 @@ private class SherpaOnnxModel(
         val phonemes = sentences.toTypedArray()
         val config = GenerationConfig(silenceScale = 1f, speed = 1f, sid = speakerId, phonemeCodepoints = phonemes)
         // The text is empty: sherpa-onnx speaks the phonemes given in the configuration.
-        val audio = tts.generateWithConfigAndCallback("", config) { if (keepGoing()) CONTINUE else STOP }
+        val audio = tts.generateWithConfigAndCallback("", config, GenerationCallback(keepGoing))
         return audio.samples
     }
 
     override fun close() = tts.release()
+}
 
-    private companion object {
+/**
+ * Asked by sherpa-onnx's native code after each sentence: 1 to go on, 0 to stop. The native code looks up
+ * `invoke(float[])` returning `java.lang.Integer` by name, which this class has (R8 keeps it, see
+ * proguard-rules.pro). A Kotlin lambda does not: it compiles to a class with only the erased `invoke(Object)`, and
+ * the native call then aborted the app on the phone.
+ */
+internal class GenerationCallback(
+    private val keepGoing: () -> Boolean,
+) : (FloatArray) -> Int {
+    override fun invoke(samples: FloatArray): Int = if (keepGoing()) CONTINUE else STOP
+
+    internal companion object {
         const val CONTINUE = 1
         const val STOP = 0
     }

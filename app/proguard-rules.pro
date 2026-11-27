@@ -29,3 +29,9 @@
 -dontwarn com.github.luben.zstd.**
 -dontwarn org.brotli.dec.**
 -dontwarn org.objectweb.asm.**
+
+# sherpa-onnx's native code calls the generation callback's invoke(float[]) -> Integer by name
+# (GenerationCallback in SherpaOnnxRuntime.kt).
+-keep class com.giovannimartins.rreader.tts.neural.GenerationCallback {
+    public java.lang.Integer invoke(float[]);
+}
