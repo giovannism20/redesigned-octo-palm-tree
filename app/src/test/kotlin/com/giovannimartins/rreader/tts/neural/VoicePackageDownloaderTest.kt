@@ -99,6 +99,45 @@ class VoicePackageDownloaderTest {
     }
 
     @Test
+    fun `a resumed archive whose first bytes are corrupt is refused as damaged, and nothing of it is kept`() {
+        val half = archive.size / 2
+        store.partialFile(pkg).apply { parentFile?.mkdirs() }.writeBytes(ByteArray(half) { 0x55 })
+        answerWith {
+            val rest = archive.copyOfRange(half, archive.size)
+            partial(rest, TYPE, "bytes $half-${archive.size - 1}/${archive.size}")
+        }
+
+        val outcome = download()
+
+        assertThat(outcome).isEqualTo(VoiceDownloadOutcome.Failed(VoiceDownloadFailure.DAMAGED, retryable = false))
+        assertThat(transport.requests.last().headers["Range"]).isEqualTo("bytes=$half-")
+        assertThat(store.partialFile(pkg).exists()).isFalse()
+        assertThat(store.stagingDirectory(pkg).exists()).isFalse()
+        assertThat(store.isComplete(pkg)).isFalse()
+    }
+
+    @Test
+    fun `a partial archive is named after its pin, so one of an earlier pin is deleted and never resumed`() {
+        val before = pkg
+        store.partialFile(before).apply { parentFile?.mkdirs() }.writeBytes(archive.copyOfRange(0, archive.size / 2))
+        val legacy = File(store.partialFile(before).parentFile, "${before.id}.part").apply { writeBytes(ByteArray(7)) }
+        val newModel = MODEL.reversedArray()
+        val newArchive = TestArchives.tarBz2(TestArchives.packageEntries(model = newModel))
+        pkg = TestArchives.pkg(newArchive, model = newModel)
+        answerWith { ok(newArchive, TYPE) }
+
+        val outcome = download()
+
+        assertThat(store.partialFile(pkg).name).isEqualTo("test-${pkg.sha256.take(16)}.part")
+        assertThat(store.partialFile(pkg)).isNotEqualTo(store.partialFile(before))
+        assertThat(outcome).isEqualTo(VoiceDownloadOutcome.Installed)
+        assertThat(transport.requests.map { it.headers["Range"] }.toSet()).containsExactly(null)
+        assertThat(store.file(pkg, "model.onnx").readBytes()).isEqualTo(newModel)
+        assertThat(store.partialFile(before).exists()).isFalse()
+        assertThat(legacy.exists()).isFalse()
+    }
+
+    @Test
     fun `starts over when the server sends the whole file instead of the rest`() {
         store.partialFile(pkg).apply { parentFile?.mkdirs() }.writeBytes(ByteArray(10) { 9 })
         answerWith { ok(archive, TYPE) }
@@ -153,6 +192,23 @@ class VoicePackageDownloaderTest {
 
         assertThat(transport.requests).isEmpty()
         assertThat(store.partialFile(pkg).exists()).isFalse()
+        assertThat(store.isComplete(pkg)).isTrue()
+    }
+
+    @Test
+    fun `what a download left after its package was put in place is deleted when the package is found installed`() {
+        answerWith { ok(archive, TYPE) }
+        download()
+        // The process died after the package was moved into place, before its archive was deleted.
+        store.partialFile(pkg).writeBytes(archive)
+        File(store.stagingDirectory(pkg), "model.onnx").apply { parentFile?.mkdirs() }.writeBytes(MODEL)
+        transport.requests.clear()
+
+        assertThat(download()).isEqualTo(VoiceDownloadOutcome.Installed)
+
+        assertThat(transport.requests).isEmpty()
+        assertThat(store.partialFile(pkg).exists()).isFalse()
+        assertThat(store.stagingDirectory(pkg).exists()).isFalse()
         assertThat(store.isComplete(pkg)).isTrue()
     }
 

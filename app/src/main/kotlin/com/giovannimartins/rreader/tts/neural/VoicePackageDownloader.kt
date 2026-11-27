@@ -61,14 +61,16 @@ sealed interface VoiceDownloadOutcome {
  *
  * 1. Checks there is room for the rest of the archive plus the unpacked files.
  * 2. Fetches the archive over [VoiceModelHttp] (allowlisted HTTPS, at most the pinned size) into
- *    [VoicePackageStore.partialFile], continuing a partial file left by an earlier attempt; when the server will not
- *    continue it, starts again once from the beginning.
+ *    [VoicePackageStore.partialFile], continuing a partial file left by an earlier attempt for the same pin; when the
+ *    server will not continue it, starts again once from the beginning.
  * 3. Checks the archive's size and SHA-256 against the values pinned in [NeuralVoices]; a mismatch deletes it.
  * 4. Unpacks the kept files into a staging folder ([VoicePackageArchive]) and moves it into place, then deletes the
  *    archive.
  *
  * Network failures keep the partial file so the next attempt resumes. A cancelled download keeps it too; [discard]
- * removes it. One download at a time per package: a second request waits for the first to finish or stop.
+ * removes it. A package found installed has what its downloads left deleted, which a process that died just after
+ * putting it in place leaves. One download at a time per package: a second request waits for the first to finish
+ * or stop.
  */
 @Singleton
 class VoicePackageDownloader
@@ -89,6 +91,7 @@ class VoicePackageDownloader
                 withContext(io) {
                     try {
                         if (store.isComplete(pkg)) {
+                            store.discardDownload(pkg)
                             store.rescan()
                             VoiceDownloadOutcome.Installed
                         } else {
@@ -116,6 +119,7 @@ class VoicePackageDownloader
             pkg: VoicePackage,
             onProgress: (VoiceDownloadProgress) -> Unit,
         ): VoiceDownloadOutcome {
+            store.discardStaleDownloads(pkg)
             val partial = store.partialFile(pkg)
             if (partial.length() > pkg.archiveBytes) partial.delete()
             val missing = pkg.archiveBytes - partial.length()
@@ -165,7 +169,7 @@ class VoicePackageDownloader
         ): VoiceDownloadOutcome {
             onProgress(VoiceDownloadProgress.Installing)
             if (partial.length() != pkg.archiveBytes || sha256(partial) != pkg.sha256) {
-                partial.delete()
+                store.discardDownload(pkg)
                 return DAMAGED
             }
             val staging = store.stagingDirectory(pkg)
@@ -173,7 +177,7 @@ class VoicePackageDownloader
             VoicePackageArchive.extract(partial, pkg, staging)
             currentCoroutineContext().ensureActive()
             store.install(pkg, staging)
-            partial.delete()
+            store.discardDownload(pkg)
             return VoiceDownloadOutcome.Installed
         }
 

@@ -359,7 +359,7 @@ sequenceDiagram
     G-->>H: 302 to release-assets.githubusercontent.com
     H->>G: HTTPS, redirect checked against the allowlist
     G-->>H: 200 (or 206 with the rest), at most the pinned size
-    H-->>J: voices/.downloads/{package}.part
+    H-->>J: voices/.downloads/{package}-{pin}.part
     J->>J: size and SHA-256 must match the pinned values
     J->>S: unpack the kept files into voices/.staging, move to voices/{package}
     S-->>U: the voice can be used
@@ -373,14 +373,19 @@ sequenceDiagram
   listener accepted mobile data; a waiting job is replaced by a new choice, a
   running one is left alone. `VoicePackageDownloader` checks the free space,
   then fetches through `VoiceModelHttp`, resuming a partial archive with an
-  HTTP range and starting over once when the server will not resume. A lost
+  HTTP range and starting over once when the server will not resume. The
+  partial archive is named after the first 16 hex digits of the pinned
+  SHA-256, so a pin that changes starts over instead of resuming old bytes
+  into the new archive (those are deleted). A lost
   connection keeps the partial file and the job tries again with a backoff
   from 30 seconds, at most six attempts. Cancelling deletes what arrived.
 - **Verification and installation.** The archive must have the pinned size
   and SHA-256; it is then unpacked by `VoicePackageArchive`, which keeps only
   the expected entries under the catalogue's names, and the staging folder is
   moved into place. A package is installed when every kept file is there with
-  its exact size.
+  its exact size; a download that finds its package installed deletes what an
+  earlier one left (a process that died between moving the package into place
+  and deleting the archive).
 
 ### Voices tab
 

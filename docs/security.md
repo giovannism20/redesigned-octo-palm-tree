@@ -175,10 +175,12 @@ Each requirement is testable; reference its ID in tests and reviews.
   downloads; `VoicePackageDownloader` refuses a body larger than the pinned
   size, checks size and SHA-256 of the whole archive, also after a resumed
   download, deletes an archive that does not match and only then unpacks it.
-  Verified by `VoicePackageDownloaderTest`. Catalogue books are not pinned:
-  Gutenberg rebuilds its EPUBs every month. They rely on HTTPS to an
-  allowlisted host and are validated like any imported file, SR-1 to SR-3 and
-  SR-7.)
+  A partial archive is named after its package and pinned SHA-256
+  (`{id}-{first 16 hex digits}.part`), so it is only ever resumed into the
+  archive it was started for. Verified by `VoicePackageDownloaderTest`.
+  Catalogue books are not pinned: Gutenberg rebuilds its EPUBs every month.
+  They rely on HTTPS to an allowlisted host and are validated like any
+  imported file, SR-1 to SR-3 and SR-7.)
 - **SR-7** Exported components are limited to the launcher/intake activity and
   the media session service; intake accepts only `content://` URIs. (`BookIntake`; content is re-detected by signature and copied with a
   300 MB limit. Whatever the sharing app's provider throws when its file is

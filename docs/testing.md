@@ -42,9 +42,11 @@ speaker ids, Kokoro's merged phonemes, the dialogue pause, model loading and
 replacement, typed failures and cancellation are checked on the JVM, and
 `NeuralAudio`, `KokoroPhonemes` and `NeuralText` are plain unit tests. Voice
 package downloads use the fake `HttpTransport` and archives built in the tests
-(`TestArchives`): pinned SHA-256 and size, resuming with HTTP ranges, hosts off
-the allowlist, free space, and hostile archives (traversal and absolute names,
-links, wrong sizes, too many entries or bytes). On a phone, the instrumented
+(`TestArchives`): pinned SHA-256 and size, resuming with HTTP ranges (a corrupt
+start is refused as damaged), partial archives named after their pin, what a
+download left behind, hosts off the allowlist, free space, and hostile archives
+(traversal and absolute names, links, wrong sizes, too many entries or bytes).
+On a phone, the instrumented
 `SherpaOnnxEngineTest` speaks a sentence with a real Piper voice, downloading
 Faber (67 MB) when no Piper voice is installed, and `EspeakPhonemizerTest`
 feeds espeak-ng text that makes it name letters, switch language or meet other

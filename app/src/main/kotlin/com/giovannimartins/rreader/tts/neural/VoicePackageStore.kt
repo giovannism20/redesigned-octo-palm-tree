@@ -18,8 +18,10 @@ import javax.inject.Singleton
 /**
  * Where voice packages live on the phone: `filesDir/voices/{package id}/` holds the files a package keeps, under the
  * names the catalogue gives them ([PackageFile.name]), never names read from an archive (SR-1). A download in
- * progress is `voices/.downloads/{id}.part` and an installation being unpacked `voices/.staging/{id}/`, so a package
- * folder only ever appears complete. A package is installed when every kept file is there with its exact size.
+ * progress is `voices/.downloads/{id}-{pin}.part`, `{pin}` being the first [PIN_DIGITS] hex digits of the archive's
+ * pinned SHA-256, so the bytes of an archive pinned before are never resumed into another; an installation being
+ * unpacked is `voices/.staging/{id}/`, so a package folder only ever appears complete. A package is installed when
+ * every kept file is there with its exact size.
  */
 @Singleton
 class VoicePackageStore internal constructor(
@@ -36,6 +38,8 @@ class VoicePackageStore internal constructor(
         @IoDispatcher io: CoroutineDispatcher,
     ) : this(File(context.filesDir, "voices"), io)
 
+    private val downloadsFolder = File(root, DOWNLOADS)
+    private val stagingFolder = File(root, STAGING)
     private val installedIds = MutableStateFlow<Set<String>?>(null)
 
     /** The ids of the installed packages, read from storage the first time and updated as packages come and go. */
@@ -67,11 +71,14 @@ class VoicePackageStore internal constructor(
         name: String,
     ): File = File(directory(pkg), name)
 
-    /** The archive of [pkg] being downloaded; kept between attempts so a download resumes where it stopped. */
-    fun partialFile(pkg: VoicePackage): File = File(File(root, DOWNLOADS), "${pkg.id}.part")
+    /**
+     * The archive of [pkg] being downloaded, kept between attempts so a download resumes where it stopped. Its name
+     * carries the archive's pin, so a download whose pin changed starts over.
+     */
+    fun partialFile(pkg: VoicePackage): File = File(downloadsFolder, "${downloadName(pkg)}.$PART")
 
     /** The folder [pkg] is unpacked into before it becomes its [directory]. */
-    fun stagingDirectory(pkg: VoicePackage): File = File(File(root, STAGING), pkg.id)
+    fun stagingDirectory(pkg: VoicePackage): File = File(stagingFolder, pkg.id)
 
     /** Whether every file [pkg] keeps is installed with its exact size. Blocking. */
     fun isComplete(pkg: VoicePackage): Boolean = pkg.files.all { file(pkg, it.name).length() == it.bytes }
@@ -101,14 +108,39 @@ class VoicePackageStore internal constructor(
         rescan()
     }
 
-    /** Removes the partial download and the unfinished installation of [pkg], keeping an installed copy. Blocking. */
+    /**
+     * Removes what downloads of [pkg] left, its partial archive for any pin and its unfinished installation, keeping an
+     * installed copy. Blocking.
+     */
     fun discardDownload(pkg: VoicePackage) {
-        partialFile(pkg).delete()
+        downloadFilesOf(pkg).forEach(File::delete)
         stagingDirectory(pkg).deleteRecursively()
     }
 
-    private companion object {
-        const val DOWNLOADS = ".downloads"
-        const val STAGING = ".staging"
+    /** Removes the partial archives of [pkg] for pins other than its own, which are never resumed. Blocking. */
+    fun discardStaleDownloads(pkg: VoicePackage) {
+        val current = currentNames(pkg)
+        downloadFilesOf(pkg).filterNot { it.name in current }.forEach(File::delete)
+    }
+
+    /** `{id}-{pin}`: the name of [pkg]'s download files, without their extension. */
+    private fun downloadName(pkg: VoicePackage) = "${pkg.id}-${pkg.sha256.take(PIN_DIGITS)}"
+
+    /** The names of the files a download of [pkg] keeps now. */
+    private fun currentNames(pkg: VoicePackage): Set<String> = setOf(partialFile(pkg).name)
+
+    /** The download files of [pkg] for any pin, and `{id}.part`, the name earlier versions of the app used. */
+    private fun downloadFilesOf(pkg: VoicePackage): List<File> {
+        val names = Regex(Regex.escape(pkg.id) + "(-[0-9a-f]{$PIN_DIGITS})?\\.$PART")
+        return downloadsFolder.listFiles().orEmpty().filter { names.matches(it.name) }
+    }
+
+    companion object {
+        /** Hex digits of the pinned SHA-256 in the name of a partial archive. */
+        const val PIN_DIGITS = 16
+
+        private const val DOWNLOADS = ".downloads"
+        private const val STAGING = ".staging"
+        private const val PART = "part"
     }
 }
