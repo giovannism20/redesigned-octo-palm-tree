@@ -52,6 +52,20 @@ measured on the device.
   non-commercial or research-based, acceptable for this personal,
   non-commercial project but recorded per voice in the app's notices.
 
+## Kokoro int8 tones (found on the phone, 2026-11-27)
+
+The owner heard a thin, high metallic whistle behind Dora and Alex on
+headphones. Spectra of the audio the app rendered on the phone show two narrow
+tones at **4.8 kHz (+21 dB)** and **9.6 kHz (+24 dB)** above their
+surroundings, also in the pauses; Piper and the phone's voice have none. They
+sit at multiples of a fifth of Kokoro's 24 kHz rate (its inverse STFT steps 5
+samples) and come from the **int8** weights: the fp32 model's render of the
+same text has them at +4.5 and +5.5 dB, but its package is 350 MB instead of
+132 MB. The app removes them with narrow notch filters (Q 60, two passes per
+tone), which take both below the background while the rest of the spectrum
+changes by 0.005 dB on average (0.09 dB at most), measured on the phone's
+audio. The bundled Kokoro samples were made again with the same filters.
+
 ## Decisions (owner, 2026-11-27)
 
 - Offer all nine voices in the Voices tab, each with its own small emblem and

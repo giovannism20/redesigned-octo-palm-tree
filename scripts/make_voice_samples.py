@@ -7,6 +7,8 @@ renders are not committed (they are generated artifacts); this script turns them
 the Voices tab plays before a voice is downloaded:
 
 - only the first sentence is kept (it ends where the report's first generated chunk ends);
+- Kokoro's narrow tones (4.8 and 9.6 kHz at 24 kHz, heard as a thin metallic whistle) are notched out
+  as the app's engine does (NeuralAudio.withoutTones: Q 60, two passes per tone);
 - a 20 Hz high-pass removes the DC offset of Kokoro voices, as the app's engine does;
 - each voice gets the gain that brings it to the evaluation's common speech level, as the app's
   engine applies it, so the samples sound like the voices will in the app;
@@ -38,6 +40,8 @@ VOICES = {
     "piper-pt_BR-edresson-low": "edresson",
 }
 HIGH_PASS_HZ = 20.0
+NOTCH_Q = 60.0
+NOTCH_PASSES = 2
 FADE_SECONDS = 0.04
 PEAK_LIMIT = 0.98
 BITRATE = "32k"
@@ -61,6 +65,31 @@ def high_pass(samples: np.ndarray, rate: int) -> np.ndarray:
         previous_out = value - previous_in + pole * previous_out
         previous_in = value
         out[index] = previous_out
+    return out
+
+
+def kokoro_tones(rate: int) -> list[float]:
+    """The tones Kokoro's int8 model leaves: multiples of a fifth of the sample rate below Nyquist."""
+    step = rate / 5
+    return [step * k for k in range(1, 5) if step * k < rate / 2]
+
+
+def without_tones(samples: np.ndarray, rate: int, tones: list[float]) -> np.ndarray:
+    """Narrow biquad notches (Q 60), two passes per tone, the same filters as the app's NeuralAudio."""
+    out = samples.astype(np.float64)
+    for tone in tones:
+        w0 = 2 * np.pi * tone / rate
+        alpha = np.sin(w0) / (2 * NOTCH_Q)
+        a0 = 1 + alpha
+        b0, b1, a2 = 1 / a0, -2 * np.cos(w0) / a0, (1 - alpha) / a0
+        for _ in range(NOTCH_PASSES):
+            filtered = np.empty_like(out)
+            in1 = in2 = out1 = out2 = 0.0
+            for index, value in enumerate(out):
+                y = b0 * value + b1 * in1 + b0 * in2 - b1 * out1 - a2 * out2
+                in2, in1, out2, out1 = in1, value, out1, y
+                filtered[index] = y
+            out = filtered
     return out
 
 
@@ -107,6 +136,8 @@ def main(evaluation: Path, output: Path) -> None:
     for voice_id, name in VOICES.items():
         samples, rate = read_wav(evaluation / f"{voice_id}.wav")
         samples = samples[: int(round(first_sentence[voice_id] * rate))]
+        if voice_id.startswith("kokoro-"):
+            samples = without_tones(samples, rate, kokoro_tones(rate))
         samples = fade_out(with_gain(high_pass(samples, rate), gains[voice_id]), rate)
         target = output / f"{name}.ogg"
         encode(samples, rate, target)

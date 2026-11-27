@@ -3,13 +3,16 @@ package com.giovannimartins.rreader.tts.neural
 import com.giovannimartins.rreader.tts.PcmWav
 import com.giovannimartins.rreader.tts.WavInfo
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 class NeuralSpeechTest {
     @get:Rule
@@ -79,6 +82,35 @@ class NeuralSpeechTest {
     }
 
     @Test
+    fun `Kokoro leaves tones at multiples of a fifth of its sample rate, Piper none`() {
+        assertThat(ModelFamily.KOKORO.artifactTones(24_000)).containsExactly(4_800.0, 9_600.0).inOrder()
+        assertThat(ModelFamily.PIPER.artifactTones(22_050)).isEmpty()
+    }
+
+    @Test
+    fun `the model's tones are removed and the sound around them is kept`() {
+        val rate = 24_000
+        val signal =
+            FloatArray(2 * rate) { index ->
+                val t = index.toDouble() / rate
+                val speechLike =
+                    0.2 * sin(2 * PI * 1_000 * t) + 0.2 * sin(2 * PI * 4_500 * t) + 0.2 * sin(2 * PI * 7_000 * t)
+                val whistle = 0.05 * sin(2 * PI * 4_800 * t) + 0.05 * sin(2 * PI * 9_600 * t)
+                (speechLike + whistle).toFloat()
+            }
+
+        val cleaned = NeuralAudio.withoutTones(signal, rate, ModelFamily.KOKORO.artifactTones(rate))
+
+        // Measured after the filters settle (0.1 s).
+        fun ratio(frequency: Double) = magnitude(cleaned, rate, frequency) / magnitude(signal, rate, frequency)
+        assertThat(ratio(4_800.0)).isLessThan(0.03)
+        assertThat(ratio(9_600.0)).isLessThan(0.03)
+        listOf(1_000.0, 4_500.0, 7_000.0).forEach { frequency ->
+            assertWithMessage("$frequency Hz").that(ratio(frequency)).isWithin(0.02).of(1.0)
+        }
+    }
+
+    @Test
     fun `silence alone becomes just the pause`() {
         val pcm = NeuralAudio.finish(FloatArray(500), 10_000, gainDb = 3f, leadingPauseMillis = 0)
 
@@ -94,5 +126,22 @@ class NeuralSpeechTest {
 
         assertThat(WavInfo.durationMillis(file)).isEqualTo(1_000)
         assertThat(file.length()).isEqualTo(44L + 2 * 22_050)
+    }
+
+    /** The magnitude of [frequency] in [samples] after their first tenth of a second (the Goertzel algorithm). */
+    private fun magnitude(
+        samples: FloatArray,
+        rate: Int,
+        frequency: Double,
+    ): Double {
+        val coefficient = 2 * cos(2 * PI * frequency / rate)
+        var previous = 0.0
+        var beforePrevious = 0.0
+        for (index in rate / 10 until samples.size) {
+            val current = samples[index] + coefficient * previous - beforePrevious
+            beforePrevious = previous
+            previous = current
+        }
+        return sqrt(previous * previous + beforePrevious * beforePrevious - coefficient * previous * beforePrevious)
     }
 }

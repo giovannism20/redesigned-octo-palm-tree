@@ -448,7 +448,11 @@ cache as the phone's voices, so playback does not change (ADR 0003):
    model's own pauses (silence scale 1). The model of the last package used
    stays loaded; another package's voice replaces it. A render cancelled
    while the model speaks stops after the current sentence.
-4. **Audio.** `NeuralAudio` removes the DC offset with a 20 Hz high-pass,
+4. **Audio.** For Kokoro, `NeuralAudio` first notches out the narrow tones
+   its int8 model leaves at 4.8 and 9.6 kHz (`ModelFamily.artifactTones`: a
+   thin metallic whistle on headphones; Q 60, two passes per tone, the sound
+   around them changes by less than 0.1 dB). It then removes the DC offset with
+   a 20 Hz high-pass,
    trims silence at both ends to 40 ms, applies the voice's gain (measured in
    the evaluation so every voice is about as loud, never past 0.98 of full
    scale) and adds a 250 ms pause after the speech; `PcmWav` writes 16-bit

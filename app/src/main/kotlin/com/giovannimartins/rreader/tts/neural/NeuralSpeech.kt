@@ -2,8 +2,10 @@ package com.giovannimartins.rreader.tts.neural
 
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 /** A segment's text as a neural voice reads it: [text] after a pause of [leadingPauseMillis]. */
 internal data class PreparedText(
@@ -78,18 +80,28 @@ internal object NeuralAudio {
     /** About -50 dBFS: quieter samples at the ends count as silence. */
     const val SILENCE_LEVEL = 0.003f
 
+    /** Notch quality: a band of a sixtieth of the tone's frequency. */
+    private const val NOTCH_Q = 60.0
+
+    /** Each tone is notched twice: once leaves a few decibels of a tone that is slightly wider than a pure line. */
+    private const val NOTCH_PASSES = 2
+
     private const val DECIBELS_PER_TENFOLD = 20.0
     private const val MILLIS_PER_SECOND = 1_000
     private const val FULL_SCALE = 32_767f
 
-    /** 16-bit PCM of [samples] (in [-1, 1] at [sampleRate]) for a voice with [gainDb], as described above. */
+    /**
+     * 16-bit PCM of [samples] (in [-1, 1] at [sampleRate]) for a voice with [gainDb], as described above, without the
+     * model's narrow [tones] (Hz, see [ModelFamily.artifactTones]).
+     */
     fun finish(
         samples: FloatArray,
         sampleRate: Int,
         gainDb: Float,
         leadingPauseMillis: Int,
+        tones: List<Double> = emptyList(),
     ): ShortArray {
-        val speech = trimmed(highPassed(samples, sampleRate), sampleRate)
+        val speech = trimmed(highPassed(withoutTones(samples, sampleRate, tones), sampleRate), sampleRate)
         val peak = speech.maxOfOrNull { abs(it) } ?: 0f
         val gain = 10.0.pow(gainDb / DECIBELS_PER_TENFOLD).toFloat()
         val scale = if (peak > 0f) minOf(gain, PEAK_LIMIT / peak) else gain
@@ -97,6 +109,49 @@ internal object NeuralAudio {
         val pcm = ShortArray(lead + speech.size + samplesFor(SEGMENT_PAUSE_MILLIS, sampleRate))
         speech.forEachIndexed { index, value -> pcm[lead + index] = toPcm(value * scale) }
         return pcm
+    }
+
+    /**
+     * [samples] without each of [tones] (Hz): every tone goes through [NOTCH_PASSES] narrow notch filters, which take
+     * it below the background while the sound around it changes by less than 0.1 dB.
+     */
+    fun withoutTones(
+        samples: FloatArray,
+        sampleRate: Int,
+        tones: List<Double>,
+    ): FloatArray {
+        var out = samples
+        tones.forEach { tone -> repeat(NOTCH_PASSES) { out = notched(out, sampleRate, tone) } }
+        return out
+    }
+
+    /** A biquad notch filter (the audio cookbook's) at [frequency], [NOTCH_Q] wide: 80 Hz at 4.8 kHz. */
+    private fun notched(
+        samples: FloatArray,
+        sampleRate: Int,
+        frequency: Double,
+    ): FloatArray {
+        val w0 = 2.0 * PI * frequency / sampleRate
+        val alpha = sin(w0) / (2.0 * NOTCH_Q)
+        val a0 = 1.0 + alpha
+        val b0 = 1.0 / a0
+        val b1 = -2.0 * cos(w0) / a0
+        val a2 = (1.0 - alpha) / a0
+        val out = FloatArray(samples.size)
+        var in1 = 0.0
+        var in2 = 0.0
+        var out1 = 0.0
+        var out2 = 0.0
+        samples.forEachIndexed { index, value ->
+            // b2 equals b0 and a1 equals b1 for a notch.
+            val y = b0 * value + b1 * in1 + b0 * in2 - b1 * out1 - a2 * out2
+            in2 = in1
+            in1 = value.toDouble()
+            out2 = out1
+            out1 = y
+            out[index] = y.toFloat()
+        }
+        return out
     }
 
     private fun toPcm(value: Float): Short = (value.coerceIn(-1f, 1f) * FULL_SCALE).roundToInt().toShort()

@@ -85,7 +85,8 @@ class SherpaOnnxEngine
                         model.generate(sentences, voice.speakerId) { job.isActive }
                     }
                 job.ensureActive()
-                val pcm = NeuralAudio.finish(speech, model.sampleRate, voice.gainDb, prepared.leadingPauseMillis)
+                val tones = voice.pkg.family.artifactTones(model.sampleRate)
+                val pcm = NeuralAudio.finish(speech, model.sampleRate, voice.gainDb, prepared.leadingPauseMillis, tones)
                 output.parentFile?.mkdirs()
                 PcmWav.write(output, pcm, model.sampleRate)
                 SynthesisResult.Rendered(pcm.size * MILLIS_PER_SECOND / model.sampleRate)

@@ -3,12 +3,28 @@ package com.giovannimartins.rreader.tts.neural
 import com.giovannimartins.rreader.tts.VoiceIds
 
 /** How a voice package's model is loaded and how its phonemes are prepared. */
-enum class ModelFamily {
-    /** Kokoro v1.0 (int8): several speakers in one model; slower than real time on many phones. */
-    KOKORO,
+enum class ModelFamily(
+    /** The step of the model's last stage (an inverse STFT), in samples, when its output keeps tones there. */
+    private val toneStepSamples: Int? = null,
+) {
+    /**
+     * Kokoro v1.0 (int8): several speakers in one model; slower than real time on many phones. Its int8 weights leave
+     * narrow tones at multiples of a fifth of the sample rate (the inverse STFT steps 5 samples): 4.8 and 9.6 kHz at
+     * 24 kHz, about 21 and 24 dB above their surroundings, heard on headphones as a thin metallic whistle. The fp32
+     * model has them about 17 dB weaker but is 350 MB instead of 132 MB, so [NeuralAudio] removes them instead.
+     */
+    KOKORO(toneStepSamples = 5),
 
     /** Piper (VITS): one speaker per model; much faster than real time. */
     PIPER,
+    ;
+
+    /** The narrow tones the model leaves in its output at [sampleRate], in Hz, below the Nyquist frequency. */
+    fun artifactTones(sampleRate: Int): List<Double> {
+        val step = toneStepSamples ?: return emptyList()
+        val first = sampleRate.toDouble() / step
+        return generateSequence(first) { it + first }.takeWhile { it < sampleRate / 2.0 }.toList()
+    }
 }
 
 /** One file kept from a package archive: [entry] in the archive is stored as [name], and must be [bytes] long. */
