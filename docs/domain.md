@@ -25,7 +25,7 @@ Names used in code and docs. Add a term here when you introduce it.
 | **Playback speed** | User-chosen multiplier (0.75–2.0×), applied by the player with pitch preserved. |
 | **Voice** | A selectable speaker, identified by engine + voice id + locale. |
 | **Speech engine** | Implementation of `SpeechEngine` that renders a segment to audio: `SystemTtsEngine` (Android TTS) or `SherpaOnnxEngine` (on-device neural models). |
-| **Segment renderer** | Component that keeps a window of upcoming segments rendered ahead of playback and manages the audio cache. |
+| **Segment renderer** | `SegmentRenderer`: renders one segment's speech to a WAV file in the audio cache (reusing a cached file when it is valid), feeds the speaking rate and trims the cache. |
 | **Facade player** | Media3 player wrapper that presents one item per chapter (continuous position/duration) to the session while the real player plays segments. |
 | **Sleep timer** | Stops playback after a duration or at the end of the chapter, fading out first. |
 | **Catalogue entry** | A public-domain book offered for download in the Explore tab. |

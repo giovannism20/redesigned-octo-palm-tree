@@ -69,7 +69,7 @@ Base package: `com.giovannimartins.rreader`.
 | `data` | Room database (`db`), book file storage (`files`), library repository (`library`), DataStore settings (`settings`) | implemented |
 | `importer` | `BookIntake` (picker/share/view URIs → signature check, size-limited copy, SHA-256 dedupe, book row), `ImportBookWorker` + `BookImportProcessor` (parse and persist), `BookParser` per format (`EpubBookParser`; PDF in Phase 2) | implemented |
 | `pdf` | PdfBox text extraction, `PdfRenderer` page rendering, ML Kit OCR → layout lines | planned |
-| `tts` | `SpeechEngine` interface and `SystemTtsEngine` (multi-engine Android TTS → WAV), `AudioCache`, `WavInfo`; later `SegmentRenderer` and `SherpaOnnxEngine` | in progress |
+| `tts` | `SpeechEngine` interface and `SystemTtsEngine` (multi-engine Android TTS → WAV), `AudioCache`, `WavInfo`, `SegmentRenderer` (segment → cached WAV, 300 MB LRU trim), `SpeakingRateTracker` (per-voice rate learned from rendered audio); later `SherpaOnnxEngine` | implemented (neural voices in Phase 5) |
 | `playback` | `PlaybackService` (`MediaSessionService`), facade player, progress saving, sleep timer | planned |
 | `catalog` | Public-domain catalogue client and downloads | planned |
 | `ui` | Compose screens, ViewModels, navigation, theme, design system | in progress (shell, library, add book, voices) |
