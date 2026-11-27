@@ -8,6 +8,17 @@ All notable user-visible changes are documented here. The format follows
 
 ### Added
 
+- Listening: books are read aloud with the phone's voice and keep playing with
+  the screen locked, controlled from the notification, the lock screen and
+  headsets (−15 s, play/pause, +15 s; headset next/previous also move 15 s).
+- Listening resumes at the start of the sentence where it stopped; the place
+  is saved as you listen, pause or stop, and a finished book starts over.
+- Player screen with cover, chapter progress and time left, large −15 s,
+  play/pause and +15 s buttons, speed from 0.75× to 2× and a chapter list.
+- Mini player above the navigation bar while a book is open; tapping a book
+  in the library (or "Listen" on "Continue listening") starts it.
+- Clear messages when no Portuguese voice is installed (with a shortcut to
+  Voices) or when the voice fails, with a way to try again.
 - Voices screen: the phone's free Portuguese voices, offline first, with a
   sample and a default choice.
 - EPUB 2 and 3 books are imported with their chapters, titles, authors and

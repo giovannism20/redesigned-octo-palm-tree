@@ -148,10 +148,13 @@ dependencies {
     testImplementation(libs.androidx.work.testing)
     testImplementation(libs.androidx.media3.test.utils)
     testImplementation(libs.androidx.media3.test.utils.robolectric)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
 
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.androidx.test.junit)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation(libs.truth)
     debugImplementation(libs.compose.ui.test.manifest)
 }

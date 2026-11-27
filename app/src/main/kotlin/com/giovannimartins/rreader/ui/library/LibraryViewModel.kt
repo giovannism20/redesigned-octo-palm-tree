@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.giovannimartins.rreader.data.db.BookStatus
 import com.giovannimartins.rreader.data.library.LibraryBook
 import com.giovannimartins.rreader.data.library.LibraryRepository
+import com.giovannimartins.rreader.ui.player.PlaybackControls
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +30,7 @@ class LibraryViewModel
     @Inject
     constructor(
         private val repository: LibraryRepository,
+        private val playback: PlaybackControls,
     ) : ViewModel() {
         val state: StateFlow<LibraryUiState> =
             repository.books
@@ -38,6 +40,9 @@ class LibraryViewModel
                         books = books,
                     )
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), LibraryUiState.Loading)
+
+        /** Starts or resumes listening to a book that is ready. */
+        fun play(bookId: String) = playback.play(bookId)
 
         fun remove(bookId: String) {
             viewModelScope.launch { repository.remove(bookId) }

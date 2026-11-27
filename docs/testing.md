@@ -20,7 +20,9 @@ internal ExoPlayer on Media3's `FakeClock` (`media3-test-utils-robolectric`,
 `TestPlayerRunHelper`) and a fake speech engine that writes small silent WAV
 files, so rendering, playlists, seeks, focus changes and the end of the book
 run for real in milliseconds. Audio focus changes are delivered through
-Robolectric's `ShadowAudioManager`.
+Robolectric's `ShadowAudioManager`. Player screens also run under
+Robolectric with `createComposeRule` (on a phone-sized screen) to check
+spoken labels, touch targets of at least 56 dp and the actions they send.
 
 `./gradlew check` is the local gate and runs unit tests, lint, detekt and
 formatting checks. CI runs the same plus the secret scan, CodeQL and the

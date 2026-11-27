@@ -30,6 +30,9 @@ Names used in code and docs. Add a term here when you introduce it.
 | **Segment span** | A segment's characters plus the whitespace up to the next segment (or the end of the chapter). The position inside a playing segment advances through its span, so it reaches the next segment's start without gaps. |
 | **Media time** | The facade player's timeline in a chapter: characters ÷ speaking rate at 1.0×. Positions, durations and ±15 s are expressed in it; playback speed changes how fast it passes, not its length. |
 | **Facade player** | `ReaderPlayer`: the Media3 player the session sees. It presents one item per chapter with a continuous position and duration in media time while an internal ExoPlayer plays rendered segments, and maps seeks, ±15 s and headset next/previous onto reading positions. |
+| **Playback connection** | `PlaybackConnection`: the UI's `MediaController` link to the playback service, connected while the app is visible; ViewModels use it through `PlaybackControls`. |
+| **Mini player** | The bar above the bottom navigation while a book is open: cover, title, chapter, −15 s and play/pause. Tapping it opens the full player. |
+| **Full player** | The player screen: cover, book and chapter titles, chapter progress with elapsed and remaining time, −15 s, play/pause, +15 s, speed and the chapter list. |
 | **Sleep timer** | Stops playback after a duration or at the end of the chapter, fading out first. |
 | **Catalogue entry** | A public-domain book offered for download in the Explore tab. |
 | **OCR page** | A PDF page without a usable text layer whose text is recognized on-device. |

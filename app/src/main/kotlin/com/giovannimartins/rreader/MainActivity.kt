@@ -7,31 +7,50 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.content.IntentCompat
 import com.giovannimartins.rreader.ui.RReaderApp
 import com.giovannimartins.rreader.ui.importer.ImportViewModel
+import com.giovannimartins.rreader.ui.player.PlaybackConnection
 import com.giovannimartins.rreader.ui.theme.RReaderTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
-/** Single activity hosting the Compose UI; also receives books shared or opened from other apps. */
+/**
+ * Single activity hosting the Compose UI; also receives books shared or opened from other apps, and opens
+ * the player when the playback notification is tapped. The UI is connected to the playback service while
+ * the activity is visible.
+ */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val importViewModel: ImportViewModel by viewModels()
 
+    @Inject
+    lateinit var playbackConnection: PlaybackConnection
+
+    private var openPlayerRequests by mutableIntStateOf(0)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        if (savedInstanceState == null) handleIncomingBook(intent)
+        lifecycle.addObserver(playbackConnection)
+        if (savedInstanceState == null) handleIntent(intent)
         setContent {
             RReaderTheme {
-                RReaderApp(importViewModel = importViewModel)
+                RReaderApp(importViewModel = importViewModel, openPlayerRequests = openPlayerRequests)
             }
         }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        handleIncomingBook(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        if (intent?.action == ACTION_OPEN_PLAYER) openPlayerRequests++ else handleIncomingBook(intent)
     }
 
     /** Accepts `content://` books from "Share" (ACTION_SEND) and "Open with" (ACTION_VIEW). */

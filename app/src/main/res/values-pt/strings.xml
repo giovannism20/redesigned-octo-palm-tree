@@ -16,6 +16,7 @@
     <string name="library_remove">Remover</string>
     <string name="library_remove_title">Remover este livro?</string>
     <string name="library_remove_body">O livro e o seu progresso serão apagados deste celular.</string>
+    <string name="library_listen">Ouvir</string>
     <string name="cover_description">Capa de %1$s</string>
 
     <!-- Import -->
@@ -50,9 +51,29 @@
     <string name="voices_more">Mais vozes nas configurações do celular</string>
 
     <!-- Player -->
+    <string name="player_play">Ouvir</string>
+    <string name="player_pause">Pausar</string>
     <string name="player_back_15">Voltar 15 segundos</string>
     <string name="player_forward_15">Avançar 15 segundos</string>
+    <string name="player_open">Abrir o player</string>
+    <string name="player_minimize">Minimizar o player</string>
+    <string name="player_now_playing">Ouvindo agora</string>
     <string name="player_chapter_number">Capítulo %1$d</string>
+    <string name="player_chapter_of">Capítulo %1$d de %2$d</string>
+    <string name="player_chapters">Capítulos</string>
+    <string name="player_chapter_current">Tocando agora</string>
+    <string name="player_speed_description">Velocidade: %1$s vezes</string>
+    <string name="player_position">Posição no capítulo</string>
+    <string name="player_position_state">%1$s de %2$s</string>
+    <string name="player_time_left">faltam %1$s</string>
+    <string name="player_preparing">Preparando a voz…</string>
+    <string name="player_finished">Você chegou ao fim do livro.</string>
+    <string name="player_error_no_voice">Nenhuma voz em português está instalada. Instale uma para ouvir este livro.</string>
+    <string name="player_error_book">Não foi possível abrir este livro.</string>
+    <string name="player_error_speech">A voz parou de funcionar. Tente de novo.</string>
+    <string name="player_error_other">A leitura parou por causa de um problema. Tente de novo.</string>
+    <string name="player_open_voices">Abrir vozes</string>
+    <string name="player_retry">Tentar de novo</string>
 
     <!-- Common -->
     <string name="action_cancel">Cancelar</string>

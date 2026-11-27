@@ -72,7 +72,7 @@ Base package: `com.giovannimartins.rreader`.
 | `tts` | `SpeechEngine` interface and `SystemTtsEngine` (multi-engine Android TTS → WAV), `AudioCache`, `WavInfo`, `SegmentRenderer` (segment → cached WAV, 300 MB LRU trim), `SpeakingRateTracker` (per-voice rate learned from rendered audio); later `SherpaOnnxEngine` | implemented (neural voices in Phase 5) |
 | `playback` | `PlaybackService` (`MediaSessionService`, trusted controllers only), `ReaderPlayer` facade (chapter playlist over an internal ExoPlayer), `SegmentFeeder` (render-ahead window), `ChapterPlans`, `SeekTargets`, `PositionSaver`, `PlaybackRepository`; later the sleep timer | implemented (sleep timer in Phase 3) |
 | `catalog` | Public-domain catalogue client and downloads | planned |
-| `ui` | Compose screens, ViewModels, navigation, theme, design system | in progress (shell, library, add book, voices) |
+| `ui` | Compose screens, ViewModels, navigation, theme, design system; `ui/player`: `PlaybackConnection` (`MediaController` while the app is visible), mini player, full player with speed and chapters | in progress (shell, library, add book, voices, player) |
 | `di` | Hilt modules (dispatchers, application scope, database, WorkManager) | implemented |
 
 ## Layering rules
@@ -81,16 +81,19 @@ Base package: `com.giovannimartins.rreader`.
 flowchart TB
     UI[ui: composables] --> VM[ui: ViewModels]
     VM --> REPO[data: repositories]
-    VM --> PB[playback: MediaController]
+    VM --> PB[ui: PlaybackConnection]
+    PB -->|MediaController| PS[playback: PlaybackService]
     REPO --> SRC[Room / files / DataStore]
     REPO --> TK[textkit]
-    PB --> TTS[tts]
+    PS --> TTS[tts]
+    PS --> REPO
     TTS --> TK
 ```
 
 - Composables only render state and emit events.
 - ViewModels expose immutable UI state as `StateFlow` and call repositories
-  or the `MediaController`.
+  or `PlaybackControls` (implemented by `PlaybackConnection` over a
+  `MediaController`).
 - Repositories own data access and map errors to sealed types.
 - The playback service is the only owner of the player; the UI talks to it
   through a `MediaController`.
@@ -118,16 +121,53 @@ sequenceDiagram
 
 ### Playback
 
-1. The UI connects a `MediaController` to `PlaybackService` and asks it to play
-   book *B* from its saved reading position.
-2. The `SegmentRenderer` turns the next sentences into audio files with the
-   selected `SpeechEngine`, keeping a few minutes rendered ahead.
-3. Rendered segments are appended to the ExoPlayer playlist; gaps between
-   sentences sound like natural pauses.
-4. The facade player exposes one item per chapter with a continuous
-   position and duration to the notification, lock screen and headset, and
-   maps ±15 s, seeks and chapter jumps to segment operations.
-5. On every segment transition the reading position is saved.
+```mermaid
+sequenceDiagram
+    participant U as Listener (app visible)
+    participant C as PlaybackConnection
+    participant S as PlaybackService + MediaSession
+    participant P as ReaderPlayer (facade)
+    participant F as SegmentFeeder
+    participant R as SegmentRenderer + SpeechEngine
+    participant X as Internal ExoPlayer
+    U->>C: tap a book
+    C->>S: setMediaItem(bookId), prepare(), play()
+    S->>P: commands (foreground service starts now, ADR 0014)
+    P->>P: load chapters, saved position, voice, speed
+    P->>X: prepare() (audio focus requested)
+    P->>F: restart at the saved position
+    F->>R: render the segment holding it, then the next ones
+    R-->>F: WAV files (cached), measured durations
+    F->>X: append items (render-ahead window)
+    X-->>P: item transitions, state, focus changes
+    P-->>S: one item per chapter, position in chapter
+    S-->>U: notification, lock screen, headset, UI
+```
+
+1. The UI connects a `MediaController` to `PlaybackService` while the app is
+   visible and opens a book with `setMediaItem(bookId)`, `prepare()` and
+   `play()`. The book resumes at the start of the segment that holds its
+   saved reading position.
+2. The `SegmentFeeder` plans each chapter with textkit's `SegmentPlanner`,
+   applies `SpeechNormalizer` to each segment (skipping blank speech) and has
+   the `SegmentRenderer` turn it into a WAV file in the audio cache. It keeps
+   at least two minutes and four segments rendered ahead of the playing one,
+   continuing into the next chapters.
+3. Rendered segments are appended to the internal ExoPlayer's playlist; the
+   pauses the voice leaves around sentences sound natural. If the internal
+   player runs out of audio, the facade reports buffering and playback
+   continues as soon as the next segment is queued.
+4. The facade player exposes one item per chapter with a position and
+   duration derived from characters and the voice's speaking rate (media
+   time, ADR 0006). Seeks map to a reading position, then to the segment that
+   holds it, and rebuild the internal playlist from there. ±15 s cross
+   chapter boundaries and are clamped to the book; headset next/previous are
+   ±15 s. The end of the book is `STATE_ENDED`.
+5. The reading position is saved on every segment change, pause, stop and
+   release, and (throttled) on seeks; the speed is saved in the settings.
+6. The internal player handles audio focus (phone calls, other apps),
+   "becoming noisy" (headphones unplugged) and a local wake lock; the facade
+   mirrors the resulting pauses and suppressions.
 
 ## Persistence
 

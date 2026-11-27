@@ -1,5 +1,6 @@
 package com.giovannimartins.rreader.ui.library
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,6 +16,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -26,6 +28,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -43,24 +46,35 @@ import com.giovannimartins.rreader.ui.importer.messageRes
 import com.giovannimartins.rreader.ui.theme.RReaderTheme
 import kotlin.math.roundToInt
 
-/** Stateful library screen bound to [LibraryViewModel]. */
+/** Stateful library screen bound to [LibraryViewModel]; starting a book opens the player. */
 @Composable
 fun LibraryRoute(
     onAddBook: () -> Unit,
+    onOpenPlayer: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LibraryViewModel =
         androidx.hilt.lifecycle.viewmodel.compose
             .hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    LibraryScreen(state = state, onAddBook = onAddBook, onRemove = viewModel::remove, modifier = modifier)
+    LibraryScreen(
+        state = state,
+        onAddBook = onAddBook,
+        onPlay = { bookId ->
+            viewModel.play(bookId)
+            onOpenPlayer()
+        },
+        onRemove = viewModel::remove,
+        modifier = modifier,
+    )
 }
 
-/** The library: "Continue listening" first, then every book with its progress. */
+/** The library: "Continue listening" first, then every book with its progress. Tap a ready book to listen. */
 @Composable
 fun LibraryScreen(
     state: LibraryUiState,
     onAddBook: () -> Unit,
+    onPlay: (String) -> Unit,
     onRemove: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -95,10 +109,14 @@ fun LibraryScreen(
                     item { LibraryEmptyState(onAddBook = onAddBook) }
                 }
                 state.continueListening?.let { book ->
-                    item { ContinueListeningCard(book) }
+                    item { ContinueListeningCard(book = book, onPlay = { onPlay(book.id) }) }
                 }
                 items(state.books, key = { it.id }) { book ->
-                    LibraryBookRow(book = book, onRemove = { pendingRemoval = book.id })
+                    LibraryBookRow(
+                        book = book,
+                        onPlay = { onPlay(book.id) }.takeIf { book.status == BookStatus.READY },
+                        onRemove = { pendingRemoval = book.id },
+                    )
                 }
             }
         }
@@ -144,9 +162,10 @@ private fun LibraryEmptyState(
 @Composable
 private fun ContinueListeningCard(
     book: LibraryBook,
+    onPlay: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(modifier = modifier.fillMaxWidth()) {
+    Card(onClick = onPlay, modifier = modifier.fillMaxWidth()) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             BookCover(title = book.displayTitle(), coverFile = book.coverFile, modifier = Modifier.width(96.dp))
             Spacer(Modifier.width(16.dp))
@@ -163,6 +182,11 @@ private fun ContinueListeningCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 ProgressLine(book)
+                Button(onClick = onPlay, modifier = Modifier.heightIn(min = 56.dp)) {
+                    Icon(painterResource(R.drawable.ic_play), contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(text = stringResource(R.string.library_listen), style = MaterialTheme.typography.labelLarge)
+                }
             }
         }
     }
@@ -171,10 +195,14 @@ private fun ContinueListeningCard(
 @Composable
 private fun LibraryBookRow(
     book: LibraryBook,
+    onPlay: (() -> Unit)?,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+    val listenLabel = stringResource(R.string.library_listen)
+    val playable =
+        if (onPlay == null) Modifier else Modifier.clickable(onClickLabel = listenLabel, onClick = onPlay)
+    Row(modifier = modifier.fillMaxWidth().then(playable), verticalAlignment = Alignment.Top) {
         BookCover(title = book.displayTitle(), coverFile = book.coverFile, modifier = Modifier.width(88.dp))
         Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -275,6 +303,7 @@ private fun LibraryScreenPreview() {
         LibraryScreen(
             state = LibraryUiState.Content(continueListening = book, books = listOf(book)),
             onAddBook = {},
+            onPlay = {},
             onRemove = {},
         )
     }
