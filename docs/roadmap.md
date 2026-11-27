@@ -84,7 +84,8 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 - [ ] "About and licences" screen: licence texts (GPL-3.0, Apache-2.0, MIT, voice models) and a link to the source
 - [x] `SherpaOnnxEngine`, model download over Wi-Fi with size shown and SHA-256 verification (all nine voices downloaded on the phone; Faber read all 5,228 sentences of Dom Casmurro without a crash after the two native fixes)
 - [ ] Pre-rendering while charging when a voice is slower than real time (implemented; verify Kokoro's speed and the pre-render on the phone)
-- [ ] Review findings: crash containment for native calls, pre-render vs live playback, download hygiene, espeak-ng memory-safety note (in progress)
+- [x] Review findings: crash containment for native calls (SR-14), pre-render out of the listener's way, last voice change wins, fallback to the phone voice, download hygiene, espeak-ng memory-safety note and input bounds; Kokoro's 4.8/9.6 kHz whistle removed (measured on the phone)
+- [ ] On the phone: playback with the new session and pre-render rules, dialogue pauses with Kokoro and Piper, the fallback notice with TalkBack
 - [ ] Rebuild piper-phonemize against espeak-ng 1.52+ (memory-safety fixes) and pin the AAR
 
 ## Phase 6 — Free catalogue
