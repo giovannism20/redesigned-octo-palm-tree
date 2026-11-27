@@ -82,6 +82,16 @@ internal fun NeuralVoiceItem(
                     ) {
                         Text(stringResource(R.string.voices_retry), style = MaterialTheme.typography.labelLarge)
                     }
+                    // Gives up the download and deletes what it received, which "Try again" would resume.
+                    TextButton(
+                        onClick = onCancelDownload,
+                        modifier = Modifier.described(stringResource(R.string.voices_remove_download_voice, name)),
+                    ) {
+                        Text(
+                            stringResource(R.string.voices_remove_download),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
                 }
 
                 NeuralVoiceStatus.Ready -> {

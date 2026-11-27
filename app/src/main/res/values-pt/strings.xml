@@ -123,6 +123,8 @@
     <string name="voices_failure_storage">Não há espaço livre suficiente no celular para esta voz.</string>
     <string name="voices_retry">Tentar de novo</string>
     <string name="voices_retry_voice">Tentar baixar %1$s de novo</string>
+    <string name="voices_remove_download">Remover</string>
+    <string name="voices_remove_download_voice">Remover o download de %1$s</string>
     <string name="voices_delete">Apagar</string>
     <string name="voices_delete_voice">Apagar a voz %1$s</string>
     <string name="voices_delete_title">Apagar a voz %1$s?</string>

@@ -178,6 +178,9 @@ new version:
     sentence being read, without the book starting over.
 21. On mobile data, "Baixar" asks first; "Esperar o Wi-Fi" waits and the
     download starts once the phone is on Wi-Fi. "Cancelar" stops a download.
+    A download that ends with a message (on a connection that keeps
+    failing, or without space) offers "Tentar de novo" and "Remover", which
+    brings back "Baixar · 67 MB".
 22. Download Dora (132 MB, also brings Alex and Santa) and listen while the
     phone charges: after a while the next chapters play without "Preparando a
     voz…" (rendered ahead).

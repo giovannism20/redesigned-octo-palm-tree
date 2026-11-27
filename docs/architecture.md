@@ -380,7 +380,10 @@ sequenceDiagram
   connection keeps the partial file and the job tries again with a backoff
   from 30 seconds, at most six attempts. Cancelling waits until WorkManager
   has cancelled the job, so no attempt starts afterwards, then deletes what
-  arrived.
+  arrived. It also removes a download that failed: WorkManager keeps a failed
+  job failed when it is cancelled, so the job is first replaced by an untagged
+  placeholder that would not start for a year, and the placeholder is
+  cancelled.
 - **Verification and installation.** The archive must have the pinned size
   and SHA-256; it is then unpacked by `VoicePackageArchive`, which keeps only
   the expected entries under the catalogue's names, and the staging folder is
@@ -400,7 +403,9 @@ phone's voices all had the same name. The tab now shows:
   mais natural"), "Ouvir", which plays the sample bundled with the app at
   once, and one main action: "Baixar · 132 MB", the download's progress with
   "Cancelar", "Usar esta voz", or "Em uso" (a border and the words, never
-  colour alone). A ready voice can be deleted after a confirmation that says
+  colour alone). A download that failed says why, with "Tentar de novo",
+  which resumes it, and "Remover", which deletes what it received and offers
+  "Baixar" again. A ready voice can be deleted after a confirmation that says
   how much space it frees and which voices share its file. No licence text
   appears on the cards.
 - **Downloads.** On Wi-Fi (or offline) a download waits for Wi-Fi; on mobile

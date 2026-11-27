@@ -124,6 +124,8 @@
     <string name="voices_failure_storage">There is not enough free space on the phone for this voice.</string>
     <string name="voices_retry">Try again</string>
     <string name="voices_retry_voice">Try downloading %1$s again</string>
+    <string name="voices_remove_download">Remove</string>
+    <string name="voices_remove_download_voice">Remove the download of %1$s</string>
     <string name="voices_delete">Delete</string>
     <string name="voices_delete_voice">Delete the voice %1$s</string>
     <string name="voices_delete_title">Delete the voice %1$s?</string>

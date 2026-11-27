@@ -5,6 +5,7 @@ import androidx.work.Constraints
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
@@ -50,7 +51,10 @@ interface VoiceDownloads {
         wifiOnly: Boolean,
     )
 
-    /** Stops the download of [pkg] and deletes what it received; no attempt of it starts afterwards. */
+    /**
+     * Stops the download of [pkg], or forgets one that failed, and deletes what it received; no attempt of it starts
+     * afterwards, and the package no longer appears in [states].
+     */
     suspend fun cancel(pkg: VoicePackage)
 
     /** The downloads WorkManager knows about, by package id. */
@@ -98,9 +102,13 @@ class WorkManagerVoiceDownloads
         }
 
         override suspend fun cancel(pkg: VoicePackage) {
-            // WorkManager cancels in the background: until it has, an attempt of the job can still start and write
-            // to the archive deleted below.
-            workManager.cancelUniqueWork(VoiceDownloadWork.uniqueName(pkg)).await()
+            val name = VoiceDownloadWork.uniqueName(pkg)
+            // A job that failed stays failed when it is cancelled, and so would its failure on the voice's card: the
+            // job is first replaced by a placeholder, which deletes it, and the placeholder is cancelled. WorkManager
+            // does both in the background: until it has, an attempt of the job can still start and write to the
+            // archive deleted below.
+            workManager.enqueueUniqueWork(name, ExistingWorkPolicy.REPLACE, VoiceDownloadWork.placeholder()).await()
+            workManager.cancelUniqueWork(name).await()
             downloader.discard(pkg)
         }
 
@@ -131,7 +139,18 @@ internal object VoiceDownloadWork {
     private const val MAX_PERCENT = 100
     private const val FULL = 100f
 
+    /** Longer than a placeholder ever waits: it is cancelled as soon as it has taken a job's place. */
+    private val PLACEHOLDER_DELAY: Duration = Duration.ofDays(365)
+
     fun uniqueName(pkg: VoicePackage) = "voice-download-${pkg.id}"
+
+    /**
+     * A job that takes the place of a download job to remove it, a finished one included, and is then cancelled. It
+     * has none of the download tags, so it never shows as a download, would not start for a year, and names no
+     * package, so it would do nothing if it did.
+     */
+    fun placeholder(): OneTimeWorkRequest =
+        OneTimeWorkRequestBuilder<VoiceDownloadWorker>().setInitialDelay(PLACEHOLDER_DELAY).build()
 
     fun packageTag(pkg: VoicePackage) = PACKAGE_TAG_PREFIX + pkg.id
 

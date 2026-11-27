@@ -53,18 +53,20 @@ class VoiceDownloadsTest {
 
     @Before
     fun setUp() {
+        store = VoicePackageStore(File(folder.root, "voices"), Dispatchers.Unconfined)
+        downloader =
+            VoicePackageDownloader(VoiceModelHttp(transport, Dispatchers.Unconfined), store, Dispatchers.Unconfined)
         WorkManagerTestInitHelper.initializeTestWorkManager(
             context,
             Configuration
                 .Builder()
                 .setExecutor(SynchronousExecutor())
                 .setTaskExecutor(tasks)
+                .setWorkerCoroutineContext(Dispatchers.Unconfined)
+                .setWorkerFactory(workers)
                 .build(),
         )
         workManager = WorkManager.getInstance(context)
-        store = VoicePackageStore(File(folder.root, "voices"), Dispatchers.Unconfined)
-        downloader =
-            VoicePackageDownloader(VoiceModelHttp(transport, Dispatchers.Unconfined), store, Dispatchers.Unconfined)
     }
 
     @After
@@ -121,6 +123,26 @@ class VoiceDownloadsTest {
 
         assertThat(job().state).isEqualTo(WorkInfo.State.CANCELLED)
         assertThat(store.partialFile(pkg).exists()).isFalse()
+    }
+
+    @Test
+    fun `removing a download that failed forgets its failure and deletes what it received`() {
+        val downloads = WorkManagerVoiceDownloads(workManager, downloader)
+        transport.answer(pkg.url) { FakeTransport.status(404) }
+        runBlocking { downloads.download(pkg, wifiOnly = false) }
+        WorkManagerTestInitHelper.getTestDriver(context)!!.setAllConstraintsMet(job().id)
+        val failed = VoiceDownloadState.Failed(VoiceDownloadFailure.UNAVAILABLE)
+        assertThat(runBlocking { downloads.states.first { it.isNotEmpty() } }).containsExactly(pkg.id, failed)
+        store.partialFile(pkg).apply { parentFile?.mkdirs() }.writeBytes(ByteArray(100))
+        store.stagingDirectory(pkg).mkdirs()
+
+        runBlocking { downloads.cancel(pkg) }
+
+        assertThat(runBlocking { downloads.states.first() }).isEmpty()
+        assertThat(store.partialFile(pkg).exists()).isFalse()
+        assertThat(store.stagingDirectory(pkg).exists()).isFalse()
+        runBlocking { downloads.download(pkg, wifiOnly = true) }
+        assertThat(runBlocking { downloads.states.first() }).containsExactly(pkg.id, VoiceDownloadState.Waiting(true))
     }
 
     @Test
@@ -208,20 +230,23 @@ class VoiceDownloadsTest {
             TestListenableWorkerBuilder<VoiceDownloadWorker>(context)
                 .setInputData(input)
                 .setRunAttemptCount(attempt)
-                .setWorkerFactory(
-                    object : WorkerFactory() {
-                        override fun createWorker(
-                            appContext: Context,
-                            workerClassName: String,
-                            workerParameters: WorkerParameters,
-                        ) = VoiceDownloadWorker(appContext, workerParameters, downloader)
-                    },
-                ).setProgressUpdater { _, _, data ->
+                .setWorkerFactory(workers)
+                .setProgressUpdater { _, _, data ->
                     published += data
                     Futures.immediateVoidFuture()
                 }.build()
         return runBlocking { worker.doWork() }
     }
+
+    /** Download jobs over this test's downloader. */
+    private val workers =
+        object : WorkerFactory() {
+            override fun createWorker(
+                appContext: Context,
+                workerClassName: String,
+                workerParameters: WorkerParameters,
+            ) = VoiceDownloadWorker(appContext, workerParameters, downloader)
+        }
 
     /** WorkManager's background tasks: run at once, or held from [hold] until [release], as a busy phone would. */
     private class HeldTasks : Executor {

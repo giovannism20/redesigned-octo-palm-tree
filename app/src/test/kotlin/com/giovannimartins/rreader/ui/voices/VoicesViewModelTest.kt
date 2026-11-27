@@ -142,6 +142,19 @@ class VoicesViewModelTest {
     }
 
     @Test
+    fun `removing a download that failed offers the voice for download again`() {
+        val viewModel = viewModel()
+        downloads.states.value = mapOf("cadu" to VoiceDownloadState.Failed(VoiceDownloadFailure.NETWORK))
+        state(viewModel) { it.neural.any { card -> card.status is NeuralVoiceStatus.Failed } }
+
+        viewModel.cancelDownload(cadu)
+
+        val state = state(viewModel) { it.neural.none { card -> card.status is NeuralVoiceStatus.Failed } }
+        assertThat(state.neural.first { it.voice == cadu }.status).isEqualTo(NeuralVoiceStatus.NotDownloaded)
+        assertThat(downloads.cancelled).containsExactly("cadu")
+    }
+
+    @Test
     fun `choosing an installed voice makes it the default and tells the player`() {
         install(NeuralVoices.CADU)
         val viewModel = viewModel()

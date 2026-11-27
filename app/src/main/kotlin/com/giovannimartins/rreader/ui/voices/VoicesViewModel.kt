@@ -147,6 +147,10 @@ class VoicesViewModel
             }
         }
 
+        /**
+         * Stops the download of [voice], or removes one that failed, and deletes what it received; the voice can be
+         * downloaded again.
+         */
         fun cancelDownload(voice: NeuralVoice) {
             viewModelScope.launch { library.cancel(voice.pkg) }
         }

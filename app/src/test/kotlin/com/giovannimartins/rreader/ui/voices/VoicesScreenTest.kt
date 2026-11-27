@@ -16,6 +16,7 @@ import com.giovannimartins.rreader.playback.voice
 import com.giovannimartins.rreader.tts.Voice
 import com.giovannimartins.rreader.tts.neural.NeuralVoice
 import com.giovannimartins.rreader.tts.neural.NeuralVoices
+import com.giovannimartins.rreader.tts.neural.VoiceDownloadFailure
 import com.giovannimartins.rreader.ui.assertAllTextReadableOn
 import com.giovannimartins.rreader.ui.components.ScreenSurface
 import com.giovannimartins.rreader.ui.theme.Ink
@@ -89,6 +90,19 @@ class VoicesScreenTest {
     }
 
     @Test
+    fun `a download that failed says why and can be tried again or removed`() {
+        show(state(status = mapOf("dora" to NeuralVoiceStatus.Failed(VoiceDownloadFailure.NETWORK))))
+
+        compose.onNodeWithText("The download stopped because the internet connection failed.").assertExists()
+        compose.onNodeWithContentDescription("Try downloading Dora again").assertHeightIsAtLeast(56.dp)
+        compose.onNodeWithContentDescription("Remove the download of Dora").assertHeightIsAtLeast(56.dp)
+        compose.onNodeWithText("Remove").assertExists()
+        compose.onNodeWithContentDescription("Try downloading Dora again").performClick()
+        compose.onNodeWithContentDescription("Remove the download of Dora").performClick()
+        assertThat(actions).containsExactly("download dora", "cancel dora").inOrder()
+    }
+
+    @Test
     fun `the phone's other voices fold away and have names of their own`() {
         val voices = listOf(phoneVoice("pt-br-x-afs-local"), phoneVoice("pt-br-x-pte-local"))
         show(state().copy(otherPhoneVoices = PhoneVoiceLabels.of(voices).map { PhoneVoiceCard(it, inUse = false) }))
@@ -114,8 +128,12 @@ class VoicesScreenTest {
 
     @Test
     fun `all text is readable on the dark background`() {
-        val downloading = mapOf("faber" to NeuralVoiceStatus.Downloading(0.2f))
-        show(state(ready = setOf("cadu"), inUse = "cadu", status = downloading))
+        val status =
+            mapOf(
+                "faber" to NeuralVoiceStatus.Downloading(0.2f),
+                "dora" to NeuralVoiceStatus.Failed(VoiceDownloadFailure.STORAGE),
+            )
+        show(state(ready = setOf("cadu"), inUse = "cadu", status = status))
 
         compose.assertAllTextReadableOn(Ink, containers = mapOf(OnSeal to Seal))
     }
