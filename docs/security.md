@@ -31,7 +31,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | # | Boundary | From → To | Controls |
 |---|----------|-----------|----------|
 | B1 | File intake | Any file chosen/shared by the user → importer | Signature-based type detection, size limits, parsing limits, typed failures |
-| B2 | Inter-app intents | Other apps → exported activity / media service | Minimal exported components, accept only `content://` URIs with read grants, validate MIME and content |
+| B2 | Inter-app intents and media controllers | Other apps → exported activity / media session service | Minimal exported components, accept only `content://` URIs with read grants, validate MIME and content; the media session accepts only trusted controllers and book-id requests |
 | B3 | Network downloads | Internet → catalogue/model downloader | HTTPS only (no cleartext), host allowlist, size limits, SHA-256 pinning for models |
 | B4 | TTS engine | App → third-party TTS engine process | Prefer offline voices; flag voices that need the network (their text leaves the device) |
 | B5 | Build supply chain | Dependencies, Gradle wrapper, Actions → build | Version catalog, Dependabot, wrapper validation, Actions pinned by SHA, CodeQL |
@@ -48,6 +48,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | Tampering | Intents (B2) | Medium | Another app sends a crafted `file://` URI or huge stream | Accept `content://` only, copy with size limit, re-detect type |
 | Spoofing / Tampering | Downloads (B3) | Medium | Network attacker swaps a voice model or book | HTTPS only; pinned SHA-256 for models; validate books like any import |
 | Info disclosure | TTS engine (B4) | Low/Medium | Network-backed voices send book text to a vendor | Default to offline voices; label network voices in the UI |
+| Info disclosure / Tampering | Media session (B2) | Low | Another app connects to the exported playback service to see what is being listened to, or to control playback | Untrusted controllers are rejected; media ids must be book UUIDs (optionally with a chapter); the notification's content intent is explicit and immutable; no media button receiver, so playback never starts from the background |
 | Info disclosure | Logs | Low | Book text or file names in logs | No content/file names in release logs |
 | Info disclosure | Backups | Low | Cloud backup copies reading history | Cloud backup disabled; device-to-device transfer allowed |
 | Tampering | Supply chain (B5) | Medium | Compromised dependency, wrapper or action | Wrapper validation, pinned Actions, Dependabot, CodeQL, minimal permissions |
@@ -72,7 +73,12 @@ Each requirement is testable; reference its ID in tests and reviews.
   in code before use.
 - **SR-7** Exported components are limited to the launcher/intake activity and
   the media session service; intake accepts only `content://` URIs. (`BookIntake`; content is re-detected by signature and copied with a
-  300 MB limit.)
+  300 MB limit. `PlaybackService` must be exported for the system to bind
+  it; `ReaderSessionCallback` accepts only trusted controllers — this app,
+  the system and apps the user allowed to control media — and only book ids.
+  Media3 also merges its `BluetoothValidationActivity`, exported but guarded
+  by the `BLUETOOTH_PRIVILEGED` permission that only the system Bluetooth app
+  holds.)
 - **SR-8** Release builds log no book content, file names or personal data. (`Diagnostics` logs only
   exception types.)
 - **SR-9** Cloud backup is disabled; device-to-device transfer is allowed.
@@ -80,6 +86,22 @@ Each requirement is testable; reference its ID in tests and reviews.
 - **SR-11** Dependencies are pinned in the version catalog and monitored by
   Dependabot; CI runs CodeQL and validates the Gradle wrapper.
 - **SR-12** No `WebView`, dynamic code loading or reflection-based plugins.
+
+## Permissions
+
+| Permission | Why |
+|------------|-----|
+| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | Listening with the screen locked runs in a `mediaPlayback` foreground service ([ADR 0014](decisions/0014-target-android-17.md)). |
+| `WAKE_LOCK` | The player keeps the CPU awake while reading with the screen off. |
+| `ACCESS_NETWORK_STATE` | Merged from ExoPlayer; unused, and the app has no `INTERNET` permission yet. |
+| `RECEIVE_BOOT_COMPLETED` | Merged from WorkManager, which reschedules pending import jobs after a restart. |
+| `…DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` | Signature permission defined by AndroidX Core to keep runtime receivers private. |
+
+No runtime permission is requested: the playback notification is a media
+notification, exempt from the notification permission. Other exported
+components merged from libraries require system-only permissions
+(`BIND_JOB_SERVICE`, `DUMP`), and the tooling activities exist only in debug
+builds.
 
 ## Secret protection layers
 

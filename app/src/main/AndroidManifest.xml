@@ -2,6 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Background listening runs in a mediaPlayback foreground service (ADR 0003, ADR 0014). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- Keeps the CPU awake while reading with the screen off (ExoPlayer wake mode). -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
     <!--
         Cloud backup is excluded entirely (data_extraction_rules / backup_rules);
         device-to-device transfer stays allowed. See ADR 0012.
@@ -42,6 +48,20 @@
                 <data android:mimeType="application/pdf" />
             </intent-filter>
         </activity>
+
+        <!--
+            Media3 requires the session service to be exported so the system (notification, lock screen,
+            Bluetooth) can bind to it; the session only accepts trusted controllers (SR-7).
+        -->
+        <service
+            android:name=".playback.PlaybackService"
+            android:exported="true"
+            android:foregroundServiceType="mediaPlayback"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaSessionService" />
+            </intent-filter>
+        </service>
 
         <!-- WorkManager is initialised on demand with Hilt's worker factory (RReaderApplication). -->
         <provider

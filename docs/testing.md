@@ -15,6 +15,13 @@
 Frameworks: `:textkit` uses JUnit Jupiter 6 with Truth; `:app` uses JUnit 4
 (the Android default) with Truth, AndroidX Test and the Compose test APIs.
 
+The facade player (`ReaderPlayer`) is tested under Robolectric with a real
+internal ExoPlayer on Media3's `FakeClock` (`media3-test-utils-robolectric`,
+`TestPlayerRunHelper`) and a fake speech engine that writes small silent WAV
+files, so rendering, playlists, seeks, focus changes and the end of the book
+run for real in milliseconds. Audio focus changes are delivered through
+Robolectric's `ShadowAudioManager`.
+
 `./gradlew check` is the local gate and runs unit tests, lint, detekt and
 formatting checks. CI runs the same plus the secret scan, CodeQL and the
 documentation link check.

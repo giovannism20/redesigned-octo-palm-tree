@@ -44,4 +44,9 @@ class MainActivity : ComponentActivity() {
             }
         if (uri != null) importViewModel.import(uri)
     }
+
+    companion object {
+        /** Sent by the playback notification's content intent (explicit, so no intent filter is needed). */
+        const val ACTION_OPEN_PLAYER = "com.giovannimartins.rreader.action.OPEN_PLAYER"
+    }
 }

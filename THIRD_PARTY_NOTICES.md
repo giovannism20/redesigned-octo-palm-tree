@@ -54,7 +54,7 @@ Libraries used by the app are declared in `gradle/libs.versions.toml`.
 | Kotlin standard library and kotlinx.coroutines | Apache License 2.0 |
 | Dagger / Hilt | Apache License 2.0 |
 | Coil | Apache License 2.0 |
-| Material Icons (vector paths in `app/src/main/res/drawable/ic_*.xml`) | Apache License 2.0 |
+| Material Icons (vector paths in `app/src/main/res/drawable/ic_*.xml`: library, add book, voices, notification headset) | Apache License 2.0 |
 | jsoup (EPUB XML/XHTML parsing in `:textkit`) | MIT License (full text below) |
 
 ### jsoup

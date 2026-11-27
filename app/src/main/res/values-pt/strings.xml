@@ -49,6 +49,11 @@
     <string name="voices_install">Instalar vozes</string>
     <string name="voices_more">Mais vozes nas configurações do celular</string>
 
+    <!-- Player -->
+    <string name="player_back_15">Voltar 15 segundos</string>
+    <string name="player_forward_15">Avançar 15 segundos</string>
+    <string name="player_chapter_number">Capítulo %1$d</string>
+
     <!-- Common -->
     <string name="action_cancel">Cancelar</string>
 </resources>

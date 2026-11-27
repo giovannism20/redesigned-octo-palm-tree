@@ -41,7 +41,7 @@ See [ADR 0003](decisions/0003-sentence-audio-rendering-with-media3.md).
 | Module | Kind | Responsibility | Status |
 |--------|------|----------------|--------|
 | `:textkit` | Pure Kotlin/JVM library | Book model, EPUB parsing, PDF/OCR text cleanup, chapter detection, sentence segmentation, speech normalization, progress and time estimates | implemented for Phase 1 (format detection, model, EPUB, text, estimates); PDF layout in Phase 2 |
-| `:app` | Android application | UI, import, PDF/OCR adapters, TTS engines, rendering, playback service, persistence | in progress (app shell) |
+| `:app` | Android application | UI, import, PDF/OCR adapters, TTS engines, rendering, playback service, persistence | in progress (shell, library, import, voices, playback) |
 
 `:app` depends on `:textkit`; `:textkit` never depends on Android. Anything
 that can be pure Kotlin goes to `:textkit` so it is fast to test
@@ -70,7 +70,7 @@ Base package: `com.giovannimartins.rreader`.
 | `importer` | `BookIntake` (picker/share/view URIs → signature check, size-limited copy, SHA-256 dedupe, book row), `ImportBookWorker` + `BookImportProcessor` (parse and persist), `BookParser` per format (`EpubBookParser`; PDF in Phase 2) | implemented |
 | `pdf` | PdfBox text extraction, `PdfRenderer` page rendering, ML Kit OCR → layout lines | planned |
 | `tts` | `SpeechEngine` interface and `SystemTtsEngine` (multi-engine Android TTS → WAV), `AudioCache`, `WavInfo`, `SegmentRenderer` (segment → cached WAV, 300 MB LRU trim), `SpeakingRateTracker` (per-voice rate learned from rendered audio); later `SherpaOnnxEngine` | implemented (neural voices in Phase 5) |
-| `playback` | `PlaybackService` (`MediaSessionService`), facade player, progress saving, sleep timer | planned |
+| `playback` | `PlaybackService` (`MediaSessionService`, trusted controllers only), `ReaderPlayer` facade (chapter playlist over an internal ExoPlayer), `SegmentFeeder` (render-ahead window), `ChapterPlans`, `SeekTargets`, `PositionSaver`, `PlaybackRepository`; later the sleep timer | implemented (sleep timer in Phase 3) |
 | `catalog` | Public-domain catalogue client and downloads | planned |
 | `ui` | Compose screens, ViewModels, navigation, theme, design system | in progress (shell, library, add book, voices) |
 | `di` | Hilt modules (dispatchers, application scope, database, WorkManager) | implemented |
@@ -138,7 +138,7 @@ sequenceDiagram
 | Original file | `filesDir/books/{bookId}/source.{pdf,epub}` | Private app storage |
 | Normalized chapters | `filesDir/books/{bookId}/chapters/{index}.txt` | UTF-8 text, immutable after import |
 | Covers | `filesDir/books/{bookId}/cover` | Raw image bytes as extracted or rendered |
-| Rendered audio | `cacheDir/tts/...` | Size-capped LRU; safe to delete |
+| Rendered audio | `cacheDir/tts/{bookId}/{voiceHash}/{chapter}-{start}-{end}.wav` | Trimmed to 300 MB, least recently used first, keeping the render-ahead window; safe to delete |
 
 ## Invariants
 
@@ -156,10 +156,13 @@ sequenceDiagram
 
 - Coroutines with injected dispatchers: `IO` for files and database,
   `Default` for parsing and segmentation, `Main` for UI.
-- Imports, OCR and audio pre-rendering run in WorkManager so they survive
-  process death.
+- Imports, OCR and long pre-rendering (for example of slow neural voices)
+  run in WorkManager so they survive process death. The render-ahead window
+  of the playing book runs inside the playback service instead.
 - The playback service runs in the main process as a foreground service of
-  type `mediaPlayback`.
+  type `mediaPlayback`. The facade and the internal ExoPlayer live on the
+  main looper; chapter text is read on `IO`, planned on `Default`, and
+  rendering results are applied back on the main looper.
 
 ## Security
 

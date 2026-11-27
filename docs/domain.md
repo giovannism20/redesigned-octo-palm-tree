@@ -26,7 +26,10 @@ Names used in code and docs. Add a term here when you introduce it.
 | **Voice** | A selectable speaker, identified by engine + voice id + locale. |
 | **Speech engine** | Implementation of `SpeechEngine` that renders a segment to audio: `SystemTtsEngine` (Android TTS) or `SherpaOnnxEngine` (on-device neural models). |
 | **Segment renderer** | `SegmentRenderer`: renders one segment's speech to a WAV file in the audio cache (reusing a cached file when it is valid), feeds the speaking rate and trims the cache. |
-| **Facade player** | Media3 player wrapper that presents one item per chapter (continuous position/duration) to the session while the real player plays segments. |
+| **Render-ahead window** | The rendered audio queued after the playing segment: at least two minutes and four segments, continuing into the next chapters. Kept full by the `SegmentFeeder`. |
+| **Segment span** | A segment's characters plus the whitespace up to the next segment (or the end of the chapter). The position inside a playing segment advances through its span, so it reaches the next segment's start without gaps. |
+| **Media time** | The facade player's timeline in a chapter: characters ÷ speaking rate at 1.0×. Positions, durations and ±15 s are expressed in it; playback speed changes how fast it passes, not its length. |
+| **Facade player** | `ReaderPlayer`: the Media3 player the session sees. It presents one item per chapter with a continuous position and duration in media time while an internal ExoPlayer plays rendered segments, and maps seeks, ±15 s and headset next/previous onto reading positions. |
 | **Sleep timer** | Stops playback after a duration or at the end of the chapter, fading out first. |
 | **Catalogue entry** | A public-domain book offered for download in the Explore tab. |
 | **OCR page** | A PDF page without a usable text layer whose text is recognized on-device. |
