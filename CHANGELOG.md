@@ -14,7 +14,9 @@ All notable user-visible changes are documented here. The format follows
   at once, before any download. "Baixar" shows the size (132 MB for Dora,
   Alex and Santa together, 67 MB for each of the others), waits for Wi-Fi
   and asks before using mobile data, shows its progress and can be
-  cancelled. A download that failed says why and offers "Tentar de novo"
+  cancelled. A download interrupted again and again (Wi-Fi changes, the phone
+  pausing background work) goes on as long as it advances. A download that
+  failed says why and offers "Tentar de novo"
   and "Remover", which deletes what it had received. A downloaded voice works
   without internet and can be deleted to free space.
 - The phone's own voice is one card, "Voz do celular", and its other voices

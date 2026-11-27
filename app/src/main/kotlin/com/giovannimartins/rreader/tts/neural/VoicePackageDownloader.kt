@@ -49,7 +49,11 @@ sealed interface VoiceDownloadProgress {
 sealed interface VoiceDownloadOutcome {
     data object Installed : VoiceDownloadOutcome
 
-    /** Not installed; a [retryable] failure may work on a later attempt, which resumes the download. */
+    /**
+     * Not installed; a [retryable] failure may work on a later attempt, which resumes the download. A failure that may
+     * pass is no longer retryable once [VoicePackageDownloader.MAX_STALLED_ATTEMPTS] attempts in a row received nothing
+     * new of the archive.
+     */
     data class Failed(
         val reason: VoiceDownloadFailure,
         val retryable: Boolean,
@@ -67,10 +71,12 @@ sealed interface VoiceDownloadOutcome {
  * 4. Unpacks the kept files into a staging folder ([VoicePackageArchive]) and moves it into place, then deletes the
  *    archive.
  *
- * Network failures keep the partial file so the next attempt resumes. A cancelled download keeps it too; [discard]
- * removes it. A package found installed has what its downloads left deleted, which a process that died just after
- * putting it in place leaves. One download at a time per package: a second request waits for the first to finish
- * or stop.
+ * Network failures keep the partial file so the next attempt resumes, until [MAX_STALLED_ATTEMPTS] attempts in a row
+ * have received nothing new of it; an attempt that receives part of the archive starts the count again, so a long
+ * download that keeps being interrupted is never given up while it advances. A cancelled download keeps the partial
+ * file too; [discard] removes it. A package found installed has what its downloads left deleted, which a process that
+ * died just after putting it in place leaves. One download at a time per package: a second request waits for the
+ * first to finish or stop.
  */
 @Singleton
 class VoicePackageDownloader
@@ -82,14 +88,19 @@ class VoicePackageDownloader
     ) {
         private val locks = ConcurrentHashMap<String, Mutex>()
 
-        /** Installs [pkg], telling [onProgress] how it goes. */
+        /**
+         * Installs [pkg], telling [onProgress] how it goes. [firstAttempt] is false for the later attempts of the same
+         * download, which go on counting the attempts in a row that received nothing new.
+         */
         suspend fun download(
             pkg: VoicePackage,
+            firstAttempt: Boolean = true,
             onProgress: (VoiceDownloadProgress) -> Unit = {},
         ): VoiceDownloadOutcome =
             lockOf(pkg).withLock {
                 withContext(io) {
                     try {
+                        if (firstAttempt) store.recordStalledAttempts(pkg, 0)
                         if (store.isComplete(pkg)) {
                             store.discardDownload(pkg)
                             store.rescan()
@@ -132,13 +143,14 @@ class VoicePackageDownloader
             store.discardStaleDownloads(pkg)
             val partial = store.partialFile(pkg)
             if (partial.length() > pkg.archiveBytes) partial.delete()
-            val missing = pkg.archiveBytes - partial.length()
+            val before = partial.length()
+            val missing = pkg.archiveBytes - before
             if (store.usableBytes() < missing + pkg.installedBytes + SPACE_MARGIN) {
                 return VoiceDownloadOutcome.Failed(VoiceDownloadFailure.STORAGE, retryable = false)
             }
             val fetched = if (missing > 0) fetch(pkg, partial, onProgress) else FetchResult.Received(pkg.archiveBytes)
             return when (fetched) {
-                is FetchResult.Failed -> failed(pkg, fetched.failure)
+                is FetchResult.Failed -> failed(pkg, fetched.failure, advanced = partial.length() > before)
                 is FetchResult.Received -> install(pkg, partial, onProgress)
             }
         }
@@ -191,21 +203,23 @@ class VoicePackageDownloader
             return VoiceDownloadOutcome.Installed
         }
 
+        /** The outcome of a fetch that ended with [failure], after it [advanced] the partial archive or not. */
         private fun failed(
             pkg: VoicePackage,
             failure: FetchFailure,
+            advanced: Boolean,
         ): VoiceDownloadOutcome.Failed {
-            // Failures that will not pass leave nothing behind; the others keep the partial file to resume.
-            if (!failure.retryable) store.discardDownload(pkg)
             val reason =
-                if (failure ==
-                    FetchFailure.NETWORK
-                ) {
-                    VoiceDownloadFailure.NETWORK
-                } else {
-                    VoiceDownloadFailure.UNAVAILABLE
-                }
-            return VoiceDownloadOutcome.Failed(reason, failure.retryable)
+                if (failure == FetchFailure.NETWORK) VoiceDownloadFailure.NETWORK else VoiceDownloadFailure.UNAVAILABLE
+            if (!failure.retryable) {
+                // Failures that will not pass leave nothing behind.
+                store.discardDownload(pkg)
+                return VoiceDownloadOutcome.Failed(reason, retryable = false)
+            }
+            // The partial file is kept for the next attempt to resume, while attempts keep receiving something.
+            val stalled = if (advanced) 0 else store.stalledAttempts(pkg) + 1
+            store.recordStalledAttempts(pkg, stalled)
+            return VoiceDownloadOutcome.Failed(reason, retryable = stalled < MAX_STALLED_ATTEMPTS)
         }
 
         private suspend fun sha256(file: File): String {
@@ -227,6 +241,12 @@ class VoicePackageDownloader
         companion object {
             /** Free space kept beyond what a package needs, so the phone is not filled to the last byte. */
             const val SPACE_MARGIN: Long = 50L * 1024 * 1024
+
+            /**
+             * Attempts in a row that may end without receiving anything new of an archive before its download gives
+             * up. Runs the system stops (the Wi-Fi was lost, background work's time limit) are not attempts that ended.
+             */
+            const val MAX_STALLED_ATTEMPTS: Int = 6
 
             private const val BUFFER_SIZE = 64 * 1024
             private const val PERCENT = 100L

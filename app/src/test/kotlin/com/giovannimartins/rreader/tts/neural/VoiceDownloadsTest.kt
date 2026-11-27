@@ -2,6 +2,7 @@ package com.giovannimartins.rreader.tts.neural
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import androidx.work.BackoffPolicy
 import androidx.work.Configuration
 import androidx.work.Data
 import androidx.work.ListenableWorker
@@ -32,6 +33,8 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.File
+import java.net.SocketTimeoutException
+import java.time.Duration
 import java.util.Collections
 import java.util.UUID
 import java.util.concurrent.Executor
@@ -201,14 +204,48 @@ class VoiceDownloadsTest {
     }
 
     @Test
-    fun `the job retries failures that may pass, until its last attempt`() {
+    fun `the job gives up after six attempts in a row that received nothing, however many runs came before`() {
         transport.answer(pkg.url) { redirect(ASSET) }
 
-        assertThat(run(attempt = 0)).isEqualTo(ListenableWorker.Result.retry())
-        val last = run(attempt = VoiceDownloadWorker.MAX_ATTEMPTS - 1)
+        // Runs the system stopped (the Wi-Fi was lost, the time limit) counted as attempts too.
+        val results = (1..VoicePackageDownloader.MAX_STALLED_ATTEMPTS).map { run(attempt = 20 + it) }
 
-        assertThat(state(WorkInfo.State.FAILED, output = last.outputData))
+        assertThat(results.dropLast(1).toSet()).containsExactly(ListenableWorker.Result.retry())
+        assertThat(state(WorkInfo.State.FAILED, output = results.last().outputData))
             .isEqualTo(VoiceDownloadState.Failed(VoiceDownloadFailure.NETWORK))
+    }
+
+    @Test
+    fun `an attempt that receives part of the archive starts the count of attempts again`() {
+        transport.answer(pkg.url) { redirect(ASSET) }
+        val stalls = VoicePackageDownloader.MAX_STALLED_ATTEMPTS - 1
+        val retry = ListenableWorker.Result.retry()
+        assertThat((1..stalls).map { run(attempt = it) }.toSet()).containsExactly(retry)
+
+        transport.answer(ASSET) { ok(breakingBody(1_000), TYPE, contentLength = pkg.archiveBytes) }
+        assertThat(run(attempt = stalls + 1)).isEqualTo(retry)
+        transport.answer(ASSET) { throw SocketTimeoutException("No answer") }
+
+        assertThat((1..stalls).map { run(attempt = stalls + 1 + it) }.toSet()).containsExactly(retry)
+        assertThat(store.partialFile(pkg).length()).isEqualTo(1_000)
+        assertThat(run(attempt = 2 * stalls + 2)).isInstanceOf(ListenableWorker.Result.Failure::class.java)
+    }
+
+    @Test
+    fun `a download asked for again forgets the attempts of the one that gave up`() {
+        transport.answer(pkg.url) { redirect(ASSET) }
+        (1..VoicePackageDownloader.MAX_STALLED_ATTEMPTS).forEach { run(attempt = it) }
+
+        assertThat(run(attempt = 0)).isEqualTo(ListenableWorker.Result.retry())
+        assertThat(store.stalledAttempts(pkg)).isEqualTo(1)
+    }
+
+    @Test
+    fun `waits longer by the same step before each new attempt`() {
+        val request = VoiceDownloadWork.request(pkg, wifiOnly = true)
+
+        assertThat(request.workSpec.backoffPolicy).isEqualTo(BackoffPolicy.LINEAR)
+        assertThat(request.workSpec.backoffDelayDuration).isEqualTo(Duration.ofSeconds(30).toMillis())
     }
 
     @Test

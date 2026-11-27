@@ -70,7 +70,7 @@ interface VoiceDownloads {
 
 /**
  * [VoiceDownloads] on WorkManager: one unique [VoiceDownloadWorker] job per package that needs a connection of the
- * chosen kind and enough storage, retried with an exponential backoff from [RETRY_DELAY] (each attempt resumes the
+ * chosen kind and enough storage, retried with a linear backoff of [RETRY_DELAY] per attempt (each attempt resumes the
  * download where the previous one stopped).
  */
 class WorkManagerVoiceDownloads
@@ -89,23 +89,8 @@ class WorkManagerVoiceDownloads
                     it.state ==
                         WorkInfo.State.RUNNING
                 }
-            val network = if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED
-            val request =
-                OneTimeWorkRequestBuilder<VoiceDownloadWorker>()
-                    .setInputData(VoiceDownloadWork.input(pkg))
-                    .setConstraints(
-                        Constraints
-                            .Builder()
-                            .setRequiredNetworkType(network)
-                            .setRequiresStorageNotLow(true)
-                            .build(),
-                    ).setBackoffCriteria(BackoffPolicy.EXPONENTIAL, RETRY_DELAY)
-                    .addTag(VoiceDownloadWork.TAG)
-                    .addTag(VoiceDownloadWork.packageTag(pkg))
-                    .apply { if (wifiOnly) addTag(VoiceDownloadWork.WIFI_ONLY_TAG) }
-                    .build()
             val policy = if (running) ExistingWorkPolicy.KEEP else ExistingWorkPolicy.REPLACE
-            workManager.enqueueUniqueWork(name, policy, request)
+            workManager.enqueueUniqueWork(name, policy, VoiceDownloadWork.request(pkg, wifiOnly))
         }
 
         override suspend fun cancel(pkg: VoicePackage) {
@@ -132,7 +117,11 @@ class WorkManagerVoiceDownloads
                 .distinctUntilChanged()
 
         companion object {
-            /** The wait before the first retry; it doubles after each failed attempt. */
+            /**
+             * The wait before the first retry, and how much longer each next one waits. Linear, not exponential: the
+             * attempt count the waits grow with also counts the runs the system stopped, and a long download that
+             * keeps making progress may have many, so doubling waits would soon reach hours.
+             */
             val RETRY_DELAY: Duration = Duration.ofSeconds(30)
         }
     }
@@ -156,6 +145,31 @@ internal object VoiceDownloadWork {
     private val PLACEHOLDER_DELAY: Duration = Duration.ofDays(365)
 
     fun uniqueName(pkg: VoicePackage) = "voice-download-${pkg.id}"
+
+    /**
+     * The download job of [pkg]: it waits for Wi-Fi (or another unmetered network) when [wifiOnly], else for any
+     * connection, and for storage that is not low, and retries with a linear backoff of
+     * [WorkManagerVoiceDownloads.RETRY_DELAY] per attempt.
+     */
+    fun request(
+        pkg: VoicePackage,
+        wifiOnly: Boolean,
+    ): OneTimeWorkRequest {
+        val network = if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED
+        return OneTimeWorkRequestBuilder<VoiceDownloadWorker>()
+            .setInputData(input(pkg))
+            .setConstraints(
+                Constraints
+                    .Builder()
+                    .setRequiredNetworkType(network)
+                    .setRequiresStorageNotLow(true)
+                    .build(),
+            ).setBackoffCriteria(BackoffPolicy.LINEAR, WorkManagerVoiceDownloads.RETRY_DELAY)
+            .addTag(TAG)
+            .addTag(packageTag(pkg))
+            .apply { if (wifiOnly) addTag(WIFI_ONLY_TAG) }
+            .build()
+    }
 
     /**
      * A job that takes the place of a download job to remove it, a finished one included, and is then cancelled. It

@@ -19,9 +19,10 @@ import javax.inject.Singleton
  * Where voice packages live on the phone: `filesDir/voices/{package id}/` holds the files a package keeps, under the
  * names the catalogue gives them ([PackageFile.name]), never names read from an archive (SR-1). A download in
  * progress is `voices/.downloads/{id}-{pin}.part`, `{pin}` being the first [PIN_DIGITS] hex digits of the archive's
- * pinned SHA-256, so the bytes of an archive pinned before are never resumed into another; an installation being
- * unpacked is `voices/.staging/{id}/`, so a package folder only ever appears complete. A package is installed when
- * every kept file is there with its exact size.
+ * pinned SHA-256, so the bytes of an archive pinned before are never resumed into another; next to it,
+ * `{id}-{pin}.stalls` counts the attempts in a row that received nothing new. An installation being unpacked is
+ * `voices/.staging/{id}/`, so a package folder only ever appears complete. A package is installed when every kept file
+ * is there with its exact size.
  */
 @Singleton
 class VoicePackageStore internal constructor(
@@ -80,6 +81,29 @@ class VoicePackageStore internal constructor(
     /** The folder [pkg] is unpacked into before it becomes its [directory]. */
     fun stagingDirectory(pkg: VoicePackage): File = File(stagingFolder, pkg.id)
 
+    /** How many attempts in a row received nothing new of [pkg]'s archive. Blocking. */
+    fun stalledAttempts(pkg: VoicePackage): Int =
+        stallsFile(pkg)
+            .takeIf(File::isFile)
+            ?.readText()
+            ?.trim()
+            ?.toIntOrNull()
+            ?.coerceAtLeast(0) ?: 0
+
+    /** Remembers that [count] attempts in a row received nothing new of [pkg]'s archive; 0 forgets them. Blocking. */
+    fun recordStalledAttempts(
+        pkg: VoicePackage,
+        count: Int,
+    ) {
+        val file = stallsFile(pkg)
+        if (count > 0) {
+            file.parentFile?.mkdirs()
+            file.writeText(count.toString())
+        } else {
+            file.delete()
+        }
+    }
+
     /** Whether every file [pkg] keeps is installed with its exact size. Blocking. */
     fun isComplete(pkg: VoicePackage): Boolean = pkg.files.all { file(pkg, it.name).length() == it.bytes }
 
@@ -109,8 +133,8 @@ class VoicePackageStore internal constructor(
     }
 
     /**
-     * Removes what downloads of [pkg] left, its partial archive for any pin and its unfinished installation, keeping an
-     * installed copy. Blocking.
+     * Removes what downloads of [pkg] left, its partial archive for any pin, its count of stalled attempts and its
+     * unfinished installation, keeping an installed copy. Blocking.
      */
     fun discardDownload(pkg: VoicePackage) {
         downloadFilesOf(pkg).forEach(File::delete)
@@ -146,12 +170,14 @@ class VoicePackageStore internal constructor(
     /** `{id}-{pin}`: the name of [pkg]'s download files, without their extension. */
     private fun downloadName(pkg: VoicePackage) = "${pkg.id}-${pkg.sha256.take(PIN_DIGITS)}"
 
+    private fun stallsFile(pkg: VoicePackage): File = File(downloadsFolder, "${downloadName(pkg)}.$STALLS")
+
     /** The names of the files a download of [pkg] keeps now. */
-    private fun currentNames(pkg: VoicePackage): Set<String> = setOf(partialFile(pkg).name)
+    private fun currentNames(pkg: VoicePackage): Set<String> = setOf(partialFile(pkg).name, stallsFile(pkg).name)
 
     /** The download files of [pkg] for any pin, and `{id}.part`, the name earlier versions of the app used. */
     private fun downloadFilesOf(pkg: VoicePackage): List<File> {
-        val names = Regex(Regex.escape(pkg.id) + "(-[0-9a-f]{$PIN_DIGITS})?\\.$PART")
+        val names = Regex(Regex.escape(pkg.id) + "(-[0-9a-f]{$PIN_DIGITS})?\\.($PART|$STALLS)")
         return downloadsFolder.listFiles().orEmpty().filter { names.matches(it.name) }
     }
 
@@ -162,5 +188,6 @@ class VoicePackageStore internal constructor(
         private const val DOWNLOADS = ".downloads"
         private const val STAGING = ".staging"
         private const val PART = "part"
+        private const val STALLS = "stalls"
     }
 }

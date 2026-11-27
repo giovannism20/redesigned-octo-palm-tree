@@ -376,9 +376,15 @@ sequenceDiagram
   HTTP range and starting over once when the server will not resume. The
   partial archive is named after the first 16 hex digits of the pinned
   SHA-256, so a pin that changes starts over instead of resuming old bytes
-  into the new archive (those are deleted). A lost
-  connection keeps the partial file and the job tries again with a backoff
-  from 30 seconds, at most six attempts. Cancelling waits until WorkManager
+  into the new archive (those are deleted). A failure that may pass (a lost
+  connection, a busy server) keeps the partial file, and the job tries again,
+  each attempt waiting 30 seconds longer than the one before. It gives up
+  after six attempts in a row that received nothing new (counted in
+  `{package}-{pin}.stalls` next to the partial archive), not after a number
+  of attempts: WorkManager's attempt count also grows each time the system
+  stops the job (the Wi-Fi was lost, background work's ten-minute limit),
+  which a long download meets several times, and doubling waits would soon
+  reach hours. Cancelling waits until WorkManager
   has cancelled the job, so no attempt starts afterwards, then deletes what
   arrived. It also removes a download that failed: WorkManager keeps a failed
   job failed when it is cancelled, so the job is first replaced by an untagged
