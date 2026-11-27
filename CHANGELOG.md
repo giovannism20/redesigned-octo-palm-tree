@@ -137,6 +137,8 @@ All notable user-visible changes are documented here. The format follows
 - Sentences a natural voice prepared before an update that changes how it
   speaks are prepared again, so the improvement (such as Dora, Alex and Santa
   without the whistle) is heard in books already started.
+- With TalkBack, "Outras vozes do celular" says whether the other voices
+  are shown or hidden.
 - Dora, Alex and Santa prepare the next chapters while the phone charges
   only when nobody is listening: the preparation stops as soon as you press
   play, so listening starts as fast as without it, and goes on when you

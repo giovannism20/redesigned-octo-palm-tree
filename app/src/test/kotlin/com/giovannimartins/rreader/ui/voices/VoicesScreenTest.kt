@@ -1,6 +1,10 @@
 package com.giovannimartins.rreader.ui.voices
 
 import android.content.Context
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
@@ -10,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import com.giovannimartins.rreader.playback.voice
@@ -114,6 +119,33 @@ class VoicesScreenTest {
         compose.onNode(hasScrollAction()).performScrollToNode(hasText("Google · Voice 2"))
         compose.onNodeWithText("Google · Voice 1").assertExists()
         compose.onNodeWithText("Google · Voice 2").assertExists()
+    }
+
+    @Test
+    fun `TalkBack hears whether the other phone voices are shown, and can show or hide them`() {
+        show(
+            state().copy(
+                otherPhoneVoices =
+                    PhoneVoiceLabels.of(listOf(phoneVoice("pt-br-x-afs-local"))).map {
+                        PhoneVoiceCard(it, inUse = false)
+                    },
+            ),
+        )
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Other phone voices"))
+        val toggle = compose.onNodeWithText("Other phone voices")
+
+        toggle
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Collapsed"))
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.Expand))
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.Collapse))
+        toggle.performSemanticsAction(SemanticsActions.Expand)
+
+        toggle
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Expanded"))
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.Collapse))
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Google · Voice 1"))
+        compose.onNodeWithText("Other phone voices").performSemanticsAction(SemanticsActions.Collapse)
+        assertThat(compose.onAllNodesWithText("Google · Voice 1").fetchSemanticsNodes()).isEmpty()
     }
 
     @Test

@@ -29,9 +29,9 @@ checked with a recording fake (`ReaderPlayerSessionTest`); the pre-render job
 itself runs with WorkManager's test helpers (`PrerenderTest`: held back while
 listening or while another model is in use, stopped after the segment being
 rendered, the same book and voice keep their job, a job started three times is
-given up), and the renderer's background renders wait for the player's window
-while a voice with a new render version renders its cached segments again
-(`SegmentRendererTest`). Player screens also run under
+given up). In `SegmentRendererTest` the renderer's background renders wait
+for the player's window, and a voice with a new render version renders its
+cached segments again. Player screens also run under
 Robolectric with `createComposeRule` (on a phone-sized screen) to check
 spoken labels, touch targets of at least 56 dp and the actions they send.
 

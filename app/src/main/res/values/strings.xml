@@ -138,6 +138,10 @@
     <string name="voices_phone_name">Phone voice</string>
     <string name="voices_phone_description">The voice that comes with the phone · no download</string>
     <string name="voices_other_phone">Other phone voices</string>
+    <string name="voices_other_phone_shown">Expanded</string>
+    <string name="voices_other_phone_hidden">Collapsed</string>
+    <string name="voices_other_phone_show">Show the other phone voices</string>
+    <string name="voices_other_phone_hide">Hide the other phone voices</string>
     <string name="voices_phone_voice_label">%1$s · Voice %2$d</string>
     <string name="voices_about">About and licences</string>
     <string name="voice_description_dora">Female · most natural</string>

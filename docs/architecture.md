@@ -441,7 +441,9 @@ phone's voices all had the same name. The tab now shows:
   emblem and a sample spoken by the phone's best offline Portuguese voice.
 - **Other phone voices**, folded away, named by engine and number
   (`PhoneVoiceLabels`: "Google · Voz 1", "Samsung · Voz 1"), never twice the
-  same; engines with the same short name keep their full system label.
+  same; engines with the same short name keep their full system label. The
+  toggle tells TalkBack whether they are shown ("Expandido", "Recolhido")
+  and offers the matching expand or collapse action.
 - **About and licences** at the end of the list (outside the main flow).
 
 Choosing a voice makes it the default and sends `REFRESH_VOICE`, so a book

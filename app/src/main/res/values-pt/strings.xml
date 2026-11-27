@@ -137,6 +137,10 @@
     <string name="voices_phone_name">Voz do celular</string>
     <string name="voices_phone_description">A voz que já vem no aparelho · sem download</string>
     <string name="voices_other_phone">Outras vozes do celular</string>
+    <string name="voices_other_phone_shown">Expandido</string>
+    <string name="voices_other_phone_hidden">Recolhido</string>
+    <string name="voices_other_phone_show">Mostrar as outras vozes do celular</string>
+    <string name="voices_other_phone_hide">Ocultar as outras vozes do celular</string>
     <string name="voices_phone_voice_label">%1$s · Voz %2$d</string>
     <string name="voices_about">Sobre e licenças</string>
     <string name="voice_description_dora">Feminina · mais natural</string>

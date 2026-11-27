@@ -23,7 +23,11 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.collapse
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.expand
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.giovannimartins.rreader.R
 import com.giovannimartins.rreader.tts.Voice
@@ -229,13 +233,30 @@ internal fun PhoneVoiceRow(
     }
 }
 
+/**
+ * Shows or hides the phone's other voices. TalkBack hears whether they are shown ("Expanded", "Collapsed") and gets
+ * the matching expand or collapse action, besides the tap.
+ */
 @Composable
 internal fun OtherPhoneVoicesToggle(
     expanded: Boolean,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    TextButton(onClick = onToggle, modifier = modifier.fillMaxWidth().heightIn(min = 56.dp)) {
+    val state = stringResource(if (expanded) R.string.voices_other_phone_shown else R.string.voices_other_phone_hidden)
+    val action = stringResource(if (expanded) R.string.voices_other_phone_hide else R.string.voices_other_phone_show)
+    val toggle = {
+        onToggle()
+        true
+    }
+    TextButton(
+        onClick = onToggle,
+        modifier =
+            modifier.fillMaxWidth().heightIn(min = 56.dp).semantics {
+                stateDescription = state
+                if (expanded) collapse(action, toggle) else expand(action, toggle)
+            },
+    ) {
         Text(
             text = stringResource(R.string.voices_other_phone),
             style = MaterialTheme.typography.titleMedium,
