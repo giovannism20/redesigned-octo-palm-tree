@@ -89,7 +89,9 @@ class BookIntake
                     val copy = copyWithLimit(input, temp)
                     val format =
                         detectFormat(temp) ?: return@withContext IntakeResult.Rejected(ImportFailure.UNSUPPORTED_FORMAT)
-                    bookDao.findBySourceSha256(copy.sha256)?.let { return@withContext IntakeResult.Duplicate(it.id) }
+                    bookDao.findBySourceSha256(copy.sha256)?.let { existing ->
+                        return@withContext retryOrReportDuplicate(existing)
+                    }
                     val bookId = UUID.randomUUID().toString()
                     files.adoptSource(temp, bookId, format)
                     bookDao.insert(newBook(bookId, fallbackTitle, format, copy))
@@ -104,6 +106,20 @@ class BookIntake
                 } finally {
                     temp.delete()
                 }
+            }
+
+        /**
+         * The same file again: a book that failed before (for example a format
+         * supported only in a later version) is prepared again instead of being
+         * reported as already in the library.
+         */
+        private suspend fun retryOrReportDuplicate(existing: BookEntity): IntakeResult =
+            if (existing.status == BookStatus.FAILED) {
+                bookDao.markImporting(existing.id)
+                enqueue(existing.id)
+                IntakeResult.Queued(existing.id)
+            } else {
+                IntakeResult.Duplicate(existing.id)
             }
 
         private fun detectFormat(file: File): BookFormat? {

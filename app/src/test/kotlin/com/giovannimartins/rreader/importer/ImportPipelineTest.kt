@@ -77,6 +77,21 @@ class ImportPipelineTest {
         }
 
     @Test
+    fun `importing a file that failed before prepares it again`() =
+        runTest {
+            val bookId = (intake().importStream(ByteArrayInputStream(EPUB_HEADER), "x") as IntakeResult.Queued).bookId
+            val unsupported = BookParser { _, _ -> ParseOutcome.Failed(ImportFailure.FORMAT_NOT_YET_SUPPORTED) }
+            processor(unsupported).process(bookId)
+
+            val again = intake().importStream(ByteArrayInputStream(EPUB_HEADER), "x")
+
+            assertThat(again).isEqualTo(IntakeResult.Queued(bookId))
+            val stored = database.bookDao().findById(bookId)!!
+            assertThat(stored.status).isEqualTo(BookStatus.IMPORTING)
+            assertThat(stored.failureReason).isNull()
+        }
+
+    @Test
     fun `rejects content that is neither PDF nor EPUB`() =
         runTest {
             val result = intake().importStream(ByteArrayInputStream("just text".toByteArray()), "notes")

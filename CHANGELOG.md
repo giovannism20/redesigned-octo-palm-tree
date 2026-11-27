@@ -8,6 +8,8 @@ All notable user-visible changes are documented here. The format follows
 
 ### Added
 
+- Importing a file that failed before (for example a format added in a later
+  version) prepares it again instead of saying it is already in the library.
 - Listening: books are read aloud with the phone's voice and keep playing with
   the screen locked, controlled from the notification, the lock screen and
   headsets (−15 s, play/pause, +15 s; headset next/previous also move 15 s).

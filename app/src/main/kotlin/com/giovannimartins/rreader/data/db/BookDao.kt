@@ -45,6 +45,9 @@ interface BookDao {
         status: BookStatus = BookStatus.FAILED,
     )
 
+    @Query("UPDATE books SET status = 'IMPORTING', failure_reason = NULL WHERE id = :id")
+    suspend fun markImporting(id: String)
+
     @Query(
         """
         UPDATE books SET title = :title, authors = :authors, language = :language,

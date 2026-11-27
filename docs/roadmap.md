@@ -49,10 +49,12 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 
 ## Phase 2 — PDF with a text layer
 
-- [ ] PdfBox extraction to layout lines
-- [ ] Cleanup: headers/footers, page numbers, hyphenation with enclisis, paragraphs
-- [ ] Chapters from outline → headings → page ranges; cover from page 1
-- [ ] Scanned-PDF detection with a clear message (until Phase 4)
+- [x] PdfBox extraction to layout lines
+- [x] Cleanup: headers/footers, page numbers, hyphenation with enclisis, paragraphs
+- [x] Chapters from outline → headings → page ranges; cover from page 1
+- [x] Scanned-PDF detection with a clear message (until Phase 4)
+- [ ] PDF: two-column layouts and footnotes (read inline today)
+- [ ] Unify the two internal `RomanNumerals` helpers in `:textkit`
 
 ## Phase 3 — Comfort
 
