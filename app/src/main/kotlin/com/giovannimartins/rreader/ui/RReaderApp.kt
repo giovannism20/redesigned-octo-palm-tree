@@ -25,6 +25,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.giovannimartins.rreader.ui.about.AboutRoute
 import com.giovannimartins.rreader.ui.components.ScreenSurface
 import com.giovannimartins.rreader.ui.explore.ExploreRoute
 import com.giovannimartins.rreader.ui.importer.ImportScreen
@@ -53,6 +54,7 @@ fun RReaderApp(
     var destination by rememberSaveable { mutableStateOf(TopDestination.LIBRARY) }
     var playerOpen by rememberSaveable { mutableStateOf(false) }
     var readerOpen by rememberSaveable { mutableStateOf(false) }
+    var aboutOpen by rememberSaveable { mutableStateOf(false) }
     val nowPlaying by playerViewModel.nowPlaying.collectAsStateWithLifecycle()
     val importState by importViewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -77,7 +79,9 @@ fun RReaderApp(
 
     val current = nowPlaying
     ScreenSurface(modifier = modifier) {
-        if (playerOpen && current != null) {
+        if (aboutOpen) {
+            AboutRoute(onClose = { aboutOpen = false })
+        } else if (playerOpen && current != null) {
             PlayerAndReader(
                 readerOpen = readerOpen,
                 onReaderOpenChange = { readerOpen = it },
@@ -88,29 +92,60 @@ fun RReaderApp(
                 },
             )
         } else {
-            Scaffold(
-                snackbarHost = { SnackbarHost(snackbarHostState) },
-                bottomBar = {
-                    ShellBottomBar(
-                        nowPlaying = current,
-                        destination = destination,
-                        onDestinationSelect = { destination = it },
-                        onOpenPlayer = { playerOpen = true },
-                        onTogglePlayPause = playerViewModel::togglePlayPause,
-                        onSeekBack = playerViewModel::seekBack,
-                    )
-                },
-            ) { padding ->
-                ShellDestination(
-                    destination = destination,
-                    receivingBook = importState.receiving,
-                    onFileSelect = importViewModel::import,
-                    onNavigate = { destination = it },
-                    onOpenPlayer = { playerOpen = true },
-                    modifier = Modifier.padding(padding),
-                )
-            }
+            ShellTabs(
+                nowPlaying = current,
+                destination = destination,
+                snackbarHostState = snackbarHostState,
+                receivingBook = importState.receiving,
+                onNavigate = { destination = it },
+                onOpenPlayer = { playerOpen = true },
+                onOpenAbout = { aboutOpen = true },
+                onFileSelect = importViewModel::import,
+                onTogglePlayPause = playerViewModel::togglePlayPause,
+                onSeekBack = playerViewModel::seekBack,
+            )
         }
+    }
+}
+
+/** The tabs with the navigation bar (and the mini player above it while a book is open). */
+@Composable
+private fun ShellTabs(
+    nowPlaying: NowPlaying?,
+    destination: TopDestination,
+    snackbarHostState: SnackbarHostState,
+    receivingBook: Boolean,
+    onNavigate: (TopDestination) -> Unit,
+    onOpenPlayer: () -> Unit,
+    onOpenAbout: () -> Unit,
+    onFileSelect: (Uri) -> Unit,
+    onTogglePlayPause: () -> Unit,
+    onSeekBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Scaffold(
+        modifier = modifier,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        bottomBar = {
+            ShellBottomBar(
+                nowPlaying = nowPlaying,
+                destination = destination,
+                onDestinationSelect = onNavigate,
+                onOpenPlayer = onOpenPlayer,
+                onTogglePlayPause = onTogglePlayPause,
+                onSeekBack = onSeekBack,
+            )
+        },
+    ) { padding ->
+        ShellDestination(
+            destination = destination,
+            receivingBook = receivingBook,
+            onFileSelect = onFileSelect,
+            onNavigate = onNavigate,
+            onOpenPlayer = onOpenPlayer,
+            onOpenAbout = onOpenAbout,
+            modifier = Modifier.padding(padding),
+        )
     }
 }
 
@@ -171,6 +206,7 @@ private fun ShellDestination(
     onFileSelect: (Uri) -> Unit,
     onNavigate: (TopDestination) -> Unit,
     onOpenPlayer: () -> Unit,
+    onOpenAbout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier) {
@@ -188,7 +224,7 @@ private fun ShellDestination(
             }
 
             TopDestination.VOICES -> {
-                VoicesRoute()
+                VoicesRoute(onOpenAbout = onOpenAbout)
             }
         }
     }

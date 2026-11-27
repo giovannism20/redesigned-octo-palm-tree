@@ -92,18 +92,61 @@
     <!-- Voices -->
     <string name="tab_voices">Voices</string>
     <string name="voices_title">Voices</string>
-    <string name="voices_intro">These voices are installed on your phone and are free. Listen to a sample and choose the one you like.</string>
+    <string name="voices_intro">Choose the voice that reads your books. Tap Listen to hear each one.</string>
+    <string name="voices_neural_title">Natural voices</string>
+    <string name="voices_neural_intro">Download a voice once and it works without internet.</string>
     <string name="voices_sample_text">Hello! This is the voice that will read your books.</string>
-    <string name="voices_voice_name">Voice %1$d · %2$s</string>
     <string name="voices_offline">%1$s · works without internet</string>
     <string name="voices_needs_internet">%1$s · needs internet</string>
     <string name="voices_listen">Listen</string>
+    <string name="voices_listen_to">Listen to %1$s</string>
+    <string name="voices_stop">Stop</string>
+    <string name="voices_stop_sample">Stop the sample of %1$s</string>
     <string name="voices_use">Use this voice</string>
+    <string name="voices_use_voice">Use the voice %1$s</string>
     <string name="voices_in_use">In use</string>
     <string name="voices_sample_failed">The sample could not be played. Try another voice.</string>
     <string name="voices_none">No Portuguese voice is installed on this phone yet.</string>
     <string name="voices_install">Install voices</string>
     <string name="voices_more">More voices in the phone settings</string>
+    <string name="voices_download">Download · %1$s</string>
+    <string name="voices_download_voice">Download the voice %1$s, %2$s</string>
+    <string name="voices_download_also">The download also brings %1$s.</string>
+    <string name="voices_and">%1$s and %2$s</string>
+    <string name="voices_waiting_wifi">Waiting for Wi-Fi to download…</string>
+    <string name="voices_waiting">Waiting for the internet to download…</string>
+    <string name="voices_downloading">Downloading… %1$d%%</string>
+    <string name="voices_installing">Getting the voice ready…</string>
+    <string name="voices_cancel_download">Cancel the download of %1$s</string>
+    <string name="voices_failure_network">The download stopped because the internet connection failed.</string>
+    <string name="voices_failure_unavailable">The voice could not be downloaded right now. Try again later.</string>
+    <string name="voices_failure_damaged">The downloaded file was damaged. Try again.</string>
+    <string name="voices_failure_storage">There is not enough free space on the phone for this voice.</string>
+    <string name="voices_retry">Try again</string>
+    <string name="voices_retry_voice">Try downloading %1$s again</string>
+    <string name="voices_delete">Delete</string>
+    <string name="voices_delete_voice">Delete the voice %1$s</string>
+    <string name="voices_delete_title">Delete the voice %1$s?</string>
+    <string name="voices_delete_body">This frees %1$s on the phone. You can download it again whenever you like.</string>
+    <string name="voices_delete_body_shared">This also deletes %2$s, which come in the same file, and frees %1$s on the phone. You can download them again whenever you like.</string>
+    <string name="voices_mobile_title">Download with mobile data?</string>
+    <string name="voices_mobile_body">You are not on Wi-Fi. This voice is %1$s and may use up your data plan.</string>
+    <string name="voices_mobile_now">Download now</string>
+    <string name="voices_mobile_wait">Wait for Wi-Fi</string>
+    <string name="voices_phone_name">Phone voice</string>
+    <string name="voices_phone_description">The voice that comes with the phone · no download</string>
+    <string name="voices_other_phone">Other phone voices</string>
+    <string name="voices_phone_voice_label">%1$s · Voice %2$d</string>
+    <string name="voices_about">About and licences</string>
+    <string name="voice_description_dora">Female · most natural</string>
+    <string name="voice_description_alex">Male · most natural</string>
+    <string name="voice_description_cadu">Male · clear and calm</string>
+    <string name="voice_description_santa">Male · natural and calm</string>
+    <string name="voice_description_faber">Male · lively pace</string>
+    <string name="voice_description_dii">Female · clear</string>
+    <string name="voice_description_jeff">Male · medium pitch</string>
+    <string name="voice_description_miro">Male · deep</string>
+    <string name="voice_description_edresson">Male · speaks slowly</string>
 
     <!-- Player -->
     <string name="player_play">Play</string>
@@ -172,4 +215,30 @@
 
     <!-- Common -->
     <string name="action_cancel">Cancel</string>
+
+    <!-- About and licences -->
+    <string name="about_title">About and licences</string>
+    <string name="about_back">Back</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_free">R Reader is free software. Its source code is published at:</string>
+    <string name="about_open_source">Open in the browser</string>
+    <string name="about_gpl">This app includes piper-phonemize and espeak-ng, which are licensed under the GNU General Public License, version 3. That is why the app as installed is distributed under the GPL 3.0, and anyone can get its source code at the address above. The source code itself is under the MIT License.</string>
+    <string name="about_components">Components and licences</string>
+    <string name="about_read_licence">Read the licence</string>
+    <string name="about_read_licence_of">Read the licence of %1$s</string>
+    <string name="about_open_terms">Open the terms</string>
+    <string name="about_open_terms_of">Open the terms of %1$s</string>
+    <string name="about_voices">Voice models</string>
+    <string name="about_voices_intro">The voices you download come from the sherpa-onnx project. Their terms:</string>
+    <string name="about_terms_kokoro">Dora, Alex and Santa (Kokoro v1.0): Apache License 2.0.</string>
+    <string name="about_terms_piper_cc0">Cadu, Faber and Jeff (Piper): recordings released as CC0 by Nabu Casa; trained from an English Piper voice whose recordings may be used for research only.</string>
+    <string name="about_terms_piper_nc">Dii and Miro (Piper): voices of real people, owned by TigreGotico, for non-commercial use only (CC BY-NC-SA 4.0 and CC BY-NC-ND 4.0).</string>
+    <string name="about_terms_edresson">Edresson (Piper): TTS-Portuguese Corpus by Edresson Casanova and others, CC BY 4.0; trained from an English Piper voice under CC BY-NC-SA 4.0 (non-commercial).</string>
+    <string name="about_terms_note">R Reader is free and non-commercial, which these terms allow.</string>
+    <string name="about_licence_failed">This licence text could not be opened.</string>
+    <string name="about_component_app">R Reader (source code)</string>
+    <string name="about_component_androidx">AndroidX, Jetpack Compose, Media3, Room, WorkManager, DataStore, Kotlin, Dagger and Hilt, Coil</string>
+    <string name="about_component_commons">Apache Commons Compress, IO, Lang and Codec</string>
+    <string name="about_component_mlkit">ML Kit text recognition (Google)</string>
+    <string name="about_component_phonemizer">piper-phonemize and espeak-ng</string>
 </resources>

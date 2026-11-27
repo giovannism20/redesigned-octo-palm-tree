@@ -8,6 +8,25 @@ All notable user-visible changes are documented here. The format follows
 
 ### Added
 
+- Natural voices: nine offline neural voices in Vozes (Dora, Alex, Cadu,
+  Santa, Faber, Dii, Jeff, Miro and Edresson), most recommended first. Each
+  has its own emblem, a short description and "Ouvir", which plays a sample
+  at once, before any download. "Baixar" shows the size (132 MB for Dora,
+  Alex and Santa together, 67 MB for each of the others), waits for Wi-Fi
+  and asks before using mobile data, shows its progress and can be
+  cancelled. A downloaded voice works without internet and can be deleted to
+  free space.
+- The phone's own voice is one card, "Voz do celular", and its other voices
+  are folded away under "Outras vozes do celular" with names that tell them
+  apart ("Google · Voz 1", "Google · Voz 2").
+- Change the voice while listening: choosing a voice in Vozes takes over at
+  the sentence being read, without starting the book again.
+  Deleting the voice in use goes on with the phone's voice.
+- Voices that take longer to prepare (Dora, Alex, Santa) prepare the next
+  chapters while the phone charges.
+- "Sobre e licenças", at the bottom of Vozes: the app's version, where its
+  source code is, and the licences of everything it includes.
+
 - Swipe down on the player to minimize it, besides its minimize button.
 - New app icon "Livro Aberto" (an open book formed by two R's with a
   bookmark ribbon), with a themed version for Android 13+, a launch screen and

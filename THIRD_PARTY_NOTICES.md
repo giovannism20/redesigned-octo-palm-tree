@@ -54,7 +54,7 @@ Libraries used by the app are declared in `gradle/libs.versions.toml`.
 | Kotlin standard library, kotlinx.coroutines and kotlinx.serialization (OCR pages saved as JSON) | Apache License 2.0 |
 | Dagger / Hilt | Apache License 2.0 |
 | Coil | Apache License 2.0 |
-| Material Icons (vector paths in `app/src/main/res/drawable/ic_*.xml`: library, add book, voices, play, pause, speed, chapters, minimize, notification headset, sleep timer, text, back, explore, search, download) | Apache License 2.0 |
+| Material Icons (vector paths in `app/src/main/res/drawable/ic_*.xml`: library, add book, voices, play, pause, speed, chapters, minimize, notification headset, sleep timer, text, back, explore, search, download, check, expand more, expand less, stop) | Apache License 2.0 |
 | AndroidX Media3 "skip back/forward 15" icons (vector paths in `ic_replay_15.xml` and `ic_forward_15.xml`, Copyright 2024 The Android Open Source Project) | Apache License 2.0 |
 | jsoup (EPUB XML/XHTML parsing in `:textkit`) | MIT License (full text below) |
 | PdfBox-Android (PDF text extraction) | Apache License 2.0 (NOTICE below) |
@@ -275,3 +275,36 @@ Copyright 2002-2025 The Apache Software Foundation
 This product includes software developed at
 The Apache Software Foundation (https://www.apache.org/).
 ```
+
+### Voice models (downloaded on demand)
+
+The neural voices are not part of the APK: the listener downloads them from
+the official [sherpa-onnx releases](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models),
+and the app checks each archive's SHA-256 before using it. Their terms, as
+recorded in the [voice evaluation](docs/design/voices-evaluation.md) and shown
+in the app's "About and licences" screen:
+
+| Voices | Model | Terms |
+|--------|-------|-------|
+| Dora, Alex, Santa | Kokoro v1.0 (82M), int8 | Apache License 2.0 (the package's LICENSE; Kokoro-82M weights Apache-2.0) |
+| Cadu, Faber, Jeff | Piper pt_BR (medium) | Recordings from Nabu Casa's voice datasets under CC0; fine-tuned from the en_US lessac voice, whose dataset (Blizzard 2013 / Lessac) is licensed for research only; piper-voices repository MIT |
+| Dii, Miro | Piper pt_BR (high) | Voices of real people owned by TigreGotico, trained on a synthetic dataset; non-commercial only (CC BY-NC-SA 4.0 in the sherpa-onnx README, CC BY-NC-ND 4.0 on the author's current card) |
+| Edresson | Piper pt_BR (low) | TTS-Portuguese Corpus by Edresson Casanova et al., CC BY 4.0 (attribution); fine-tuned from the en_US ryan voice, whose RyanSpeech dataset is CC BY-NC-SA 4.0 |
+
+R Reader is a free, non-commercial personal project, which these terms allow.
+
+### Voice samples
+
+`app/src/main/assets/voices/samples/*.ogg` are the first sentence of the
+opening of *Dom Casmurro* (Machado de Assis, public domain) spoken by each
+voice above with sherpa-onnx 2.0.3 during the voice evaluation, filtered,
+levelled and encoded as Ogg Opus by `scripts/make_voice_samples.py`. They are
+output of the models, under the same terms as the models.
+
+### Licence texts in the app
+
+`app/src/main/assets/licenses/` holds the texts the "About and licences"
+screen shows: the GNU GPL 3.0 and the Apache License 2.0 (from Debian's
+`common-licenses`), the Apache 2.0 text with the PdfBox-Android and Apache
+Commons notices, the MIT licences of R Reader, ONNX Runtime, jsoup and
+Bouncy Castle (as above), and the font's SIL Open Font License.

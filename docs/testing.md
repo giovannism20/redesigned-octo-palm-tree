@@ -161,3 +161,18 @@ new version:
 18. While a book plays, start a backup in the phone's settings (or run
     `adb shell bmgr backupnow --all`): playback goes on, and R Reader is not
     in the list of apps being backed up (ADR 0021).
+19. In Vozes, every voice has its own emblem, name and description, and
+    "Ouvir" plays its sample at once, also in airplane mode.
+20. On Wi-Fi, download Cadu (67 MB): it shows "Baixando… N%", then "Usar
+    esta voz"; choose it while a book plays: the voice changes at the
+    sentence being read, without the book starting over.
+21. On mobile data, "Baixar" asks first; "Esperar o Wi-Fi" waits and the
+    download starts once the phone is on Wi-Fi. "Cancelar" stops a download.
+22. Download Dora (132 MB, also brings Alex and Santa) and listen while the
+    phone charges: after a while the next chapters play without "Preparando a
+    voz…" (rendered ahead).
+23. Delete the voice in use: listening goes on with the phone's voice, and
+    "Voz do celular" shows "Em uso".
+24. "Sobre e licenças" opens from the bottom of Vozes, shows the version, the
+    source address, the GPL note and every licence text; "Abrir no
+    navegador" opens the repository.

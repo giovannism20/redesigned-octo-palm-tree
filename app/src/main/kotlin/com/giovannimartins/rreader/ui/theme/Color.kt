@@ -37,3 +37,10 @@ internal val OutlineVariant = Color(0xFF3A4766)
 internal val CoverColors =
     listOf(Color(0xFF3B4A6B), Color(0xFF5B3B4A), Color(0xFF2F5A4E), Color(0xFF6B4E2F), Color(0xFF4A3B6B))
 internal val OnCover = Color(0xFFFFFFFF)
+
+/**
+ * The colours of the voice emblems (abstract marks, one per voice, never a face): brand tones, each at least 3 : 1
+ * against the [Surface] disc they are drawn on and the [SurfaceHigh] cards around it (checked by ThemeTest). Every
+ * emblem also has a shape of its own, so voices never differ by colour alone.
+ */
+internal val VoiceEmblemColors = listOf(Seal, OnInk, Outline, Danger, OnInkMuted)

@@ -58,6 +58,7 @@ Supporting tokens, so every Material role has a brand colour:
 | `DangerContainer` | `#5C2020` | error containers | OnInk 10.5 on it |
 | `OutlineVariant` | `#3A4766` | decorative dividers, disabled borders (never text) | — |
 | `CoverColors` / `OnCover` | five muted tones / white | generated covers of books without an image | ≥ 4.5 |
+| `VoiceEmblemColors` | `Seal`, `OnInk`, `Outline`, `Danger`, `OnInkMuted` | the voice emblems' shapes, drawn on a `Surface` disc; every emblem also has its own shape | ≥ 3 : 1 on Surface and SurfaceHigh |
 
 ### Material colour roles
 

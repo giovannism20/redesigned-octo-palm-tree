@@ -85,7 +85,7 @@ Base package: `com.giovannimartins.rreader`.
 | `work` | Helpers shared by WorkManager jobs (`reportingProgress`: conflated progress publishing) | implemented |
 | `net` | `HttpsClient`, the only way to the network: HTTPS GETs through an `HttpTransport` (`UrlConnectionTransport` on `HttpsURLConnection`), every address and redirect checked by the client's `HostAllowlist`, media type, size and redirect limits, and resuming an interrupted download from where it stopped (`Range`, HTTP 206) | implemented |
 | `catalog` | Free public-domain catalogue (Project Gutenberg, [ADR 0017](decisions/0017-free-catalogue-from-project-gutenberg.md)): `CatalogHttp`, the `HttpsClient` for `CatalogHosts` with the `CatalogUserAgent`; `CuratedCatalog` (curated classics from an asset), `CatalogRepository` (OPDS search through `GutenbergEndpoints`, pages kept in memory by `SearchCache`), `CatalogDownloads` (`WorkManagerCatalogDownloads`: one unique `DownloadBookWorker` job per book, needing a connection) running `CatalogDownloader` (EPUB → temporary file → `BookIntake.importFile`), `NetworkStatus` (offline or not, from the system's default network) | implemented |
-| `ui` | Compose screens, ViewModels, navigation, theme, design system; `ui/player`: `PlaybackConnection` (`MediaController` while the app is visible), mini player, full player with speed, chapters, time left and the sleep timer; `ui/library`: progress and time left (`LibraryTimeLeft`); `ui/reader`: follow-along reader (`ReaderViewModel`, `ReaderChapter`); `ui/components`: `BookCover`, time-left text (`timeLeft`); `ui/explore`: Explore tab (`ExploreViewModel`: curated classics, search, downloads, offline state) | in progress (shell, library, explore, add book, voices, player) |
+| `ui` | Compose screens, ViewModels, navigation, theme, design system; `ui/player`: `PlaybackConnection` (`MediaController` while the app is visible), mini player, full player with speed, chapters, time left and the sleep timer; `ui/library`: progress and time left (`LibraryTimeLeft`); `ui/reader`: follow-along reader (`ReaderViewModel`, `ReaderChapter`); `ui/components`: `BookCover`, time-left text (`timeLeft`); `ui/explore`: Explore tab (`ExploreViewModel`: curated classics, search, downloads, offline state); `ui/voices`: Voices tab (`VoicesViewModel`: the nine neural voices with their emblems (`VoiceEmblem`, `VoiceLooks`), bundled samples (`VoiceSamplePlayer`), downloads, deletion, the phone's voice and its other voices named apart by `PhoneVoiceLabels`), `SystemSettings`; `ui/about`: About and licences (`AboutViewModel`, `AboutContent`, licence texts in `assets/licenses/`) | in progress (shell, library, explore, add book, voices, player) |
 | `di` | Hilt modules (dispatchers, application scope, database, WorkManager) | implemented |
 
 ## Layering rules
@@ -381,6 +381,49 @@ sequenceDiagram
   moved into place. A package is installed when every kept file is there with
   its exact size.
 
+### Voices tab
+
+The owner's device test asked for pictures on the voices and found that the
+phone's voices all had the same name. The tab now shows:
+
+- **The nine neural voices**, most recommended first, each on a card with its
+  own emblem (an abstract mark: a shape of its own in a brand colour,
+  `VoiceEmblem`, never a face), its name, a short description ("Feminina ·
+  mais natural"), "Ouvir", which plays the sample bundled with the app at
+  once, and one main action: "Baixar · 132 MB", the download's progress with
+  "Cancelar", "Usar esta voz", or "Em uso" (a border and the words, never
+  colour alone). A ready voice can be deleted after a confirmation that says
+  how much space it frees and which voices share its file. No licence text
+  appears on the cards.
+- **Downloads.** On Wi-Fi (or offline) a download waits for Wi-Fi; on mobile
+  data the tab first asks whether to download now or wait for Wi-Fi
+  (`ConnectionCheck`).
+- **The phone's voice** ("Voz do celular"), the `phone` choice, with its own
+  emblem and a sample spoken by the phone's best offline Portuguese voice.
+- **Other phone voices**, folded away, named by engine and number
+  (`PhoneVoiceLabels`: "Google · Voz 1", "Samsung · Voz 1"), never twice the
+  same; engines with the same short name keep their full system label.
+- **About and licences** at the end of the list (outside the main flow).
+
+Choosing a voice makes it the default and sends `REFRESH_VOICE`, so a book
+that follows the default continues with it at once (see
+[Voice changes](#voice-changes)); deleting the voice in use falls back to the
+phone's voice the same way. Samples play with ExoPlayer as media, so a book
+being listened to pauses while a sample plays; they stop when the tab is
+left.
+
+### About and licences
+
+`AboutScreen`, a full screen over the app opened from the Voices tab, shows
+the app's version, the address of the source code (selectable, and "Abrir no
+navegador"), why the installed app is under the GPL 3.0 (it includes
+piper-phonemize and espeak-ng, ADR 0018), every component with its licence,
+and the terms of the voice models. Licence texts ship in `assets/licenses/`
+(GPL 3.0, Apache 2.0 with the PdfBox and Apache Commons notices, MIT for the
+app, ONNX Runtime, jsoup and Bouncy Castle, the font's OFL) and open in a
+full-screen reader, paragraph by paragraph; terms published on the web (ML
+Kit, the Creative Commons licences of the Piper voices) open in the browser.
+
 ### Neural speech
 
 `SherpaOnnxEngine` renders a segment for a neural voice into the same WAV
@@ -483,7 +526,8 @@ sequenceDiagram
 | What | Where | Notes |
 |------|-------|-------|
 | Books, chapters metadata, reading positions, per-book voice | Room (`rreader.db`) | Schema versioned; exported to `app/schemas/` for migration tests |
-| Settings (default voice, speed, text size) | DataStore (`settings`) | |
+| Settings (default voice, speed, text size) | DataStore (`settings`) | The default voice is a phone voice, a neural voice (`neural:<key>`) or `phone`, the phone's own voice; nothing chosen means `phone` |
+| Voice samples | `assets/voices/samples/{voice}.ogg` | Bundled, about 7–10 s of each neural voice (Ogg Opus, 290 KB in all), played before any download (`scripts/make_voice_samples.py`) |
 | Learned speaking rates per voice, last voice that read | DataStore (`speaking_rates`, `SpeakingRatePreferences`) | Apart from the settings because they are measured, not chosen. Restored before the first book plays (`PlaybackRepository.load`) and for the library's time left; saved right after a change, then at most every 30 s |
 | Original file | `filesDir/books/{bookId}/source.{pdf,epub}` | Private app storage |
 | Normalized chapters | `filesDir/books/{bookId}/chapters/{index}.txt` | UTF-8 text, immutable after import |

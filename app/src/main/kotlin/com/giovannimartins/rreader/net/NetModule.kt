@@ -10,4 +10,7 @@ import dagger.hilt.components.SingletonComponent
 abstract class NetModule {
     @Binds
     abstract fun transport(transport: UrlConnectionTransport): HttpTransport
+
+    @Binds
+    abstract fun connectionCheck(check: SystemConnectionCheck): ConnectionCheck
 }

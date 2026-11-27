@@ -16,9 +16,14 @@ internal const val MIN_CONTRAST = 4.5f
 /**
  * Asserts that every text on screen is drawn in a colour readable on [background]. Catches text that falls
  * back to the default black content colour when a screen is drawn without the shared screen surface.
- * Use it on states whose text sits on the screen background (not on buttons or coloured cards).
+ * Use it on states whose text sits on the screen background or on cards of a similar tone. Text drawn in one of
+ * the colours of [containers] sits on the matching container instead (filled buttons: their text colour to their
+ * container colour) and is checked against it.
  */
-internal fun SemanticsNodeInteractionsProvider.assertAllTextReadableOn(background: Color) {
+internal fun SemanticsNodeInteractionsProvider.assertAllTextReadableOn(
+    background: Color,
+    containers: Map<Color, Color> = emptyMap(),
+) {
     val nodes =
         onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.GetTextLayoutResult), useUnmergedTree = true)
             .fetchSemanticsNodes()
@@ -32,8 +37,9 @@ internal fun SemanticsNodeInteractionsProvider.assertAllTextReadableOn(backgroun
         layouts.forEach { layout ->
             val color = layout.layoutInput.style.color
             assertWithMessage("colour of \"${layout.layoutInput.text}\"").that(color).isNotEqualTo(Color.Unspecified)
+            val behind = containers[color] ?: background
             assertWithMessage("contrast of \"${layout.layoutInput.text}\" on the background")
-                .that(contrastRatio(color.compositeOver(background), background))
+                .that(contrastRatio(color.compositeOver(behind), behind))
                 .isAtLeast(MIN_CONTRAST)
         }
     }

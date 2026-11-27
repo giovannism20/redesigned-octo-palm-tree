@@ -102,6 +102,15 @@ class ThemeTest {
     }
 
     @Test
+    fun `voice emblems stand out from the disc and the card they are drawn on`() {
+        VoiceEmblemColors.forEach { color ->
+            assertThat(contrastRatio(color, Surface)).isAtLeast(MIN_GRAPHIC_CONTRAST)
+            assertThat(contrastRatio(color, SurfaceHigh)).isAtLeast(MIN_GRAPHIC_CONTRAST)
+            assertThat(color.value.toLong()).isIn(brandPalette.map { it.value.toLong() })
+        }
+    }
+
+    @Test
     fun `components get the intended content colour on every surface`() {
         with(RReaderColorScheme) {
             val plainSurfaces =
@@ -162,6 +171,9 @@ class ThemeTest {
         /** Colour roles of material3 1.5. */
         const val MATERIAL_COLOR_ROLES = 48
         const val MIN_TEXT_SP = 16f
+
+        /** WCAG AA for graphical objects such as the voice emblems. */
+        const val MIN_GRAPHIC_CONTRAST = 3f
         const val MIN_BODY_SP = 18f
     }
 }
