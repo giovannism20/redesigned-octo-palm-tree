@@ -80,10 +80,12 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 
 - [x] Voice comparison samples (Kokoro, Piper) for the user to choose ([evaluation](design/voices-evaluation.md))
 - [x] Owner decisions: all nine voices, GPL-3.0 for the APK only ([ADR 0018](decisions/0018-offline-neural-voices.md))
-- [ ] Voice emblems (abstract marks) and short bundled samples playable before download
+- [x] Voice emblems (abstract marks) and short bundled samples playable before download (owner tried them on the phone)
 - [ ] "About and licences" screen: licence texts (GPL-3.0, Apache-2.0, MIT, voice models) and a link to the source
-- [ ] `SherpaOnnxEngine`, model download over Wi-Fi with size shown and SHA-256 verification
-- [ ] Pre-rendering while charging when a voice is slower than real time
+- [x] `SherpaOnnxEngine`, model download over Wi-Fi with size shown and SHA-256 verification (all nine voices downloaded on the phone; Faber read all 5,228 sentences of Dom Casmurro without a crash after the two native fixes)
+- [ ] Pre-rendering while charging when a voice is slower than real time (implemented; verify Kokoro's speed and the pre-render on the phone)
+- [ ] Review findings: crash containment for native calls, pre-render vs live playback, download hygiene, espeak-ng memory-safety note (in progress)
+- [ ] Rebuild piper-phonemize against espeak-ng 1.52+ (memory-safety fixes) and pin the AAR
 
 ## Phase 6 — Free catalogue
 
