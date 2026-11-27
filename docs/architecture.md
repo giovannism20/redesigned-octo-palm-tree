@@ -383,7 +383,11 @@ sequenceDiagram
   arrived. It also removes a download that failed: WorkManager keeps a failed
   job failed when it is cancelled, so the job is first replaced by an untagged
   placeholder that would not start for a year, and the placeholder is
-  cancelled.
+  cancelled. When the app opens (`MainActivity`, which runs only in the app's
+  own process), `VoiceDownloads.discardLeftovers` deletes what no waiting or
+  running job will finish: the partial archives and unpacking folders of
+  downloads that failed or were cancelled, of earlier pins and of earlier
+  versions of the app.
 - **Verification and installation.** The archive must have the pinned size
   and SHA-256; it is then unpacked by `VoicePackageArchive`, which keeps only
   the expected entries under the catalogue's names, and the staging folder is

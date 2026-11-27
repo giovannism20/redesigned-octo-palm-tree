@@ -30,7 +30,7 @@ class VoicePackageStore internal constructor(
     /** Bytes free for the app in the storage that holds a folder; replaced in tests. */
     private val spaceOf: (File) -> Long = File::getUsableSpace,
     /** The packages that can be installed. */
-    private val packages: List<VoicePackage> = NeuralVoices.packages,
+    val packages: List<VoicePackage> = NeuralVoices.packages,
 ) {
     @Inject
     constructor(
@@ -121,6 +121,26 @@ class VoicePackageStore internal constructor(
     fun discardStaleDownloads(pkg: VoicePackage) {
         val current = currentNames(pkg)
         downloadFilesOf(pkg).filterNot { it.name in current }.forEach(File::delete)
+    }
+
+    /**
+     * Removes from the download and staging folders what belongs to no package's current download: archives of pins
+     * changed since, of packages no longer offered or of earlier versions of the app, and anything else. The current
+     * download of each package is left to [discardDownload]. Blocking.
+     */
+    fun discardStrays() {
+        val current = packages.flatMap(::currentNames).toSet()
+        downloadsFolder
+            .listFiles()
+            .orEmpty()
+            .filterNot { it.name in current }
+            .forEach(File::deleteRecursively)
+        val ids = packages.map(VoicePackage::id).toSet()
+        stagingFolder
+            .listFiles()
+            .orEmpty()
+            .filterNot { it.name in ids }
+            .forEach(File::deleteRecursively)
     }
 
     /** `{id}-{pin}`: the name of [pkg]'s download files, without their extension. */

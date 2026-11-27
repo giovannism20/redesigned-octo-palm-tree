@@ -12,11 +12,14 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.IntentCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.lifecycleScope
+import com.giovannimartins.rreader.tts.neural.VoiceDownloads
 import com.giovannimartins.rreader.ui.RReaderApp
 import com.giovannimartins.rreader.ui.importer.ImportViewModel
 import com.giovannimartins.rreader.ui.player.PlaybackConnection
 import com.giovannimartins.rreader.ui.theme.RReaderTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -31,6 +34,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var playbackConnection: PlaybackConnection
 
+    @Inject
+    lateinit var voiceDownloads: VoiceDownloads
+
     private var openPlayerRequests by mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,7 +44,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         lifecycle.addObserver(playbackConnection)
-        if (savedInstanceState == null) handleIntent(intent)
+        if (savedInstanceState == null) {
+            handleIntent(intent)
+            // Here rather than in the Application, which every process of the app and every unit test creates.
+            lifecycleScope.launch { voiceDownloads.discardLeftovers() }
+        }
         setContent {
             RReaderTheme {
                 RReaderApp(importViewModel = importViewModel, openPlayerRequests = openPlayerRequests)

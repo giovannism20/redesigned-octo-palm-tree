@@ -146,6 +146,38 @@ class VoiceDownloadsTest {
     }
 
     @Test
+    fun `when the app starts, only what the waiting or running downloads received is kept`() {
+        val downloads = WorkManagerVoiceDownloads(workManager, downloader)
+        runBlocking { downloads.download(pkg, wifiOnly = true) }
+        val failed = NeuralVoices.KOKORO
+        transport.answer(failed.url) { FakeTransport.status(404) }
+        runBlocking { downloads.download(failed, wifiOnly = false) }
+        WorkManagerTestInitHelper.getTestDriver(context)!!.setAllConstraintsMet(job(failed).id)
+        val idle = NeuralVoices.FABER
+        val downloadsFolder = store.partialFile(pkg).parentFile!!
+        val stagingFolder = store.stagingDirectory(pkg).parentFile!!
+        val kept = listOf(store.partialFile(pkg), File(store.stagingDirectory(pkg), "model.onnx"))
+        val leftovers =
+            listOf(
+                store.partialFile(failed),
+                store.partialFile(idle),
+                File(store.stagingDirectory(idle), "model.onnx"),
+                File(downloadsFolder, "${pkg.id}.part"),
+                File(downloadsFolder, "${pkg.id}-0123456789abcdef.part"),
+                File(downloadsFolder, "unknown.tmp"),
+                File(stagingFolder, "retired/model.onnx"),
+            )
+        (kept + leftovers).forEach { it.apply { parentFile?.mkdirs() }.writeBytes(ByteArray(10)) }
+
+        runBlocking { downloads.discardLeftovers() }
+
+        assertThat(job(failed).state).isEqualTo(WorkInfo.State.FAILED)
+        assertThat(kept.filterNot(File::exists)).isEmpty()
+        assertThat(leftovers.filter(File::exists)).isEmpty()
+        assertThat(stagingFolder.list()?.toList()).containsExactly(pkg.id)
+    }
+
+    @Test
     fun `reads where each download stands from its job`() {
         assertThat(state(WorkInfo.State.ENQUEUED)).isEqualTo(VoiceDownloadState.Waiting(false))
         assertThat(state(WorkInfo.State.ENQUEUED, wifiOnly = true)).isEqualTo(VoiceDownloadState.Waiting(true))
@@ -199,8 +231,8 @@ class VoiceDownloadsTest {
         assertThat(transport.requests).isEmpty()
     }
 
-    private fun job(): WorkInfo =
-        workManager.getWorkInfosForUniqueWork(VoiceDownloadWork.uniqueName(pkg)).get().single()
+    private fun job(of: VoicePackage = pkg): WorkInfo =
+        workManager.getWorkInfosForUniqueWork(VoiceDownloadWork.uniqueName(of)).get().single()
 
     private fun state(
         state: WorkInfo.State,

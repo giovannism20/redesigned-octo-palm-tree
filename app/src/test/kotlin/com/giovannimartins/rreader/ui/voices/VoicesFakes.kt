@@ -30,6 +30,8 @@ internal class FakeVoiceDownloads : VoiceDownloads {
         cancelled += pkg.id
         states.update { it - pkg.id }
     }
+
+    override suspend fun discardLeftovers() = Unit
 }
 
 /** The phone's engines, with [voices]; samples are short silent WAV files. */

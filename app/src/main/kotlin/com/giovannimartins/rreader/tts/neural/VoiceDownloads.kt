@@ -57,6 +57,13 @@ interface VoiceDownloads {
      */
     suspend fun cancel(pkg: VoicePackage)
 
+    /**
+     * Deletes what downloads left that no job will finish: the partial archives (up to 132 MB each) and unfinished
+     * installations of packages whose download neither waits nor runs, because it failed, was cancelled while the
+     * app was stopped, or is of an earlier pin or version of the app. Run when the app starts.
+     */
+    suspend fun discardLeftovers()
+
     /** The downloads WorkManager knows about, by package id. */
     val states: Flow<Map<String, VoiceDownloadState>>
 }
@@ -110,6 +117,12 @@ class WorkManagerVoiceDownloads
             workManager.enqueueUniqueWork(name, ExistingWorkPolicy.REPLACE, VoiceDownloadWork.placeholder()).await()
             workManager.cancelUniqueWork(name).await()
             downloader.discard(pkg)
+        }
+
+        override suspend fun discardLeftovers() {
+            val jobs = workManager.getWorkInfosByTagFlow(VoiceDownloadWork.TAG).first()
+            val active = jobs.filterNot { it.state.isFinished }.mapNotNull(VoiceDownloadWork::packageIdOf)
+            downloader.discardLeftovers(active.toSet())
         }
 
         override val states: Flow<Map<String, VoiceDownloadState>> =
@@ -175,12 +188,15 @@ internal object VoiceDownloadWork {
 
     fun failed(reason: VoiceDownloadFailure): Data = workDataOf(FAILURE to reason.name)
 
+    /** The id of the package the download job [job] is for, or null when its tags name none. */
+    fun packageIdOf(job: WorkInfo): String? =
+        job.tags.firstNotNullOfOrNull { tag ->
+            tag.takeIf { it.startsWith(PACKAGE_TAG_PREFIX) }?.removePrefix(PACKAGE_TAG_PREFIX)
+        }
+
     /** The package id and the state of the download job [job], or null for a job that tells nothing. */
     fun stateOf(job: WorkInfo): Pair<String, VoiceDownloadState>? {
-        val id =
-            job.tags.firstNotNullOfOrNull { tag ->
-                tag.takeIf { it.startsWith(PACKAGE_TAG_PREFIX) }?.removePrefix(PACKAGE_TAG_PREFIX)
-            }
+        val id = packageIdOf(job)
         val state =
             when (job.state) {
                 WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED -> VoiceDownloadState.Waiting(WIFI_ONLY_TAG in job.tags)

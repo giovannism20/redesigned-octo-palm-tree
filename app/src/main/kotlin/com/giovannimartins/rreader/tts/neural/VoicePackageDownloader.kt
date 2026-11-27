@@ -115,6 +115,16 @@ class VoicePackageDownloader
             lockOf(pkg).withLock { withContext(io) { store.discardDownload(pkg) } }
         }
 
+        /**
+         * Deletes what downloads left behind, except the current download of the packages in [activeIds], whose jobs
+         * wait or run: what every other package's downloads left (each once a download of it running now has
+         * stopped), and whatever belongs to no package's current download.
+         */
+        suspend fun discardLeftovers(activeIds: Set<String>) {
+            store.packages.filterNot { it.id in activeIds }.forEach { discard(it) }
+            withContext(io) { store.discardStrays() }
+        }
+
         private suspend fun fetchAndInstall(
             pkg: VoicePackage,
             onProgress: (VoiceDownloadProgress) -> Unit,

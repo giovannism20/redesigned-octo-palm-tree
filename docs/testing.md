@@ -48,7 +48,9 @@ download left behind, hosts off the allowlist, free space, and hostile archives
 (traversal and absolute names, links, wrong sizes, too many entries or bytes).
 Their jobs run with WorkManager's test helpers, whose background tasks a test
 can hold, as a busy phone would, to check that cancelling waits for WorkManager
-before it deletes what a download received. On a phone, the instrumented
+before it deletes what a download received; a job that really fails shows how
+a failed download is removed, and how the files of downloads that neither wait
+nor run are deleted when the app opens. On a phone, the instrumented
 `SherpaOnnxEngineTest` speaks a sentence with a real Piper voice, downloading
 Faber (67 MB) when no Piper voice is installed, and `EspeakPhonemizerTest`
 feeds espeak-ng text that makes it name letters, switch language or meet other
