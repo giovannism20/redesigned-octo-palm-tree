@@ -86,6 +86,7 @@
     <string name="player_error_other">Listening stopped because of a problem. Try again.</string>
     <string name="player_open_voices">Open voices</string>
     <string name="player_retry">Try again</string>
+    <string name="player_text">Text</string>
     <string name="player_sleep_timer">Sleep timer</string>
     <string name="player_sleep_timer_title">Stop listening after</string>
     <string name="player_sleep_timer_running">Sleep timer: stops in %1$s</string>
@@ -105,6 +106,18 @@
         <item quantity="one">%1$s left in the book</item>
         <item quantity="other">%1$s left in the book</item>
     </plurals>
+
+    <!-- Follow-along reader -->
+    <string name="reader_close">Back to the player</string>
+    <string name="reader_text_smaller">Smaller text</string>
+    <string name="reader_text_larger">Larger text</string>
+    <string name="reader_text_smaller_symbol" translatable="false">A−</string>
+    <string name="reader_text_larger_symbol" translatable="false">A+</string>
+    <string name="reader_back_to_reading">Back to the reading</string>
+    <string name="reader_read_from_here">Read from here</string>
+    <string name="reader_reading_now">Being read now</string>
+    <string name="reader_loading">Opening the chapter…</string>
+    <string name="reader_failed">This chapter could not be opened.</string>
 
     <!-- Durations, shown inside the time-left sentences -->
     <string name="duration_hours_minutes" translatable="false">%1$d h %2$d min</string>

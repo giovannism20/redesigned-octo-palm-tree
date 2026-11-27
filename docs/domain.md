@@ -36,6 +36,9 @@ Names used in code and docs. Add a term here when you introduce it.
 | **Playback connection** | `PlaybackConnection`: the UI's `MediaController` link to the playback service, connected while the app is visible; ViewModels use it through `PlaybackControls`. |
 | **Mini player** | The bar above the bottom navigation while a book is open: cover, title, chapter, −15 s and play/pause. Tapping it opens the full player. |
 | **Full player** | The player screen: cover, book and chapter titles, chapter progress with elapsed and remaining time, the time left in the chapter and the book, −15 s, play/pause, +15 s, speed, the sleep timer and the chapter list. |
+| **Follow-along reader** | The screen that shows the chapter being read in large, adjustable text, highlights the segment being spoken and keeps it in view, and reads from a tapped sentence. Opened with "Text" in the full player. |
+| **Auto-follow** | The reader keeping the highlighted segment in view as reading moves on; scrolling away stops it until "Back to the reading". |
+| **Read from here** | Tapping a sentence in the reader: listening continues from the start of the segment that holds it. |
 | **Sleep timer** | Pauses listening after a duration of listening (the player offers 5–60 minutes) or at the end of the chapter being listened to, fading the volume out over the last 10 seconds; the position is saved. Its time runs only while audio plays. Lives in the facade player (`SleepTimer`), so it works with the screen off. |
 | **Resume rewind** | After a pause of more than 5 minutes (or a book left that long), listening resumes one segment or about 10 seconds of text earlier, whichever is less, from the start of the segment that holds that point; never before the start of the book. Seeks and chapter jumps cancel it. |
 | **Fade-out** | The last 10 seconds of a sleep timer, while the internal player's volume falls to zero before the pause; the full volume is restored after pausing. |

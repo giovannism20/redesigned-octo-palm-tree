@@ -72,7 +72,7 @@ Base package: `com.giovannimartins.rreader`.
 | `tts` | `SpeechEngine` interface and `SystemTtsEngine` (multi-engine Android TTS → WAV), `AudioCache`, `WavInfo`, `SegmentRenderer` (segment → cached WAV, 300 MB LRU trim), `SpeakingRateTracker` (per-voice rate learned from rendered audio, kept across restarts through `SpeakingRateStore`); later `SherpaOnnxEngine` | implemented (neural voices in Phase 5) |
 | `playback` | `PlaybackService` (`MediaSessionService`, trusted controllers only), `ReaderPlayer` facade (chapter playlist over an internal ExoPlayer), `SegmentFeeder` (render-ahead window), `ChapterPlans`, `SeekTargets`, `PositionSaver`, `PlaybackRepository`, `ListeningStatus` (spoken segment and sleep timer for the UI), `ReaderCommands` (custom session commands), `SleepTimer` | implemented |
 | `catalog` | Public-domain catalogue client and downloads | planned |
-| `ui` | Compose screens, ViewModels, navigation, theme, design system; `ui/player`: `PlaybackConnection` (`MediaController` while the app is visible), mini player, full player with speed, chapters, time left and the sleep timer; `ui/library`: progress and time left (`LibraryTimeLeft`); `ui/components`: `BookCover`, time-left text (`timeLeft`) | in progress (shell, library, add book, voices, player) |
+| `ui` | Compose screens, ViewModels, navigation, theme, design system; `ui/player`: `PlaybackConnection` (`MediaController` while the app is visible), mini player, full player with speed, chapters, time left and the sleep timer; `ui/library`: progress and time left (`LibraryTimeLeft`); `ui/reader`: follow-along reader (`ReaderViewModel`, `ReaderChapter`); `ui/components`: `BookCover`, time-left text (`timeLeft`) | in progress (shell, library, add book, voices, player) |
 | `di` | Hilt modules (dispatchers, application scope, database, WorkManager) | implemented |
 
 ## Layering rules
@@ -204,6 +204,49 @@ flowchart LR
   and passes a typed `ReaderCommand` to `ReaderPlayer.handle`; invalid
   requests get `ERROR_BAD_VALUE`, requests that do not apply (no book open)
   get `ERROR_INVALID_STATE`.
+
+### Follow-along reader
+
+```mermaid
+sequenceDiagram
+    participant P as ReaderPlayer
+    participant L as ListeningStatus
+    participant V as ReaderViewModel
+    participant R as ReaderScreen
+    participant C as PlaybackConnection
+    P->>L: spoken segment (book, chapter, range)
+    L-->>V: StateFlow
+    V->>V: chapter text (PlaybackContent) → ReaderChapter on Default
+    V-->>R: paragraphs, highlight, following
+    R->>V: drag (stop following), "Back to the reading", tap (paragraph, offset)
+    V->>C: readFrom(chapter, segment start)
+    C->>P: READ_FROM custom command
+```
+
+- The full player's "Text" button opens the reader over the player; back
+  returns to the player. It shows the chapter being read: the spoken
+  segment's chapter, else the player's current chapter.
+- `ReaderChapter` splits the chapter text into paragraphs
+  (`Chapter.paragraphRangesOf`) and plans its segments with the same
+  `SegmentPlanner` as the player, on the `Default` dispatcher. The text is a
+  `LazyColumn` with one item per paragraph, so long chapters scroll smoothly;
+  only the paragraph being read carries an `AnnotatedString` highlight of the
+  spoken segment (primary colour behind it).
+- **Auto-follow**: while following, the highlighted line is kept between 10 %
+  and 80 % of the screen and otherwise scrolled to 25 % (a far paragraph is
+  jumped to first). A drag by the listener stops following (programmatic
+  scrolls do not count); "Back to the reading" follows again and scrolls
+  back. While not following, the chapter shown stays put even when the
+  voice moves on to the next chapter.
+- **Read from here**: a tap maps the character under the finger to the
+  segment that holds it (or the next one between sentences) and sends
+  `readFrom` with that segment's start, which plays from there. TalkBack
+  users get "Read from here" on each paragraph (its first sentence). After
+  reading from a chapter left behind, the reader stays on it until the voice
+  gets there.
+- **Text size**: A− and A+ step through 0.85×–2× (`ReaderTextScale`), saved
+  as `readerTextScale` in the settings; sizes are in sp, so the system font
+  scale applies on top.
 
 ### Resume rewind
 

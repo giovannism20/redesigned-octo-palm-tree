@@ -32,6 +32,20 @@ class SettingsRepositoryTest {
             assertThat(settings.playbackSpeed).isEqualTo(AppSettings.SPEED_RANGE.endInclusive)
         }
 
+    @Test
+    fun `keeps the reader text size within its range`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val repository = repository(File(folder.root, "settings.preferences_pb"))
+
+            repository.setReaderTextScale(1.3f)
+            assertThat(repository.settings.first().readerTextScale).isEqualTo(1.3f)
+
+            repository.setReaderTextScale(9f)
+            assertThat(repository.settings.first().readerTextScale).isEqualTo(AppSettings.TEXT_SCALE_RANGE.endInclusive)
+            repository.setReaderTextScale(0.1f)
+            assertThat(repository.settings.first().readerTextScale).isEqualTo(AppSettings.TEXT_SCALE_RANGE.start)
+        }
+
     private fun TestScope.repository(file: File) =
         SettingsRepository(PreferenceDataStoreFactory.create(scope = backgroundScope) { file })
 }

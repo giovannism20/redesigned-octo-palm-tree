@@ -83,6 +83,7 @@
     <string name="player_error_other">A leitura parou por causa de um problema. Tente de novo.</string>
     <string name="player_open_voices">Abrir vozes</string>
     <string name="player_retry">Tentar de novo</string>
+    <string name="player_text">Texto</string>
     <string name="player_sleep_timer">Timer</string>
     <string name="player_sleep_timer_title">Parar de ler depois de</string>
     <string name="player_sleep_timer_running">Timer: para em %1$s</string>
@@ -105,6 +106,16 @@
         <item quantity="many">Faltam %1$s no livro</item>
         <item quantity="other">Faltam %1$s no livro</item>
     </plurals>
+
+    <!-- Follow-along reader -->
+    <string name="reader_close">Voltar ao player</string>
+    <string name="reader_text_smaller">Diminuir o texto</string>
+    <string name="reader_text_larger">Aumentar o texto</string>
+    <string name="reader_back_to_reading">Voltar à leitura</string>
+    <string name="reader_read_from_here">Ler a partir daqui</string>
+    <string name="reader_reading_now">Sendo lido agora</string>
+    <string name="reader_loading">Abrindo o capítulo…</string>
+    <string name="reader_failed">Não foi possível abrir este capítulo.</string>
 
     <!-- Durations, shown inside the time-left sentences -->
     <string name="duration_under_a_minute">menos de 1 min</string>

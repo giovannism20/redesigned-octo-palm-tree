@@ -67,6 +67,7 @@ import kotlin.time.Duration.Companion.seconds
 fun PlayerRoute(
     onMinimize: () -> Unit,
     onOpenVoices: () -> Unit,
+    onOpenReader: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PlayerViewModel = hiltViewModel(),
 ) {
@@ -87,6 +88,7 @@ fun PlayerRoute(
         onCancelSleepTimer = viewModel::cancelSleepTimer,
         onRetry = viewModel::retry,
         onOpenVoices = onOpenVoices,
+        onOpenReader = onOpenReader,
         modifier = modifier,
     )
 }
@@ -107,6 +109,7 @@ fun PlayerScreen(
     onCancelSleepTimer: () -> Unit,
     onRetry: () -> Unit,
     onOpenVoices: () -> Unit,
+    onOpenReader: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showChapters by rememberSaveable { mutableStateOf(false) }
@@ -152,6 +155,7 @@ fun PlayerScreen(
             onSetSleepTimer = onSetSleepTimer,
             onCancelSleepTimer = onCancelSleepTimer,
             onShowChapters = { showChapters = true },
+            onOpenReader = onOpenReader,
         )
         PlayerStatus(nowPlaying = nowPlaying, onRetry = onRetry, onOpenVoices = onOpenVoices)
         if (showChapters) {
@@ -391,6 +395,7 @@ private fun PlayerScreenPreview() {
             onCancelSleepTimer = {},
             onRetry = {},
             onOpenVoices = {},
+            onOpenReader = {},
         )
     }
 }
@@ -413,6 +418,7 @@ private fun PlayerScreenNoVoicePreview() {
             onCancelSleepTimer = {},
             onRetry = {},
             onOpenVoices = {},
+            onOpenReader = {},
         )
     }
 }

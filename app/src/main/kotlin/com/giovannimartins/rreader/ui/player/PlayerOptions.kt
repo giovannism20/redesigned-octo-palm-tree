@@ -31,7 +31,7 @@ import com.giovannimartins.rreader.R
 import com.giovannimartins.rreader.playback.SleepTimerSetting
 import com.giovannimartins.rreader.playback.SleepTimerState
 
-/** Speed, sleep timer and chapters, wrapping onto more lines when the text is large. */
+/** Speed, sleep timer, chapters and the follow-along text, wrapping onto more lines when the text is large. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun PlayerOptions(
@@ -41,6 +41,7 @@ internal fun PlayerOptions(
     onSetSleepTimer: (SleepTimerSetting) -> Unit,
     onCancelSleepTimer: () -> Unit,
     onShowChapters: () -> Unit,
+    onOpenReader: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     FlowRow(
@@ -54,6 +55,11 @@ internal fun PlayerOptions(
             Icon(painterResource(R.drawable.ic_chapters), contentDescription = null)
             Spacer(Modifier.width(8.dp))
             Text(stringResource(R.string.player_chapters), style = MaterialTheme.typography.labelLarge)
+        }
+        OutlinedButton(onClick = onOpenReader, modifier = Modifier.heightIn(min = 56.dp)) {
+            Icon(painterResource(R.drawable.ic_reader), contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(R.string.player_text), style = MaterialTheme.typography.labelLarge)
         }
     }
 }

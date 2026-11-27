@@ -10,6 +10,11 @@ All notable user-visible changes are documented here. The format follows
 
 - Importing a file that failed before (for example a format added in a later
   version) prepares it again instead of saying it is already in the library.
+- Follow-along text: "Text" in the player shows the chapter being read in
+  large type with the sentence being spoken highlighted, and keeps it in
+  view. Scroll freely and tap "Back to the reading" to return; tap any
+  sentence to listen from there; A− and A+ change the text size (on top of
+  the phone's font size), which is remembered.
 - Sleep timer in the player: stop listening after 5, 10, 15, 30, 45 minutes
   or 1 hour of listening, or at the end of the chapter. The countdown shows
   on the player, the voice fades out gently over the last seconds, the place

@@ -33,12 +33,13 @@ import com.giovannimartins.rreader.ui.player.MiniPlayer
 import com.giovannimartins.rreader.ui.player.NowPlaying
 import com.giovannimartins.rreader.ui.player.PlayerRoute
 import com.giovannimartins.rreader.ui.player.PlayerViewModel
+import com.giovannimartins.rreader.ui.reader.ReaderRoute
 import com.giovannimartins.rreader.ui.voices.VoicesRoute
 
 /**
  * App shell: bottom navigation with the mini player above it, the full player over everything when it is
- * open, and snackbar feedback for imports. [openPlayerRequests] grows each time the notification asks to open
- * the player.
+ * open, the follow-along reader over the player, and snackbar feedback for imports. [openPlayerRequests] grows
+ * each time the notification asks to open the player.
  */
 @Composable
 fun RReaderApp(
@@ -49,6 +50,7 @@ fun RReaderApp(
 ) {
     var destination by rememberSaveable { mutableStateOf(TopDestination.LIBRARY) }
     var playerOpen by rememberSaveable { mutableStateOf(false) }
+    var readerOpen by rememberSaveable { mutableStateOf(false) }
     val nowPlaying by playerViewModel.nowPlaying.collectAsStateWithLifecycle()
     val importState by importViewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -56,6 +58,11 @@ fun RReaderApp(
 
     LaunchedEffect(openPlayerRequests) {
         if (openPlayerRequests > 0) playerOpen = true
+    }
+    // The reader opens over the player only: it closes with the player or when no book is open anymore.
+    val bookOpen = nowPlaying != null
+    LaunchedEffect(playerOpen, bookOpen) {
+        if (!playerOpen || !bookOpen) readerOpen = false
     }
     LaunchedEffect(messageText) {
         if (messageText == null) return@LaunchedEffect
@@ -69,8 +76,9 @@ fun RReaderApp(
     val current = nowPlaying
     Box(modifier = modifier.fillMaxSize()) {
         if (playerOpen && current != null) {
-            BackHandler { playerOpen = false }
-            PlayerRoute(
+            PlayerAndReader(
+                readerOpen = readerOpen,
+                onReaderOpenChange = { readerOpen = it },
                 onMinimize = { playerOpen = false },
                 onOpenVoices = {
                     playerOpen = false
@@ -101,6 +109,23 @@ fun RReaderApp(
                 )
             }
         }
+    }
+}
+
+/** The full player, or the follow-along reader over it; back goes from the reader to the player. */
+@Composable
+private fun PlayerAndReader(
+    readerOpen: Boolean,
+    onReaderOpenChange: (Boolean) -> Unit,
+    onMinimize: () -> Unit,
+    onOpenVoices: () -> Unit,
+) {
+    if (readerOpen) {
+        BackHandler { onReaderOpenChange(false) }
+        ReaderRoute(onClose = { onReaderOpenChange(false) })
+    } else {
+        BackHandler(onBack = onMinimize)
+        PlayerRoute(onMinimize = onMinimize, onOpenVoices = onOpenVoices, onOpenReader = { onReaderOpenChange(true) })
     }
 }
 

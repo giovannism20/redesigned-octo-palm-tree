@@ -16,12 +16,14 @@ data class AppSettings(
     val defaultVoiceId: String? = null,
     /** Playback speed multiplier, see [SPEED_RANGE]. */
     val playbackSpeed: Float = DEFAULT_SPEED,
-    /** Multiplier for the follow-along reader text size. */
-    val readerTextScale: Float = 1f,
+    /** Multiplier for the follow-along reader text size, on top of the system font scale; see [TEXT_SCALE_RANGE]. */
+    val readerTextScale: Float = DEFAULT_TEXT_SCALE,
 ) {
     companion object {
         const val DEFAULT_SPEED = 1f
         val SPEED_RANGE = 0.75f..2f
+        const val DEFAULT_TEXT_SCALE = 1f
+        val TEXT_SCALE_RANGE = 0.85f..2f
     }
 }
 
@@ -36,7 +38,8 @@ class SettingsRepository
                 AppSettings(
                     defaultVoiceId = prefs[DEFAULT_VOICE],
                     playbackSpeed = (prefs[SPEED] ?: AppSettings.DEFAULT_SPEED).coerceIn(AppSettings.SPEED_RANGE),
-                    readerTextScale = prefs[TEXT_SCALE] ?: 1f,
+                    readerTextScale =
+                        (prefs[TEXT_SCALE] ?: AppSettings.DEFAULT_TEXT_SCALE).coerceIn(AppSettings.TEXT_SCALE_RANGE),
                 )
             }
 
@@ -49,7 +52,7 @@ class SettingsRepository
         }
 
         suspend fun setReaderTextScale(scale: Float) {
-            dataStore.edit { it[TEXT_SCALE] = scale }
+            dataStore.edit { it[TEXT_SCALE] = scale.coerceIn(AppSettings.TEXT_SCALE_RANGE) }
         }
 
         private companion object {

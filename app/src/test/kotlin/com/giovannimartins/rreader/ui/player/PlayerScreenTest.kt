@@ -118,6 +118,19 @@ class PlayerScreenTest {
     }
 
     @Test
+    fun `the text button opens the follow-along reader`() {
+        show(previewNowPlaying())
+
+        compose
+            .onNodeWithText("Text")
+            .assertHeightIsAtLeast(56.dp)
+            .performScrollTo()
+            .performClick()
+
+        assertThat(events).containsExactly("reader")
+    }
+
+    @Test
     fun `choosing a chapter starts it`() {
         show(previewNowPlaying())
 
@@ -178,6 +191,7 @@ class PlayerScreenTest {
                     onCancelSleepTimer = { events += "cancelSleepTimer" },
                     onRetry = { events += "retry" },
                     onOpenVoices = { events += "voices" },
+                    onOpenReader = { events += "reader" },
                 )
             }
         }
