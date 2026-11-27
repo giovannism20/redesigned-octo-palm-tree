@@ -10,6 +10,10 @@ All notable user-visible changes are documented here. The format follows
 
 - Importing a file that failed before (for example a format added in a later
   version) prepares it again instead of saying it is already in the library.
+- Sleep timer in the player: stop listening after 5, 10, 15, 30, 45 minutes
+  or 1 hour of listening, or at the end of the chapter. The countdown shows
+  on the player, the voice fades out gently over the last seconds, the place
+  is saved, and the timer can be turned off. It works with the screen off.
 - Time left: the library and "Continue listening" show how long the rest of
   each book takes at your speed ("Faltam 3 h 20 min"), and the player shows
   the time left in the chapter and in the book. How fast each voice speaks is

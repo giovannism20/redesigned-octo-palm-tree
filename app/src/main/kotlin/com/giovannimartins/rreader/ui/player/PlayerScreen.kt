@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -52,9 +54,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.giovannimartins.rreader.R
+import com.giovannimartins.rreader.playback.SleepTimerSetting
+import com.giovannimartins.rreader.playback.SleepTimerState
 import com.giovannimartins.rreader.ui.components.BookCover
 import com.giovannimartins.rreader.ui.components.timeLeft
 import com.giovannimartins.rreader.ui.theme.RReaderTheme
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 /** Stateful full player bound to [PlayerViewModel]; shows nothing while no book is open. */
 @Composable
@@ -65,9 +71,11 @@ fun PlayerRoute(
     viewModel: PlayerViewModel = hiltViewModel(),
 ) {
     val nowPlaying by viewModel.nowPlaying.collectAsStateWithLifecycle()
+    val sleepTimer by viewModel.sleepTimer.collectAsStateWithLifecycle()
     val current = nowPlaying ?: return
     PlayerScreen(
         nowPlaying = current,
+        sleepTimer = sleepTimer,
         onMinimize = onMinimize,
         onTogglePlayPause = viewModel::togglePlayPause,
         onSeekBack = viewModel::seekBack,
@@ -75,16 +83,19 @@ fun PlayerRoute(
         onSeekTo = viewModel::seekTo,
         onSelectChapter = viewModel::playChapter,
         onSpeedChange = viewModel::setSpeed,
+        onSetSleepTimer = viewModel::setSleepTimer,
+        onCancelSleepTimer = viewModel::cancelSleepTimer,
         onRetry = viewModel::retry,
         onOpenVoices = onOpenVoices,
         modifier = modifier,
     )
 }
 
-/** The full player: cover, titles, chapter progress, large controls, speed and chapters. */
+/** The full player: cover, titles, chapter progress, large controls, speed, sleep timer and chapters. */
 @Composable
 fun PlayerScreen(
     nowPlaying: NowPlaying,
+    sleepTimer: SleepTimerState,
     onMinimize: () -> Unit,
     onTogglePlayPause: () -> Unit,
     onSeekBack: () -> Unit,
@@ -92,6 +103,8 @@ fun PlayerScreen(
     onSeekTo: (Long) -> Unit,
     onSelectChapter: (Int) -> Unit,
     onSpeedChange: (Float) -> Unit,
+    onSetSleepTimer: (SleepTimerSetting) -> Unit,
+    onCancelSleepTimer: () -> Unit,
     onRetry: () -> Unit,
     onOpenVoices: () -> Unit,
     modifier: Modifier = Modifier,
@@ -132,14 +145,14 @@ fun PlayerScreen(
             onTogglePlayPause = onTogglePlayPause,
             onSeekForward = onSeekForward,
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            SpeedButton(speed = nowPlaying.speed, onSpeedChange = onSpeedChange)
-            OutlinedButton(onClick = { showChapters = true }, modifier = Modifier.heightIn(min = 56.dp)) {
-                Icon(painterResource(R.drawable.ic_chapters), contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.player_chapters), style = MaterialTheme.typography.labelLarge)
-            }
-        }
+        PlayerOptions(
+            speed = nowPlaying.speed,
+            sleepTimer = sleepTimer,
+            onSpeedChange = onSpeedChange,
+            onSetSleepTimer = onSetSleepTimer,
+            onCancelSleepTimer = onCancelSleepTimer,
+            onShowChapters = { showChapters = true },
+        )
         PlayerStatus(nowPlaying = nowPlaying, onRetry = onRetry, onOpenVoices = onOpenVoices)
         if (showChapters) {
             ChapterSheet(
@@ -297,48 +310,6 @@ private fun TransportControls(
     }
 }
 
-@Composable
-private fun SpeedButton(
-    speed: Float,
-    onSpeedChange: (Float) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val locale = LocalConfiguration.current.locales[0]
-    val value = PlayerFormat.speed(speed, locale)
-    val description = stringResource(R.string.player_speed_description, value)
-    Box(modifier = modifier) {
-        OutlinedButton(
-            onClick = { expanded = true },
-            modifier = Modifier.heightIn(min = 56.dp).semantics { contentDescription = description },
-        ) {
-            Icon(painterResource(R.drawable.ic_speed), contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.player_speed_value, value), style = MaterialTheme.typography.labelLarge)
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            PlayerFormat.SPEEDS.forEach { option ->
-                val optionText = PlayerFormat.speed(option, locale)
-                val optionDescription = stringResource(R.string.player_speed_description, optionText)
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = stringResource(R.string.player_speed_value, optionText),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = if (option == speed) MaterialTheme.colorScheme.primary else Color.Unspecified,
-                        )
-                    },
-                    onClick = {
-                        expanded = false
-                        onSpeedChange(option)
-                    },
-                    modifier = Modifier.heightIn(min = 56.dp).semantics { contentDescription = optionDescription },
-                )
-            }
-        }
-    }
-}
-
 /** Buffering, end of the book or a problem with what to do next. */
 @Composable
 private fun PlayerStatus(
@@ -408,6 +379,7 @@ private fun PlayerScreenPreview() {
     RReaderTheme {
         PlayerScreen(
             nowPlaying = previewNowPlaying(),
+            sleepTimer = SleepTimerState.After(29.minutes + 59.seconds),
             onMinimize = {},
             onTogglePlayPause = {},
             onSeekBack = {},
@@ -415,6 +387,8 @@ private fun PlayerScreenPreview() {
             onSeekTo = {},
             onSelectChapter = {},
             onSpeedChange = {},
+            onSetSleepTimer = {},
+            onCancelSleepTimer = {},
             onRetry = {},
             onOpenVoices = {},
         )
@@ -427,6 +401,7 @@ private fun PlayerScreenNoVoicePreview() {
     RReaderTheme {
         PlayerScreen(
             nowPlaying = previewNowPlaying().copy(isPlaying = false, problem = PlaybackProblem.NO_VOICE),
+            sleepTimer = SleepTimerState.Off,
             onMinimize = {},
             onTogglePlayPause = {},
             onSeekBack = {},
@@ -434,6 +409,8 @@ private fun PlayerScreenNoVoicePreview() {
             onSeekTo = {},
             onSelectChapter = {},
             onSpeedChange = {},
+            onSetSleepTimer = {},
+            onCancelSleepTimer = {},
             onRetry = {},
             onOpenVoices = {},
         )

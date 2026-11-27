@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
+import com.giovannimartins.rreader.playback.SleepTimerState
 import com.giovannimartins.rreader.ui.theme.RReaderTheme
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
@@ -17,6 +18,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 /** On a phone-sized screen; the full player scrolls, so nodes are scrolled into view before clicks. */
 @RunWith(RobolectricTestRunner::class)
@@ -75,6 +78,46 @@ class PlayerScreenTest {
     }
 
     @Test
+    fun `the sleep timer offers durations and the end of the chapter`() {
+        show(previewNowPlaying())
+
+        compose
+            .onNodeWithContentDescription(
+                "Sleep timer",
+            ).assertHeightIsAtLeast(56.dp)
+            .performScrollTo()
+            .performClick()
+        compose.onNodeWithText("Stop listening after").assertExists()
+        listOf("5 minutes", "10 minutes", "15 minutes", "30 minutes", "45 minutes", "1 hour").forEach {
+            compose.onNodeWithText(it).assertExists()
+        }
+        compose.onNodeWithText("Turn off the timer").assertDoesNotExist()
+        compose.onNodeWithText("30 minutes").assertHeightIsAtLeast(56.dp).performClick()
+        compose.onNodeWithContentDescription("Sleep timer").performScrollTo().performClick()
+        compose.onNodeWithText("End of chapter").performClick()
+
+        assertThat(events).containsExactly("sleep After(duration=30m)", "sleep EndOfChapter").inOrder()
+    }
+
+    @Test
+    fun `a running sleep timer shows its countdown and can be turned off`() {
+        show(previewNowPlaying(), SleepTimerState.After(29.minutes + 59.seconds))
+
+        compose.onNodeWithText("29:59").assertExists()
+        compose.onNodeWithContentDescription("Sleep timer: stops in 29:59").performScrollTo().performClick()
+        compose.onNodeWithText("Turn off the timer").performClick()
+
+        assertThat(events).containsExactly("cancelSleepTimer")
+    }
+
+    @Test
+    fun `a timer for the end of the chapter says so`() {
+        show(previewNowPlaying(), SleepTimerState.EndOfChapter)
+
+        compose.onNodeWithContentDescription("Sleep timer: stops at the end of the chapter").assertExists()
+    }
+
+    @Test
     fun `choosing a chapter starts it`() {
         show(previewNowPlaying())
 
@@ -115,11 +158,15 @@ class PlayerScreenTest {
         assertThat(events).containsExactly("open", "back", "toggle").inOrder()
     }
 
-    private fun show(nowPlaying: NowPlaying) {
+    private fun show(
+        nowPlaying: NowPlaying,
+        sleepTimer: SleepTimerState = SleepTimerState.Off,
+    ) {
         compose.setContent {
             RReaderTheme {
                 PlayerScreen(
                     nowPlaying = nowPlaying,
+                    sleepTimer = sleepTimer,
                     onMinimize = { events += "minimize" },
                     onTogglePlayPause = { events += "toggle" },
                     onSeekBack = { events += "back" },
@@ -127,6 +174,8 @@ class PlayerScreenTest {
                     onSeekTo = { events += "seek $it" },
                     onSelectChapter = { events += "chapter $it" },
                     onSpeedChange = { events += "speed $it" },
+                    onSetSleepTimer = { events += "sleep $it" },
+                    onCancelSleepTimer = { events += "cancelSleepTimer" },
                     onRetry = { events += "retry" },
                     onOpenVoices = { events += "voices" },
                 )

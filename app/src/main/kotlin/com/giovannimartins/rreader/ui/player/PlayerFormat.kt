@@ -12,6 +12,9 @@ internal object PlayerFormat {
     /** Speeds offered by the speed selector. */
     val SPEEDS: List<Float> = listOf(0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f)
 
+    /** Durations offered by the sleep timer, in minutes. */
+    val SLEEP_MINUTES: List<Int> = listOf(5, 10, 15, 30, 45, 60)
+
     /** A time such as `4:05` or `1:02:03`; negative times count as zero. */
     fun duration(millis: Long): String =
         millis.coerceAtLeast(0).milliseconds.toComponents { hours, minutes, seconds, _ ->

@@ -83,6 +83,18 @@
     <string name="player_error_other">A leitura parou por causa de um problema. Tente de novo.</string>
     <string name="player_open_voices">Abrir vozes</string>
     <string name="player_retry">Tentar de novo</string>
+    <string name="player_sleep_timer">Timer</string>
+    <string name="player_sleep_timer_title">Parar de ler depois de</string>
+    <string name="player_sleep_timer_running">Timer: para em %1$s</string>
+    <string name="player_sleep_timer_chapter">Timer: para no fim do capítulo</string>
+    <plurals name="player_sleep_minutes">
+        <item quantity="one">%1$d minuto</item>
+        <item quantity="many">%1$d minutos</item>
+        <item quantity="other">%1$d minutos</item>
+    </plurals>
+    <string name="player_sleep_hour">1 hora</string>
+    <string name="player_sleep_end_of_chapter">Fim do capítulo</string>
+    <string name="player_sleep_cancel">Desligar o timer</string>
     <plurals name="player_chapter_time_left">
         <item quantity="one">Falta %1$s neste capítulo</item>
         <item quantity="many">Faltam %1$s neste capítulo</item>
