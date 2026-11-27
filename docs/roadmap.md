@@ -17,7 +17,7 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 - [ ] CI: build, unit tests, lint, detekt, formatting, Gradle wrapper validation, CodeQL, documentation link check
 - [x] Enable private vulnerability reporting on GitHub
 - [x] Emulator tooling: command-line tools, emulator, Android 16/17 Play images, `rreader-api36` AVD (needs KVM: enable SVM in firmware)
-- [ ] `rreader-api37` AVD (Android 17 reference image)
+- [x] `rreader-api37` AVD (Android 17 reference image)
 - [ ] Feasibility spike on a real phone: `synthesizeToFile` speed/quality with the Google pt-BR voice
 - [ ] Feasibility spike on a real phone: sequential sentence playback for 30+ minutes with the screen locked
 
