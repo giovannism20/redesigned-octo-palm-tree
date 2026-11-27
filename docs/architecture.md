@@ -378,7 +378,9 @@ sequenceDiagram
   SHA-256, so a pin that changes starts over instead of resuming old bytes
   into the new archive (those are deleted). A lost
   connection keeps the partial file and the job tries again with a backoff
-  from 30 seconds, at most six attempts. Cancelling deletes what arrived.
+  from 30 seconds, at most six attempts. Cancelling waits until WorkManager
+  has cancelled the job, so no attempt starts afterwards, then deletes what
+  arrived.
 - **Verification and installation.** The archive must have the pinned size
   and SHA-256; it is then unpacked by `VoicePackageArchive`, which keeps only
   the expected entries under the catalogue's names, and the staging folder is

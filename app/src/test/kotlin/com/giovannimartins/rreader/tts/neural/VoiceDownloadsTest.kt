@@ -14,13 +14,16 @@ import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
 import com.giovannimartins.rreader.net.FakeTransport
+import com.giovannimartins.rreader.net.FakeTransport.Companion.breakingBody
 import com.giovannimartins.rreader.net.FakeTransport.Companion.ok
 import com.giovannimartins.rreader.net.FakeTransport.Companion.redirect
 import com.google.common.truth.Truth.assertThat
 import com.google.common.util.concurrent.Futures
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -31,6 +34,7 @@ import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.util.Collections
 import java.util.UUID
+import java.util.concurrent.Executor
 
 /** The voice download jobs: their network rules, what they report, when they retry and how they are cancelled. */
 @RunWith(RobolectricTestRunner::class)
@@ -41,6 +45,7 @@ class VoiceDownloadsTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val transport = FakeTransport()
     private val published: MutableList<Data> = Collections.synchronizedList(mutableListOf())
+    private val tasks = HeldTasks()
     private val pkg = NeuralVoices.CADU
     private lateinit var workManager: WorkManager
     private lateinit var store: VoicePackageStore
@@ -53,7 +58,7 @@ class VoiceDownloadsTest {
             Configuration
                 .Builder()
                 .setExecutor(SynchronousExecutor())
-                .setTaskExecutor(SynchronousExecutor())
+                .setTaskExecutor(tasks)
                 .build(),
         )
         workManager = WorkManager.getInstance(context)
@@ -93,6 +98,29 @@ class VoiceDownloadsTest {
         assertThat(job().state).isEqualTo(WorkInfo.State.CANCELLED)
         assertThat(store.partialFile(pkg).exists()).isFalse()
         assertThat(runBlocking { downloads.states.first() }).isEmpty()
+    }
+
+    @Test
+    fun `cancelling waits for WorkManager, so an attempt that starts meanwhile leaves nothing behind`() {
+        val downloads = WorkManagerVoiceDownloads(workManager, downloader)
+        runBlocking { downloads.download(pkg, wifiOnly = true) }
+        transport.answer(pkg.url) { redirect(ASSET) }
+        transport.answer(ASSET) { ok(breakingBody(1_000), TYPE, contentLength = pkg.archiveBytes) }
+
+        runBlocking {
+            tasks.hold()
+            val cancelling = launch { downloads.cancel(pkg) }
+            yield()
+            // An attempt of the job starts before WorkManager has cancelled it, and keeps what it received.
+            assertThat(downloader.download(pkg))
+                .isEqualTo(VoiceDownloadOutcome.Failed(VoiceDownloadFailure.NETWORK, retryable = true))
+            assertThat(store.partialFile(pkg).exists()).isTrue()
+            tasks.release()
+            cancelling.join()
+        }
+
+        assertThat(job().state).isEqualTo(WorkInfo.State.CANCELLED)
+        assertThat(store.partialFile(pkg).exists()).isFalse()
     }
 
     @Test
@@ -195,7 +223,37 @@ class VoiceDownloadsTest {
         return runBlocking { worker.doWork() }
     }
 
+    /** WorkManager's background tasks: run at once, or held from [hold] until [release], as a busy phone would. */
+    private class HeldTasks : Executor {
+        private val held = ArrayDeque<Runnable>()
+        private var holding = false
+
+        @Synchronized
+        fun hold() {
+            holding = true
+        }
+
+        fun release() {
+            val waiting =
+                synchronized(this) {
+                    holding = false
+                    held.toList().also { held.clear() }
+                }
+            waiting.forEach(Runnable::run)
+        }
+
+        override fun execute(command: Runnable) {
+            val now =
+                synchronized(this) {
+                    if (holding) held.addLast(command)
+                    !holding
+                }
+            if (now) command.run()
+        }
+    }
+
     private companion object {
+        const val TYPE = "application/octet-stream"
         const val ASSET = "https://release-assets.githubusercontent.com/github-production-release-asset/1/cadu?sig=x"
     }
 }

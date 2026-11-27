@@ -8,6 +8,7 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import androidx.work.await
 import androidx.work.workDataOf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -49,7 +50,7 @@ interface VoiceDownloads {
         wifiOnly: Boolean,
     )
 
-    /** Stops the download of [pkg] and deletes what it received. */
+    /** Stops the download of [pkg] and deletes what it received; no attempt of it starts afterwards. */
     suspend fun cancel(pkg: VoicePackage)
 
     /** The downloads WorkManager knows about, by package id. */
@@ -97,7 +98,9 @@ class WorkManagerVoiceDownloads
         }
 
         override suspend fun cancel(pkg: VoicePackage) {
-            workManager.cancelUniqueWork(VoiceDownloadWork.uniqueName(pkg))
+            // WorkManager cancels in the background: until it has, an attempt of the job can still start and write
+            // to the archive deleted below.
+            workManager.cancelUniqueWork(VoiceDownloadWork.uniqueName(pkg)).await()
             downloader.discard(pkg)
         }
 
