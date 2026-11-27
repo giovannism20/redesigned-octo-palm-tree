@@ -11,6 +11,7 @@ import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
 import com.giovannimartins.rreader.catalog.FakeTransport.Companion.EPUB
 import com.giovannimartins.rreader.catalog.FakeTransport.Companion.ok
+import com.giovannimartins.rreader.catalog.FakeTransport.Companion.redirect
 import com.giovannimartins.rreader.data.db.RReaderDatabase
 import com.giovannimartins.rreader.data.files.BookFileStore
 import com.giovannimartins.rreader.importer.BookIntake
@@ -97,6 +98,27 @@ class DownloadBookWorkerTest {
         val result = run(attempt = 0)
 
         assertThat(stateAfter(result, WorkInfo.State.FAILED)).isEqualTo(DownloadState.Failed(DownloadFailure.TOO_LARGE))
+    }
+
+    @Test
+    fun `an answer that is not the book fails without retrying`() {
+        transport.answer(BOOK) { ok("<html>Down for maintenance</html>".toByteArray(), "text/html") }
+
+        val result = run(attempt = 0)
+
+        assertThat(stateAfter(result, WorkInfo.State.FAILED))
+            .isEqualTo(DownloadState.Failed(DownloadFailure.UNAVAILABLE))
+    }
+
+    @Test
+    fun `a redirect off the allowlist is refused without contacting it, and not retried`() {
+        transport.answer(BOOK) { redirect("https://mirror.example/pg55752-images-3.epub") }
+
+        val result = run(attempt = 0)
+
+        assertThat(stateAfter(result, WorkInfo.State.FAILED))
+            .isEqualTo(DownloadState.Failed(DownloadFailure.UNAVAILABLE))
+        assertThat(transport.requests.map { it.address }).containsExactly(BOOK)
     }
 
     @Test
