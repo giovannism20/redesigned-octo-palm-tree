@@ -36,14 +36,15 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.giovannimartins.rreader.R
+import com.giovannimartins.rreader.data.settings.ReadingFont
+import com.giovannimartins.rreader.ui.theme.readingTextStyle
 
 /**
- * The chapter's paragraphs, one lazy item each so long chapters scroll smoothly; only the paragraph being
- * read carries a highlight. While [following], the highlighted line is kept in the upper part of the screen;
- * a drag by the listener reports [onUserScroll]. Tapping a paragraph reads from the sentence under the finger,
- * and TalkBack users get "Read from here" on each paragraph.
+ * The chapter's paragraphs in the listener's [readingFont], one lazy item each so long chapters scroll smoothly; only
+ * the paragraph being read carries a highlight. While [following], the highlighted line is kept in the upper part of
+ * the screen; a drag by the listener reports [onUserScroll]. Tapping a paragraph reads from the sentence under the
+ * finger, and TalkBack users get "Read from here" on each paragraph.
  */
 @Composable
 internal fun ReaderText(
@@ -53,6 +54,7 @@ internal fun ReaderText(
     following: Boolean,
     followRequests: Int,
     textScale: Float,
+    readingFont: ReadingFont,
     onUserScroll: () -> Unit,
     onReadFrom: (paragraph: Int, offset: Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -67,7 +69,7 @@ internal fun ReaderText(
     LaunchedEffect(listState, highlight, following, followRequests) {
         if (following && highlight != null) listState.keepInView(highlight, layouts)
     }
-    val style = readerTextStyle(textScale)
+    val style = readingTextStyle(readingFont, textScale)
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),
@@ -147,11 +149,6 @@ private fun highlighted(
         }
     }
 
-/** Large reading text: 22 sp at 1×, times the listener's [scale]; sp also follows the system font scale. */
-@Composable
-private fun readerTextStyle(scale: Float): TextStyle =
-    MaterialTheme.typography.bodyLarge.copy(fontSize = BASE_FONT_SIZE * scale, lineHeight = BASE_LINE_HEIGHT * scale)
-
 /**
  * Scrolls so the highlighted line sits in the upper part of the screen, unless it is already comfortably in
  * view. A paragraph far away is jumped to first, then the line is placed once that paragraph is laid out.
@@ -178,8 +175,6 @@ private suspend fun LazyListState.keepInView(
     }
 }
 
-private val BASE_FONT_SIZE = 22.sp
-private val BASE_LINE_HEIGHT = 34.sp
 private val PARAGRAPH_SPACING = 16.dp
 private val MIN_TOUCH_HEIGHT = 48.dp
 

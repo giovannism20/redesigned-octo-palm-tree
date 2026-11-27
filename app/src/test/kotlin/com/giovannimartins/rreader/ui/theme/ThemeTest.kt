@@ -4,6 +4,7 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.contentColorFor
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.TextUnit
+import com.giovannimartins.rreader.data.settings.ReadingFont
 import com.giovannimartins.rreader.ui.MIN_CONTRAST
 import com.giovannimartins.rreader.ui.contrastRatio
 import com.google.common.truth.Truth.assertThat
@@ -154,6 +155,12 @@ class ThemeTest {
         }
         assertThat(RReaderTypography.bodyMedium.fontSize.value).isAtLeast(MIN_BODY_SP)
         assertThat(RReaderTypography.bodySmall.fontSize.value).isAtLeast(MIN_BODY_SP)
+    }
+
+    @Test
+    fun `only the reading font may be Literata`() {
+        assertThat(ReadingFont.ATKINSON.fontFamily).isEqualTo(AppFontFamily)
+        assertThat(ReadingFont.LITERATA.fontFamily).isEqualTo(LiterataFontFamily)
     }
 
     /** Every text or icon colour of [colors] with the surface it is drawn on. */

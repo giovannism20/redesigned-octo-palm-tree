@@ -135,7 +135,24 @@ stays night blue in both.
 app uses 400, 500, 600 and 700). It was designed for readers with low vision:
 similar letters stay easy to tell apart (I, l and 1; O and 0). It covers
 Portuguese (ã, õ, ç, ê…) and typographic punctuation (— “ ” …). It is the
-app's only typeface.
+app's typeface for every screen.
+
+**Owner decision (2026-11-27):** keep Atkinson Hyperlegible Next, its slashed
+zero included: the slash is what keeps 0 apart from O, which matters more to
+the listener than how the digit looks.
+
+### Reading font
+
+The follow-along reader's text, and only that text, may use another face,
+which the listener chooses in Ajustes: **Atkinson Hyperlegible** (the
+default) or **Literata** (TypeTogether, SIL Open Font License 1.1), a serif
+book face made for long reading on screens, bundled as one variable font file
+(`app/src/main/res/font/literata.ttf`, unmodified from the Google Fonts
+repository; the reader uses its regular weight at its default text optical
+size). It covers Portuguese and typographic punctuation (checked with
+fontTools: ã õ ç ê à é í ó ú â ô — “ ” …). Titles, buttons and every other
+text stay in Atkinson Hyperlegible Next. The reading text is 22 sp with
+34 sp lines at the reader's 1× (`readingTextStyle` in `ui/theme/Type.kt`).
 
 ### Text size
 

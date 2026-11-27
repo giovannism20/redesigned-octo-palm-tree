@@ -68,6 +68,7 @@ object AboutContent {
                 licence = "SIL Open Font License 1.1",
                 asset = "OFL-1.1-atkinson-hyperlegible-next.txt",
             ),
+            AboutComponent(name = "Literata", licence = "SIL Open Font License 1.1", asset = "OFL-1.1-literata.txt"),
         )
 
     /** The terms of the voice models (ADR 0018), each with where to read them. */

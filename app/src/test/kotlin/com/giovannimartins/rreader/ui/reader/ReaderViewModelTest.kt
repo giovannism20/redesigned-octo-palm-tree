@@ -1,6 +1,7 @@
 package com.giovannimartins.rreader.ui.reader
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import com.giovannimartins.rreader.data.settings.ReadingFont
 import com.giovannimartins.rreader.data.settings.SettingsRepository
 import com.giovannimartins.rreader.playback.BOOK_ID
 import com.giovannimartins.rreader.playback.FakePlaybackContent
@@ -161,6 +162,19 @@ class ReaderViewModelTest {
         }
 
     @Test
+    fun `the text follows the reading font chosen in the settings`() =
+        runTest {
+            val settings = SettingsRepository(dataStore())
+            val viewModel = viewModel(settings = settings)
+            listenTo(chapter = 0, segment = 0)
+            assertThat(viewModel.awaitState { it.paragraphs != null }.readingFont).isEqualTo(ReadingFont.ATKINSON)
+
+            settings.setReadingFont(ReadingFont.LITERATA)
+
+            assertThat(viewModel.awaitState { it.readingFont == ReadingFont.LITERATA }.paragraphs).isNotNull()
+        }
+
+    @Test
     fun `a chapter that cannot be read says so`() =
         runTest {
             val broken =
@@ -178,16 +192,20 @@ class ReaderViewModelTest {
             assertThat(state.paragraphs).isNull()
         }
 
-    private fun TestScope.viewModel(source: PlaybackContent = content): ReaderViewModel {
-        val dataStore =
-            PreferenceDataStoreFactory.create(scope = backgroundScope) { File(folder.root, "settings.preferences_pb") }
+    private fun TestScope.dataStore() =
+        PreferenceDataStoreFactory.create(scope = backgroundScope) { File(folder.root, "settings.preferences_pb") }
+
+    private fun TestScope.viewModel(
+        source: PlaybackContent = content,
+        settings: SettingsRepository = SettingsRepository(dataStore()),
+    ): ReaderViewModel {
         val viewModel =
             ReaderViewModel(
                 controls = controls,
                 status = status,
                 content = source,
                 planner = planner,
-                settings = SettingsRepository(dataStore),
+                settings = settings,
                 cpu = UnconfinedTestDispatcher(testScheduler),
             )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.state.collect {} }

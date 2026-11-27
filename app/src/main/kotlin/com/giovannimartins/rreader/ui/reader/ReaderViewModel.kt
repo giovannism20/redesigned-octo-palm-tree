@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.giovannimartins.rreader.Diagnostics
 import com.giovannimartins.rreader.data.settings.AppSettings
+import com.giovannimartins.rreader.data.settings.ReadingFont
 import com.giovannimartins.rreader.data.settings.SettingsRepository
 import com.giovannimartins.rreader.di.DefaultDispatcher
 import com.giovannimartins.rreader.playback.ListeningStatus
@@ -47,6 +48,8 @@ data class ReaderUiState(
     val followRequests: Int = 0,
     /** Text size multiplier on top of the system font scale. */
     val textScale: Float = AppSettings.DEFAULT_TEXT_SCALE,
+    /** The typeface the listener chose for the text. */
+    val readingFont: ReadingFont = ReadingFont.ATKINSON,
 ) {
     val canShrinkText: Boolean get() = ReaderTextScale.smaller(textScale) != null
     val canEnlargeText: Boolean get() = ReaderTextScale.larger(textScale) != null
@@ -76,13 +79,14 @@ class ReaderViewModel
         /** A chapter the listener chose to read from; the text stays there until the voice reaches it. */
         private var awaited: ChapterKey? = null
 
-        private val textScale =
+        /** The listener's choices for the text: its size and its typeface. */
+        private val textLook =
             settings.settings
-                .map { it.readerTextScale }
+                .map { TextLook(it.readerTextScale, it.appearance.readingFont) }
                 .catch { e ->
                     if (e !is IOException) throw e
-                    Diagnostics.recordHandled("read the reader text size", e)
-                    emit(AppSettings.DEFAULT_TEXT_SCALE)
+                    Diagnostics.recordHandled("read the reader text settings", e)
+                    emit(TextLook())
                 }
 
         val state: StateFlow<ReaderUiState> =
@@ -91,8 +95,8 @@ class ReaderViewModel
                 loaded,
                 status.spokenSegment,
                 combine(following, followRequests, ::Pair),
-                combine(textScale, controls.nowPlaying, ::Pair),
-            ) { key, result, spoken, (follow, requests), (scale, now) ->
+                combine(textLook, controls.nowPlaying, ::Pair),
+            ) { key, result, spoken, (follow, requests), (look, now) ->
                 val current = result?.takeIf { it.key == key }
                 ReaderUiState(
                     chapterIndex = key?.chapterIndex ?: 0,
@@ -102,7 +106,8 @@ class ReaderViewModel
                     highlight = current?.chapter?.highlightOf(spoken),
                     following = follow,
                     followRequests = requests,
-                    textScale = scale,
+                    textScale = look.scale,
+                    readingFont = look.font,
                 )
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ReaderUiState())
 
@@ -179,6 +184,12 @@ class ReaderViewModel
                 Diagnostics.recordHandled("read a chapter for the reader", e)
                 Loaded(key, null)
             }
+
+        /** The text's size multiplier and typeface. */
+        private data class TextLook(
+            val scale: Float = AppSettings.DEFAULT_TEXT_SCALE,
+            val font: ReadingFont = ReadingFont.ATKINSON,
+        )
 
         /** A loaded chapter, or a chapter that could not be read ([chapter] is null). */
         private class Loaded(

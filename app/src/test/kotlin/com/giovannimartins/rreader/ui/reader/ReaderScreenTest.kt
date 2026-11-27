@@ -14,9 +14,15 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.dp
+import com.giovannimartins.rreader.data.settings.ReadingFont
+import com.giovannimartins.rreader.ui.assertAllTextReadableIn
 import com.giovannimartins.rreader.ui.assertAllTextReadableOn
 import com.giovannimartins.rreader.ui.player.previewNowPlaying
+import com.giovannimartins.rreader.ui.textLayout
+import com.giovannimartins.rreader.ui.theme.AppFontFamily
 import com.giovannimartins.rreader.ui.theme.Ink
+import com.giovannimartins.rreader.ui.theme.LiterataFontFamily
+import com.giovannimartins.rreader.ui.theme.RReaderLightColorScheme
 import com.giovannimartins.rreader.ui.theme.RReaderTheme
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
@@ -132,15 +138,46 @@ class ReaderScreenTest {
     }
 
     @Test
+    fun `all text is readable in the light theme, the highlight included`() {
+        show(reading.copy(readingFont = ReadingFont.LITERATA), darkTheme = false)
+
+        compose.assertAllTextReadableIn(RReaderLightColorScheme)
+    }
+
+    @Test
+    fun `the text is in the reading font the listener chose, and nothing else is`() {
+        show(reading.copy(readingFont = ReadingFont.LITERATA))
+
+        assertThat(fontOf(paragraphs[0])).isEqualTo(LiterataFontFamily)
+        assertThat(fontOf("Capítulo III — A denúncia")).isEqualTo(AppFontFamily)
+    }
+
+    @Test
+    fun `the app's typeface is the reading font until another is chosen`() {
+        show(reading)
+
+        assertThat(fontOf(paragraphs[0])).isEqualTo(AppFontFamily)
+    }
+
+    @Test
     fun `a chapter that cannot be read says so`() {
         show(reading.copy(paragraphs = null, failed = true))
 
         compose.onNodeWithText("This chapter could not be opened.").assertExists()
     }
 
-    private fun show(state: ReaderUiState) {
+    private fun fontOf(text: String) =
+        compose
+            .onNodeWithText(text, useUnmergedTree = true)
+            .textLayout()
+            .layoutInput.style.fontFamily
+
+    private fun show(
+        state: ReaderUiState,
+        darkTheme: Boolean = true,
+    ) {
         compose.setContent {
-            RReaderTheme {
+            RReaderTheme(darkTheme = darkTheme) {
                 ReaderScreen(
                     state = state,
                     nowPlaying = previewNowPlaying(),

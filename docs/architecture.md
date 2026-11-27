@@ -313,6 +313,10 @@ sequenceDiagram
 - **Text size**: A− and A+ step through 0.85×–2× (`ReaderTextScale`), saved
   as `readerTextScale` in the settings; sizes are in sp, so the system font
   scale applies on top.
+- **Reading font**: the text is in the listener's reading font
+  (`ReadingFont`, from the settings with the text size: Atkinson Hyperlegible
+  Next or Literata, `readingTextStyle`); everything else on the screen stays
+  in the app's typeface.
 
 ### Resume rewind
 
@@ -478,7 +482,7 @@ navegador"), why the installed app is under the GPL 3.0 (it includes
 piper-phonemize and espeak-ng, ADR 0018), every component with its licence,
 and the terms of the voice models. Licence texts ship in `assets/licenses/`
 (GPL 3.0, Apache 2.0 with the PdfBox and Apache Commons notices, MIT for the
-app, ONNX Runtime, jsoup and Bouncy Castle, the font's OFL) and open in a
+app, ONNX Runtime, jsoup and Bouncy Castle, the OFL of each font) and open in a
 full-screen reader, paragraph by paragraph; terms published on the web (ML
 Kit, the Creative Commons licences of the Piper voices) open in the browser.
 

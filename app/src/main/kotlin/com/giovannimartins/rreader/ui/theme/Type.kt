@@ -1,6 +1,9 @@
 package com.giovannimartins.rreader.ui.theme
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -9,6 +12,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import com.giovannimartins.rreader.R
+import com.giovannimartins.rreader.data.settings.ReadingFont
 
 /** One weight of the variable font file. */
 private fun appFont(weight: FontWeight) =
@@ -20,7 +24,8 @@ private fun appFont(weight: FontWeight) =
 
 /**
  * Atkinson Hyperlegible Next (SIL Open Font License 1.1), designed by the Braille Institute for readers with
- * low vision: similar letters stay easy to tell apart (I, l and 1; O and 0). The app's only typeface.
+ * low vision: similar letters stay easy to tell apart (I, l and 1; O and 0, whose slash the owner kept). The app's
+ * typeface for everything; only the follow-along reader's text may use [LiterataFontFamily] instead.
  */
 internal val AppFontFamily =
     FontFamily(
@@ -60,3 +65,43 @@ internal val RReaderTypography =
         labelMedium = style(size = 18.sp, lineHeight = 24.sp, weight = FontWeight.Medium),
         labelSmall = style(size = 16.sp, lineHeight = 22.sp, weight = FontWeight.Medium),
     )
+
+/**
+ * Literata (SIL Open Font License 1.1, TypeTogether), a serif book face, offered for the follow-along reader's text
+ * only. One variable font file; the reader uses its regular weight at the font's own text optical size.
+ */
+internal val LiterataFontFamily =
+    FontFamily(
+        Font(
+            resId = R.font.literata,
+            weight = FontWeight.Normal,
+            variationSettings = FontVariation.Settings(FontVariation.weight(FontWeight.Normal.weight)),
+        ),
+    )
+
+/** The typeface of a reading font. */
+internal val ReadingFont.fontFamily: FontFamily
+    get() =
+        when (this) {
+            ReadingFont.ATKINSON -> AppFontFamily
+            ReadingFont.LITERATA -> LiterataFontFamily
+        }
+
+/**
+ * The follow-along reader's text in the listener's reading [font]: 22 sp with 34 sp lines, times the reader's own
+ * [scale] (A− and A+). Sizes are in sp, so the app's text size and the phone's font size apply on top.
+ */
+@Composable
+@ReadOnlyComposable
+internal fun readingTextStyle(
+    font: ReadingFont,
+    scale: Float,
+): TextStyle =
+    MaterialTheme.typography.bodyLarge.copy(
+        fontFamily = font.fontFamily,
+        fontSize = READING_FONT_SIZE * scale,
+        lineHeight = READING_LINE_HEIGHT * scale,
+    )
+
+private val READING_FONT_SIZE = 22.sp
+private val READING_LINE_HEIGHT = 34.sp

@@ -167,6 +167,19 @@ Hyperlegible Next Project Authors. It is licensed under the
 ships with the app in
 `app/src/main/assets/licenses/OFL-1.1-atkinson-hyperlegible-next.txt`.
 
+### Literata
+
+[Literata](https://github.com/googlefonts/literata) (TypeTogether), the serif
+reading font the listener may choose for the follow-along text, is bundled
+unmodified as `app/src/main/res/font/literata.ttf`: the variable font
+`Literata[opsz,wght].ttf` (version 3.103) from the Google Fonts repository
+(`ofl/literata`), 955,132 bytes, SHA-256
+`b41138c9373112f32abb589cc22e8674b06ed4048b0c513be922bdd26f274440`. Copyright
+2017 The Literata Project Authors. It is licensed under the
+[SIL Open Font License 1.1](https://openfontlicense.org); the full licence
+text, as published with the font, ships with the app in
+`app/src/main/assets/licenses/OFL-1.1-literata.txt`.
+
 ### Project Gutenberg
 
 The Explore tab searches and downloads public-domain books from
@@ -308,4 +321,5 @@ output of the models, under the same terms as the models.
 screen shows: the GNU GPL 3.0 and the Apache License 2.0 (from Debian's
 `common-licenses`), the Apache 2.0 text with the PdfBox-Android and Apache
 Commons notices, the MIT licences of R Reader, ONNX Runtime, jsoup and
-Bouncy Castle (as above), and the font's SIL Open Font License.
+Bouncy Castle (as above), and the SIL Open Font License of each font
+(Atkinson Hyperlegible Next and Literata).

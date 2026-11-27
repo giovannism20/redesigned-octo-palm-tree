@@ -163,6 +163,7 @@ private fun ReaderBody(
                     following = state.following,
                     followRequests = state.followRequests,
                     textScale = state.textScale,
+                    readingFont = state.readingFont,
                     onUserScroll = onUserScroll,
                     onReadFrom = onReadFrom,
                 )
