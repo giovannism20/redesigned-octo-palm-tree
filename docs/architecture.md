@@ -396,8 +396,9 @@ sequenceDiagram
   versions of the app.
 - **Verification and installation.** The archive must have the pinned size
   and SHA-256; it is then unpacked by `VoicePackageArchive`, which keeps only
-  the expected entries under the catalogue's names, and the staging folder is
-  moved into place. A package is installed when every kept file is there with
+  the expected entries under the catalogue's names (regular files of their
+  pinned sizes, each flushed to the disk once written), and the staging folder
+  is moved into place. A package is installed when every kept file is there with
   its exact size; a download that finds its package installed deletes what an
   earlier one left (a process that died between moving the package into place
   and deleting the archive).

@@ -45,14 +45,18 @@ package downloads use the fake `HttpTransport` and archives built in the tests
 (`TestArchives`): pinned SHA-256 and size, resuming with HTTP ranges (a corrupt
 start is refused as damaged), partial archives named after their pin, what a
 download left behind, hosts off the allowlist, free space, and hostile archives
-(traversal and absolute names, links, wrong sizes, too many entries or bytes).
-Their jobs run with WorkManager's test helpers, whose background tasks a test
-can hold, as a busy phone would, to check that cancelling waits for WorkManager
-before it deletes what a download received; a job that really fails shows how
-a failed download is removed, and how the files of downloads that neither wait
-nor run are deleted when the app opens. The worker runs with any attempt count,
-to check that only attempts in a row that receive nothing make it give up. On a
-phone, the instrumented
+(traversal and absolute names, symbolic and hard links, devices and named
+pipes at a kept name, wrong sizes, too many entries or bytes), and every kept
+file is flushed to the disk before its folder is put in place.
+`VoicePackageArchiveTest` stays a plain JUnit test: Robolectric's Android jar
+carries an older Commons Compress, which Robolectric tests load instead of the
+app's. The download jobs run with WorkManager's test helpers, whose background
+tasks a test can hold, as a busy phone would, to check that cancelling waits for
+WorkManager before it deletes what a download received; a job that really fails
+shows how a failed download is removed, and how the files of downloads that
+neither wait nor run are deleted when the app opens. The worker runs with any
+attempt count, to check that only attempts in a row that receive nothing make
+it give up. On a phone, the instrumented
 `SherpaOnnxEngineTest` speaks a sentence with a real Piper voice, downloading
 Faber (67 MB) when no Piper voice is installed, and `EspeakPhonemizerTest`
 feeds espeak-ng text that makes it name letters, switch language or meet other

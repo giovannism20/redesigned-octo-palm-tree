@@ -25,6 +25,14 @@ internal object TestArchives {
         val target: String,
     ) : Entry
 
+    /** An entry of [type] (`TarConstants.LF_*`) carrying [bytes] and naming [target], as a crafted archive can. */
+    class TypedEntry(
+        override val name: String,
+        val type: Byte,
+        val bytes: ByteArray,
+        val target: String,
+    ) : Entry
+
     fun file(
         name: String,
         bytes: ByteArray,
@@ -34,6 +42,13 @@ internal object TestArchives {
         name: String,
         target: String,
     ): Entry = LinkEntry(name, target)
+
+    fun typed(
+        name: String,
+        type: Byte,
+        bytes: ByteArray,
+        target: String = "",
+    ): Entry = TypedEntry(name, type, bytes, target)
 
     fun tarBz2(entries: List<Entry>): ByteArray {
         val out = ByteArrayOutputStream()
@@ -64,6 +79,16 @@ internal object TestArchives {
                 tar.putArchiveEntry(
                     TarArchiveEntry(entry.name, TarConstants.LF_SYMLINK, true).apply { linkName = entry.target },
                 )
+            }
+
+            is TypedEntry -> {
+                val header =
+                    TarArchiveEntry(entry.name, entry.type, true).apply {
+                        linkName = entry.target
+                        size = entry.bytes.size.toLong()
+                    }
+                tar.putArchiveEntry(header)
+                tar.write(entry.bytes)
             }
         }
         tar.closeArchiveEntry()

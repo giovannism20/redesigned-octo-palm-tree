@@ -6,6 +6,7 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
 import java.io.BufferedInputStream
 import java.io.File
+import java.io.FileOutputStream
 import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
@@ -20,7 +21,9 @@ class VoiceArchiveException(
  * SHA-256 check. Defence in depth for SR-1 and SR-2: entry names are only compared with the names the catalogue
  * expects and never used as paths (each kept file is written under its [PackageFile.name]); an archive with an
  * absolute or `..` entry, more than [MAX_ENTRIES] entries or more than [MAX_UNPACKED_BYTES] in all is refused; a
- * kept file must be a regular file of exactly its expected size and appear once; and every kept file must be found.
+ * kept file must be a regular file (not a link, a device or a named pipe) of exactly its expected size and appear
+ * once; and every kept file must be found. Other entries, of any type, are skipped: nothing is ever created from them.
+ * Each kept file is on the disk (`fsync`) before this returns, so the folder can be renamed into place.
  */
 internal object VoicePackageArchive {
     /** More entries than any official package has (the Kokoro one has about 420). */
@@ -32,8 +35,8 @@ internal object VoicePackageArchive {
     private const val BUFFER_SIZE = 64 * 1024
 
     /**
-     * Writes the [pkg] files found in [archive] into [target], which is created and must be empty. The limits are
-     * parameters for tests.
+     * Writes the [pkg] files found in [archive] into [target], which is created and must be empty, and flushes each
+     * one to the disk with [sync] once it is complete. The limits and [sync] are parameters for tests.
      *
      * @throws VoiceArchiveException when the archive is not what the catalogue describes.
      * @throws IOException when it cannot be read or the files cannot be written.
@@ -44,6 +47,7 @@ internal object VoicePackageArchive {
         target: File,
         maxEntries: Int = MAX_ENTRIES,
         maxUnpackedBytes: Long = MAX_UNPACKED_BYTES,
+        sync: (FileOutputStream) -> Unit = { it.fd.sync() },
     ) {
         if (!target.mkdirs() && !target.isDirectory) throw IOException("Cannot create the package folder")
         val wanted = pkg.files.associateBy(PackageFile::entry)
@@ -53,7 +57,7 @@ internal object VoicePackageArchive {
                 forEachEntry(tar, maxEntries) { entry ->
                     wanted[entry.name]?.let { file ->
                         refuse(!found.add(file.entry), "A file appears twice")
-                        copy(tar, entry, file, File(target, file.name))
+                        copy(tar, entry, file, File(target, file.name), sync)
                     }
                 }
             }
@@ -108,11 +112,11 @@ internal object VoicePackageArchive {
         entry: TarArchiveEntry,
         file: PackageFile,
         destination: File,
+        sync: (FileOutputStream) -> Unit,
     ) {
-        val regular = entry.isFile && !entry.isSymbolicLink && !entry.isLink
-        refuse(!regular || entry.size != file.bytes, "A file is not what was expected")
+        refuse(!isRegularFile(entry) || entry.size != file.bytes, "A file is not what was expected")
         var copied = 0L
-        destination.outputStream().use { output ->
+        FileOutputStream(destination).use { output ->
             val buffer = ByteArray(BUFFER_SIZE)
             var read = tar.read(buffer)
             while (read > 0) {
@@ -120,9 +124,25 @@ internal object VoicePackageArchive {
                 copied += read
                 read = tar.read(buffer)
             }
+            refuse(copied != file.bytes, "A file is incomplete")
+            // On the disk before the package folder is renamed into place: after a crash or a power cut, an
+            // installed package never has files whose bytes were not written.
+            sync(output)
         }
-        refuse(copied != file.bytes, "A file is incomplete")
     }
+
+    /**
+     * Whether [entry] is a regular file. [TarArchiveEntry.isFile] holds for every entry that is not a folder, links,
+     * devices and named pipes included, so those are excluded one by one, with methods that this library and the
+     * older copy in Robolectric's Android jar both have.
+     */
+    private fun isRegularFile(entry: TarArchiveEntry): Boolean =
+        entry.isFile &&
+            !entry.isSymbolicLink &&
+            !entry.isLink &&
+            !entry.isCharacterDevice &&
+            !entry.isBlockDevice &&
+            !entry.isFIFO
 
     /** Fails once more than [limit] bytes were read: a bound on what a hostile archive can unpack to. */
     private class Limited(
