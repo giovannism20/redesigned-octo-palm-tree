@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.android.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
@@ -119,6 +120,9 @@ class ReaderPlayer internal constructor(
 
     /** Whether the next start rewinds a little because listening resumes after a long pause. */
     private var rewindOnStart = false
+
+    /** The lookup of the voice asked for by the last [ReaderCommand.RefreshVoice]; a newer one cancels it. */
+    private var voiceRefresh: Job? = null
 
     init {
         exo.addListener(InternalPlayerListener())
@@ -327,7 +331,11 @@ class ReaderPlayer internal constructor(
 
             ReaderCommand.RefreshVoice -> {
                 val open = book
-                if (open != null) scope.launch { voiceSwitch.apply(open.id, deps.content.voiceFor(open.id)) }
+                if (open != null) {
+                    // Two choices in a row: the lookup of the first could end last, so the last choice cancels it.
+                    voiceRefresh?.cancel()
+                    voiceRefresh = scope.launch { voiceSwitch.apply(open.id, deps.content.voiceFor(open.id)) }
+                }
                 open != null
             }
         }

@@ -129,5 +129,9 @@ internal class FakePlaybackContent(
     /** The voice of [book]: tests change it (or set [voice]) to change the voice of the open book. */
     var voice: Voice? = null
 
-    override suspend fun voiceFor(bookId: String): Voice? = voice ?: book?.takeIf { it.id == bookId }?.voice
+    /** Answers for the next voice lookups, in order, before [voice]; a test can make one wait. */
+    val voiceAnswers = ArrayDeque<suspend () -> Voice?>()
+
+    override suspend fun voiceFor(bookId: String): Voice? =
+        voiceAnswers.removeFirstOrNull()?.invoke() ?: voice ?: book?.takeIf { it.id == bookId }?.voice
 }

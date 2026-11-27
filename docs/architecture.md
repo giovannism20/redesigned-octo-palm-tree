@@ -247,6 +247,8 @@ spoken, without reopening the book:
    best offline Portuguese voice of the system engines), else any offline
    Portuguese voice. A voice that is not installed (a deleted neural voice)
    is skipped, so listening falls back to the default and then to the phone.
+   The lookup is asynchronous, so a newer `REFRESH_VOICE` cancels the lookup
+   of an older one that has not finished: the last choice wins.
 4. When the voice differs, the player re-anchors at the current position and
    restarts the feeder from the start of the segment that holds it with the
    new voice (a playing book keeps playing, a paused one renders ahead), and

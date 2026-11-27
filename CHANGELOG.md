@@ -125,6 +125,8 @@ All notable user-visible changes are documented here. The format follows
 - A sentence that makes a natural voice close the app no longer stops the
   book for good: if the app closes twice in a row on the same sentence, that
   sentence is skipped with a short pause and listening goes on.
+- Choosing two voices quickly one after the other reads with the last one
+  chosen.
 - Dora, Alex and Santa prepare the next chapters while the phone charges
   only when nobody is listening: the preparation stops as soon as you press
   play, so listening starts as fast as without it, and goes on when you

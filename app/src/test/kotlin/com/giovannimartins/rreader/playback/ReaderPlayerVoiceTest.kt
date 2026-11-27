@@ -5,7 +5,9 @@ import androidx.media3.test.utils.robolectric.RobolectricUtil.runMainLooperUntil
 import androidx.media3.test.utils.robolectric.TestPlayerRunHelper.advance
 import com.giovannimartins.rreader.textkit.model.ReadingPosition
 import com.giovannimartins.rreader.textkit.text.SegmentPlanner
+import com.giovannimartins.rreader.tts.Voice
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CompletableDeferred
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -80,6 +82,28 @@ class ReaderPlayerVoiceTest {
         assertThat(player.playWhenReady).isTrue()
         assertThat(player.playerError).isNull()
         assertThat(content.loads).isEqualTo(1)
+    }
+
+    @Test
+    fun `when the voice is changed twice quickly, the last choice wins`() {
+        openAt(ReadingPosition(0, segments[2].start))
+        val alex = voice(id = "neural:alex")
+        val slowLookup = CompletableDeferred<Voice?>()
+        content.voiceAnswers += { slowLookup.await() }
+        content.voiceAnswers += { phone }
+
+        player.handle(ReaderCommand.RefreshVoice)
+        ShadowLooper.idleMainLooper()
+        player.handle(ReaderCommand.RefreshVoice)
+        runMainLooperUntil { phone.id in engine.voicesUsed }
+        slowLookup.complete(alex)
+        ShadowLooper.idleMainLooper()
+
+        assertThat(engine.voicesUsed).doesNotContain(alex.id)
+        assertThat(
+            fixture.status.session.value
+                ?.voice,
+        ).isEqualTo(phone)
     }
 
     @Test
