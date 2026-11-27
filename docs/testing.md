@@ -78,6 +78,13 @@ documentation link check.
   crashing recognizer, and stored pages that are damaged, too large or of
   another format. Expected: a typed failure, a capped bitmap, or the page
   recognized again.
+- **Crashes in native code** (`NativeCallMarkersTest`, `PdfOcrTest`,
+  `PdfBookParserTest`, `ImportBookWorkerTest`): a fake renderer or
+  recognizer "kills the process" with an `Error` nothing catches, and the
+  test puts back the native call marker the run left, as a real crash
+  would. Expected: the call is made again after one death and skipped after
+  two (cover left out, page without text, or "too complex"), and an import
+  started ten times is given up.
 - **Hostile network answers** (`CatalogHttpTest`, `CatalogHostsTest`,
   `GutenbergFeedParserTest`, `CatalogDownloaderTest`): addresses and redirects
   off the allowlist or to cleartext, too many redirects, unexpected media

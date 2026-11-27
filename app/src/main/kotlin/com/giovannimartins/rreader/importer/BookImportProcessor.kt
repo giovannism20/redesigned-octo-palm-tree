@@ -24,8 +24,9 @@ import javax.inject.Inject
  * Second half of an import: parses a stored source file and persists the
  * normalized chapters, cover and metadata. Runs inside [ImportBookWorker] and
  * is safe to repeat for the same book: a run stopped by the system resumes
- * from the pages text recognition stored, which are deleted once the import
- * is over, ready or failed. When the book was removed meanwhile, whatever the
+ * from the pages text recognition stored, and skips a native call that made
+ * the process die twice (`NativeCallMarkers`); both are deleted once the
+ * import is over, ready or failed. When the book was removed meanwhile, whatever the
  * import wrote is deleted as it ends, also when it is cancelled. Anything a
  * parser or the storage throws, cancellation aside, ends the import as failed,
  * so a book never stays "being prepared" because of it.
@@ -64,7 +65,7 @@ class BookImportProcessor
             withContext(NonCancellable + io) {
                 val book = bookDao.findById(bookId)
                 if (book?.status == BookStatus.IMPORTING) bookDao.markFailed(bookId, ImportFailure.TOO_COMPLEX)
-                if (book == null) files.delete(bookId) else files.deleteOcrPages(bookId)
+                if (book == null) files.delete(bookId) else files.deleteResumeFiles(bookId)
             }
 
         private suspend fun import(
@@ -83,7 +84,7 @@ class BookImportProcessor
                     parseAndPersist(book, parser, request)
                 }
             failure?.let { fail(bookId, it) }
-            withContext(io) { files.deleteOcrPages(bookId) }
+            withContext(io) { files.deleteResumeFiles(bookId) }
         }
 
         /**

@@ -94,6 +94,10 @@ All notable user-visible changes are documented here. The format follows
 - A book whose preparation failed in an unexpected way, or kept stopping, no
   longer stays "Preparing the book…" forever: it says why it could not be
   prepared, and adding the same file again tries again.
+- A PDF whose cover or one of whose scanned pages makes the phone's PDF
+  reader crash no longer makes the app close again and again while the book
+  is prepared: after the second time, that cover is left out or that page is
+  skipped.
 
 ### Security
 

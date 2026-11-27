@@ -19,6 +19,7 @@ import javax.inject.Singleton
  * files/books/{bookId}/chapters/{index}.txt
  * files/books/{bookId}/cover
  * files/books/{bookId}/ocr/{page}.json   (pages read by text recognition while the import runs)
+ * files/books/{bookId}/native.inflight   (the native call the import is making, while it makes it)
  * files/imports/            (temporary files while copying)
  * ```
  *
@@ -67,6 +68,9 @@ class BookFileStore internal constructor(
         require(pageIndex >= 0) { "Page index must not be negative" }
         return File(File(bookDir(bookId), OCR_DIRECTORY), "$pageIndex.json")
     }
+
+    /** Where an import notes the call into native code it is making, while it makes it (`NativeCallMarkers`). */
+    fun nativeCallFile(bookId: String): File = File(bookDir(bookId), NATIVE_CALL_FILE)
 
     /** Moves a completed temporary import into place as the book's source file. */
     @Throws(IOException::class)
@@ -121,6 +125,12 @@ class BookFileStore internal constructor(
         File(bookDir(bookId), OCR_DIRECTORY).deleteRecursively()
     }
 
+    /** Removes what an import keeps to resume after it was stopped: recognized pages and the native call marker. */
+    fun deleteResumeFiles(bookId: String) {
+        deleteOcrPages(bookId)
+        nativeCallFile(bookId).delete()
+    }
+
     /** Removes everything stored for a book. */
     fun delete(bookId: String) {
         bookDir(bookId).deleteRecursively()
@@ -146,6 +156,7 @@ class BookFileStore internal constructor(
 
     private companion object {
         const val OCR_DIRECTORY = "ocr"
+        const val NATIVE_CALL_FILE = "native.inflight"
         val UUID_PATTERN = Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
     }
 }

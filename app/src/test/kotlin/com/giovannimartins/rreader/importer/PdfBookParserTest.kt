@@ -3,6 +3,8 @@ package com.giovannimartins.rreader.importer
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.giovannimartins.rreader.data.db.ImportFailure
+import com.giovannimartins.rreader.data.files.BookFileStore
+import com.giovannimartins.rreader.pdf.NativeCallMarkers
 import com.giovannimartins.rreader.pdf.OcrLimits
 import com.giovannimartins.rreader.pdf.PageTextRecognizer
 import com.giovannimartins.rreader.pdf.PdfCoverRenderer
@@ -24,6 +26,7 @@ import com.giovannimartins.rreader.textkit.model.Chapter
 import com.giovannimartins.rreader.textkit.model.CoverImage
 import com.giovannimartins.rreader.textkit.model.NormalizedBook
 import com.google.common.truth.Truth.assertThat
+import org.junit.Assert.assertThrows
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -37,6 +40,7 @@ class PdfBookParserTest {
 
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val cover = CoverImage("image/jpeg", byteArrayOf(1, 2, 3))
+    private val files by lazy { BookFileStore(folder.root) }
 
     @Test
     fun `imports a typeset PDF with its outline, without running headers and page numbers`() {
@@ -293,6 +297,37 @@ class PdfBookParserTest {
             },
         )
 
+    @Test
+    fun `SR-4 leaves out a cover whose drawing made the process die twice in a row`() {
+        val source = typesetBook().writeTo(folder.newFile())
+        val marker = files.nativeCallFile(BOOK_ID)
+        repeat(NativeCallMarkers.MAX_DEATHS) {
+            var left = ByteArray(0)
+            val dying =
+                PdfCoverRenderer {
+                    left = marker.readBytes()
+                    throw ProcessDeath()
+                }
+            assertThrows(ProcessDeath::class.java) {
+                parser(coverRenderer = dying).parse(ParseRequest(BOOK_ID, source, "livro"))
+            }
+            marker.writeBytes(left)
+        }
+        var drawn = 0
+
+        val outcome =
+            parser(
+                coverRenderer = {
+                    drawn++
+                    cover
+                },
+            ).parse(ParseRequest(BOOK_ID, source, "livro"))
+
+        assertThat((outcome as ParseOutcome.Parsed).book.cover).isNull()
+        assertThat(drawn).isEqualTo(0)
+        assertThat(PdfError.RendererCrashed.toImportFailure()).isEqualTo(ImportFailure.TOO_COMPLEX)
+    }
+
     private fun parse(
         fixture: PdfFixture,
         fallbackTitle: String = "livro",
@@ -305,7 +340,10 @@ class PdfBookParserTest {
     private fun parser(
         coverRenderer: PdfCoverRenderer = PdfCoverRenderer { cover },
         ocr: PdfOcr = pdfOcr(ScriptedRecognizer(), folder.root),
-    ) = PdfBookParser(PdfLayoutExtractor(context), ocr, coverRenderer, LayoutBookBuilder())
+    ) = PdfBookParser(PdfLayoutExtractor(context), ocr, coverRenderer, LayoutBookBuilder(), NativeCallMarkers(files))
+
+    /** Stands for the process being killed by a crash in native code: nothing in the app catches it. */
+    private class ProcessDeath : Error("process died in native code")
 
     private companion object {
         const val BOOK_ID = "00000000-0000-4000-8000-000000000001"

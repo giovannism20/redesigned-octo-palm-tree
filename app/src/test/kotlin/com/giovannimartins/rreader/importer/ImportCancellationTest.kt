@@ -8,6 +8,7 @@ import com.giovannimartins.rreader.data.db.BookStatus
 import com.giovannimartins.rreader.data.db.RReaderDatabase
 import com.giovannimartins.rreader.data.files.BookFileStore
 import com.giovannimartins.rreader.data.library.LibraryRepository
+import com.giovannimartins.rreader.pdf.NativeCallMarkers
 import com.giovannimartins.rreader.pdf.PageTextRecognizer
 import com.giovannimartins.rreader.pdf.PdfFixture
 import com.giovannimartins.rreader.pdf.PdfLayoutExtractor
@@ -104,6 +105,7 @@ class ImportCancellationTest {
                             pdfOcr(recognizer, folder.root),
                             { null },
                             LayoutBookBuilder(),
+                            NativeCallMarkers(files),
                         ),
                 ),
             io = Dispatchers.IO,

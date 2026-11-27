@@ -45,6 +45,9 @@ sealed interface PdfError {
     /** Opening the document needs a password. */
     data object PasswordProtected : PdfError
 
+    /** The platform's PDF renderer made the app close twice in a row when opening the file (a native crash). */
+    data object RendererCrashed : PdfError
+
     /** The document exceeds [limit]. */
     data class LimitExceeded(
         val limit: PdfLimit,

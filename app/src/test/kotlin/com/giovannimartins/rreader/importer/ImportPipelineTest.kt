@@ -11,6 +11,7 @@ import com.giovannimartins.rreader.data.db.ChapterEntity
 import com.giovannimartins.rreader.data.db.ImportFailure
 import com.giovannimartins.rreader.data.db.RReaderDatabase
 import com.giovannimartins.rreader.data.files.BookFileStore
+import com.giovannimartins.rreader.pdf.NativeCallMarkers
 import com.giovannimartins.rreader.pdf.PageTextRecognizer
 import com.giovannimartins.rreader.pdf.PdfFixture
 import com.giovannimartins.rreader.pdf.PdfLayoutExtractor
@@ -280,7 +281,13 @@ class ImportPipelineTest {
     }
 
     private fun pdfParser(recognizer: PageTextRecognizer = ScriptedRecognizer()) =
-        PdfBookParser(PdfLayoutExtractor(context), pdfOcr(recognizer, folder.root), { null }, LayoutBookBuilder())
+        PdfBookParser(
+            PdfLayoutExtractor(context),
+            pdfOcr(recognizer, folder.root),
+            { null },
+            LayoutBookBuilder(),
+            NativeCallMarkers(files),
+        )
 
     private fun kotlinx.coroutines.test.TestScope.intake() =
         BookIntake(

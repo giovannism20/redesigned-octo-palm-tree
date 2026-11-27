@@ -52,8 +52,8 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | Info disclosure / DoS | XML parsing (B1) | Medium | External entities or DTD expansion (XXE, billion laughs) | DTD and external entities disabled on every XML parser |
 | DoS | Book metadata (B1) | High | An EPUB, PDF or shared file name carries a title, author list, language or description of several megabytes; stored whole, the book's database row no longer fits in a cursor window, and reading the library crashes the app at every launch | Titles of books, chapters and catalogue entries, authors, languages and descriptions are cut where they are read (SR-13); the library reads only the columns it shows, cut again in SQL; the library and Explore screens turn a read failure into a message instead of a crash |
 | DoS | PDF parsing (B1) | Medium | Malformed or gigantic PDF hangs or crashes the app | Parse in a worker with page, time, glyph and buffer limits (SR-4); password-protected files refused; out-of-memory reported as a typed failure so WorkManager does not retry a crash forever |
-| DoS | Cover rendering (B1) | Low | A crafted first page crashes or stalls the platform PDF renderer (native code) | Rendered only after PdfBox read the file, one page downscaled to at most 600 x 900 px, inside the import worker; a failure means no cover |
-| DoS | OCR page rendering and recognition (B1) | Medium | A scan with huge or crafted pages exhausts memory, or stalls the native renderer or the recognizer | Pages are drawn only after PdfBox read the file within its limits, one at a time, into a bitmap capped at 4,096 px a side and 12 million pixels; ML Kit gets one minute per page; allocation failures end in a typed failure (SR-4, ADR 0015) |
+| DoS | Cover rendering (B1) | Low | A crafted first page crashes or stalls the platform PDF renderer (native code); a crash kills the process, and WorkManager runs the import again, which crashes again | Rendered only after PdfBox read the file, one page downscaled to at most 600 x 900 px, inside the import worker; a failure means no cover; a native call marker (`native.inflight`) names the call in flight, so a cover whose drawing killed the process twice in a row is left out, and an import started ten times without ending is given up (SR-4) |
+| DoS | OCR page rendering and recognition (B1) | Medium | A scan with huge or crafted pages exhausts memory, or stalls or crashes the native renderer or the recognizer, the crash repeating at every run of the import | Pages are drawn only after PdfBox read the file within its limits, one at a time, into a bitmap capped at 4,096 px a side and 12 million pixels; ML Kit gets one minute per page; allocation failures end in a typed failure; a page in which the process died twice in a row is kept without text, a file whose opening did so fails as "too complex", and an import started ten times without ending is given up (SR-4, ADR 0015) |
 | Tampering | Intents (B2) | Medium | Another app sends a crafted `file://` URI or huge stream | Accept `content://` only, copy with size limit, re-detect type |
 | Spoofing / Tampering | Downloads (B3) | Medium | Network attacker swaps a voice model or book | HTTPS only, system CAs for `gutenberg.org` only; pinned SHA-256 for models; books validated like any import (signature, size, EPUB limits) |
 | Spoofing / Tampering | Redirects (B3) | Medium | A redirect (or a feed's next-page link) sends the app to another host or to cleartext | Each hop checked against the allowlist and HTTPS before any connection, at most 5 redirects; TLS to other hosts fails anyway (network security config) |
@@ -122,7 +122,16 @@ Each requirement is testable; reference its ID in tests and reviews.
   typed failure when a bitmap cannot be allocated or the recognizer fails.
   Stored recognized pages over 4 MiB, of another format version or that do
   not parse are ignored and recognized again. Verified by `PdfOcrTest`,
-  `OcrLimitsTest` and `OcrPageStoreTest`.)
+  `OcrLimitsTest` and `OcrPageStoreTest`. A crash in native code (the
+  platform renderer, ML Kit) kills the process with nothing to catch, so
+  before each native call, drawing the cover, opening the file for
+  recognition or recognizing a page, the import notes the call in
+  `books/{id}/native.inflight` (`NativeCallMarkers`) and deletes the note when
+  the call returns; the next run reads a note left behind and, once the
+  process died in the same call twice in a row, leaves the cover out, keeps
+  the page without text, or fails as "too complex" when opening the file
+  crashed. Verified by `NativeCallMarkersTest`, `PdfOcrTest` and
+  `PdfBookParserTest`.)
 - **SR-5** Cleartext traffic is disabled (`network_security_config`); only
   allowlisted HTTPS hosts are contacted, and only after a user action. (ADR
   0017: `CatalogHttp` is the app's only network client and sends a request

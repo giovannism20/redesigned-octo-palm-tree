@@ -35,7 +35,7 @@ class PdfOcrTest {
         val recognizer = FakeRecognizer()
         val content = content(text(0), picture(1), text(2), picture(3), picture(4))
 
-        val result = ocr(recognizer).recognize(BOOK_ID, source, content, ::onPage)
+        val result = ocr(recognizer).recognize(BOOK_ID, source, content, guard(), ::onPage)
 
         assertThat(recognizer.requested).containsExactly(1, 3, 4).inOrder()
         assertThat(progress).containsExactly(1 to 3, 2 to 3, 3 to 3).inOrder()
@@ -52,7 +52,7 @@ class PdfOcrTest {
         val short = PageLayout(2, 420f, 595f, listOf(LayoutLine("PARTE I", 180f, 200f, 240f, 220f, 18f)))
         val content = PdfContent(listOf(text(0), blank(1), short), emptyList(), PdfInfo(), picturedPages = emptySet())
 
-        val result = ocr(recognizer).recognize(BOOK_ID, source, content, ::onPage)
+        val result = ocr(recognizer).recognize(BOOK_ID, source, content, guard(), ::onPage)
 
         assertThat(result).isEqualTo(PdfExtraction.Extracted(content))
         assertThat(recognizer.opened).isEqualTo(0)
@@ -65,7 +65,7 @@ class PdfOcrTest {
         val content = content(picture(0), picture(1), text(2), picture(3), picture(4))
 
         assertThrows(InterruptedException::class.java) {
-            ocr(interrupted).recognize(BOOK_ID, source, content, ::onPage)
+            ocr(interrupted).recognize(BOOK_ID, source, content, guard(), ::onPage)
         }
         assertThat(listOf(0, 1, 3, 4).map { store.read(BOOK_ID, it) != null })
             .containsExactly(true, true, false, false)
@@ -73,7 +73,7 @@ class PdfOcrTest {
 
         progress.clear()
         val resumed = FakeRecognizer()
-        val result = ocr(resumed).recognize(BOOK_ID, source, content, ::onPage)
+        val result = ocr(resumed).recognize(BOOK_ID, source, content, guard(), ::onPage)
 
         assertThat(resumed.requested).containsExactly(3, 4).inOrder()
         assertThat(progress).containsExactly(3 to 4, 4 to 4).inOrder()
@@ -87,7 +87,7 @@ class PdfOcrTest {
         files.ocrPageFile(BOOK_ID, 1).apply { parentFile!!.mkdirs() }.writeText("{ danificado")
         val recognizer = FakeRecognizer()
 
-        ocr(recognizer).recognize(BOOK_ID, source, content(text(0), picture(1)), ::onPage)
+        ocr(recognizer).recognize(BOOK_ID, source, content(text(0), picture(1)), guard(), ::onPage)
 
         assertThat(recognizer.requested).containsExactly(1)
         assertThat(
@@ -105,12 +105,13 @@ class PdfOcrTest {
         val recognizer = FakeRecognizer()
         val content = content(picture(0), picture(1), picture(2))
 
-        val result = ocr(recognizer, OcrLimits(maxPages = 2)).recognize(BOOK_ID, source, content, ::onPage)
+        val result = ocr(recognizer, OcrLimits(maxPages = 2)).recognize(BOOK_ID, source, content, guard(), ::onPage)
 
         assertThat(result).isEqualTo(PdfExtraction.Failed(PdfError.LimitExceeded(PdfLimit.MAX_OCR_PAGES)))
         assertThat(recognizer.opened).isEqualTo(0)
-        assertThat(ocr(FakeRecognizer(), OcrLimits(maxPages = 3)).recognize(BOOK_ID, source, content, ::onPage))
-            .isInstanceOf(PdfExtraction.Extracted::class.java)
+        assertThat(
+            ocr(FakeRecognizer(), OcrLimits(maxPages = 3)).recognize(BOOK_ID, source, content, guard(), ::onPage),
+        ).isInstanceOf(PdfExtraction.Extracted::class.java)
     }
 
     @Test
@@ -120,13 +121,13 @@ class PdfOcrTest {
         val content = content(picture(0), picture(1), picture(2), picture(3))
         val limits = OcrLimits(timeBudget = 25.minutes)
 
-        val first = ocr(slow, limits, clock).recognize(BOOK_ID, source, content, ::onPage)
+        val first = ocr(slow, limits, clock).recognize(BOOK_ID, source, content, guard(), ::onPage)
 
         assertThat(first).isEqualTo(PdfExtraction.Failed(PdfError.LimitExceeded(PdfLimit.TIME_BUDGET)))
         assertThat(slow.requested).containsExactly(0, 1, 2).inOrder()
 
         val again = FakeRecognizer()
-        assertThat(ocr(again, limits, clock).recognize(BOOK_ID, source, content, ::onPage))
+        assertThat(ocr(again, limits, clock).recognize(BOOK_ID, source, content, guard(), ::onPage))
             .isEqualTo(PdfExtraction.Failed(PdfError.LimitExceeded(PdfLimit.TIME_BUDGET)))
         assertThat(again.requested).isEmpty()
     }
@@ -139,13 +140,13 @@ class PdfOcrTest {
         val crashing = failingWith(IllegalStateException("native failure"))
         val outOfMemory = failingWith(OutOfMemoryError())
 
-        assertThat(ocr(unopenable).recognize(BOOK_ID, source, content, ::onPage))
+        assertThat(ocr(unopenable).recognize(BOOK_ID, source, content, guard(), ::onPage))
             .isEqualTo(PdfExtraction.Failed(PdfError.Damaged))
-        assertThat(ocr(failing).recognize(BOOK_ID, source, content, ::onPage))
+        assertThat(ocr(failing).recognize(BOOK_ID, source, content, guard(), ::onPage))
             .isEqualTo(PdfExtraction.Failed(PdfError.TextRecognitionFailed))
-        assertThat(ocr(crashing).recognize(BOOK_ID, source, content, ::onPage))
+        assertThat(ocr(crashing).recognize(BOOK_ID, source, content, guard(), ::onPage))
             .isEqualTo(PdfExtraction.Failed(PdfError.TextRecognitionFailed))
-        assertThat(ocr(outOfMemory).recognize(BOOK_ID, source, content, ::onPage))
+        assertThat(ocr(outOfMemory).recognize(BOOK_ID, source, content, guard(), ::onPage))
             .isEqualTo(PdfExtraction.Failed(PdfError.LimitExceeded(PdfLimit.MEMORY)))
         assertThat(failing.closed).isTrue()
     }
@@ -161,7 +162,10 @@ class PdfOcrTest {
         val waiter =
             thread {
                 try {
-                    ocr(FakeRecognizer(), gate = gate).recognize(BOOK_ID, source, content(picture(0)), ::onPage)
+                    ocr(
+                        FakeRecognizer(),
+                        gate = gate,
+                    ).recognize(BOOK_ID, source, content(picture(0)), guard(), ::onPage)
                 } catch (e: InterruptedException) {
                     waiterFailure = e
                 }
@@ -177,6 +181,87 @@ class PdfOcrTest {
         assertThat(waiterFailure).isInstanceOf(InterruptedException::class.java)
         assertThat(store.read(BOOK_ID, 0)).isNull()
     }
+
+    @Test
+    fun `SR-4 a page in which the process died twice in a row is kept without text, and the rest is read`() {
+        val content = content(picture(0), picture(1), picture(2))
+        repeat(NativeCallMarkers.MAX_DEATHS) { dieWhile(content, recognizingPage = 1) }
+
+        val survivor = FakeRecognizer()
+        val result = ocr(survivor).recognize(BOOK_ID, source, content, guard(), ::onPage)
+
+        assertThat(survivor.requested).containsExactly(2)
+        val pages = (result as PdfExtraction.Extracted).content.pages
+        assertThat(pages.map { it.lines.singleOrNull()?.text })
+            .containsExactly("Página 0 lida", null, "Página 2 lida")
+            .inOrder()
+        assertThat(store.read(BOOK_ID, 1)).isNotNull()
+        assertThat(files.nativeCallFile(BOOK_ID).exists()).isFalse()
+    }
+
+    @Test
+    fun `SR-4 a page in which the process died once is read again`() {
+        val content = content(picture(0), picture(1))
+        dieWhile(content, recognizingPage = 1)
+
+        val resumed = FakeRecognizer()
+        ocr(resumed).recognize(BOOK_ID, source, content, guard(), ::onPage)
+
+        assertThat(resumed.requested).containsExactly(1)
+    }
+
+    @Test
+    fun `SR-4 a file whose opening made the process die twice in a row fails without opening it again`() {
+        val content = content(picture(0))
+        repeat(NativeCallMarkers.MAX_DEATHS) { dieWhile(content, recognizingPage = null) }
+
+        val recognizer = FakeRecognizer()
+
+        assertThat(ocr(recognizer).recognize(BOOK_ID, source, content, guard(), ::onPage))
+            .isEqualTo(PdfExtraction.Failed(PdfError.RendererCrashed))
+        assertThat(recognizer.opened).isEqualTo(0)
+    }
+
+    private fun guard() = NativeCallMarkers(files).forRun(BOOK_ID)
+
+    /**
+     * Runs recognition of [content] in a process that dies inside native code: while opening the file when
+     * [recognizingPage] is null, else while recognizing that page. The run stops there, and the native call marker it
+     * had written is left on disk, as a crash would leave it.
+     */
+    private fun dieWhile(
+        content: PdfContent,
+        recognizingPage: Int?,
+    ) {
+        val marker = files.nativeCallFile(BOOK_ID)
+        var left = ByteArray(0)
+        val dying =
+            object : PageTextRecognizer {
+                override fun open(source: File): PageTextRecognizer.Session {
+                    if (recognizingPage == null) die()
+                    val pages = FakeRecognizer().open(source)
+                    return object : PageTextRecognizer.Session by pages {
+                        override fun recognize(pageIndex: Int): PageLayout {
+                            if (pageIndex == recognizingPage) die()
+                            return pages.recognize(pageIndex)
+                        }
+                    }
+                }
+
+                private fun die(): Nothing {
+                    left = marker.readBytes()
+                    throw ProcessDeath()
+                }
+            }
+
+        assertThrows(ProcessDeath::class.java) {
+            ocr(dying).recognize(BOOK_ID, source, content, guard(), ::onPage)
+        }
+        marker.writeBytes(left)
+    }
+
+    /** Stands for the process being killed by a crash in native code: nothing in the app catches it. */
+    private class ProcessDeath : Error("process died in native code")
 
     private fun failingWith(failure: Throwable) = FakeRecognizer(onRecognize = { throw failure })
 
