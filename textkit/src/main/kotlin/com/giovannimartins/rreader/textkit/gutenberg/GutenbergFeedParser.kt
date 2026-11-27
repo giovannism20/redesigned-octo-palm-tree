@@ -5,15 +5,16 @@ import com.giovannimartins.rreader.textkit.epub.SafeXml
 import com.giovannimartins.rreader.textkit.epub.attributeTokens
 import com.giovannimartins.rreader.textkit.epub.childrenNamed
 import com.giovannimartins.rreader.textkit.epub.localName
+import com.giovannimartins.rreader.textkit.model.MetadataLimits
 import org.jsoup.nodes.Element
 
 /** A book listed in a Project Gutenberg OPDS feed. */
 public data class FeedBook(
     /** Gutenberg's ebook number, as in `https://www.gutenberg.org/ebooks/55752`; always positive. */
     val id: Int,
-    /** The title on one line; never blank. */
+    /** The title on one line; never blank, at most [MetadataLimits.MAX_TITLE_LENGTH] characters. */
     val title: String,
-    /** The author as the feed names it, or null when it names none. */
+    /** The author as the feed names it, at most [MetadataLimits.MAX_AUTHOR_LENGTH] characters, or null. */
     val author: String?,
 )
 
@@ -32,7 +33,7 @@ public data class FeedPage(
  * [FeedBook]: the title from its `title`, the author from its `author`'s `name` or, as search results give it, from a
  * plain-text `content`. Entries that lead elsewhere (authors, subjects, sort orders), repeated books, entries without
  * a title and the entries after the first [MAX_BOOKS] are left out. Text is cleaned like book text: whitespace
- * collapsed, invisible characters removed and accents composed.
+ * collapsed, invisible characters removed and accents composed; titles and authors are cut to [MetadataLimits].
  *
  * A feed comes from the network and is untrusted: it is parsed by the same parser as EPUB content, which loads no
  * DTD or external entity and expands no declared entity (SR-3). [parse] never throws.
@@ -69,8 +70,14 @@ public object GutenbergFeedParser {
 
     private fun book(entry: Element): FeedBook? {
         val id = bookId(entry)
-        val title = text(entry.childrenNamed("title").firstOrNull())
-        return if (id == null || title == null) null else FeedBook(id, title, author(entry))
+        val title = text(entry.childrenNamed("title").firstOrNull())?.let(MetadataLimits::title)
+        return if (id == null ||
+            title == null
+        ) {
+            null
+        } else {
+            FeedBook(id, title, author(entry)?.let(MetadataLimits::author))
+        }
     }
 
     /** The ebook number of the entry's `subsection` link, else of its `id`. */

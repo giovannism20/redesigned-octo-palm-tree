@@ -9,6 +9,7 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.WorkManagerTestInitHelper
+import com.giovannimartins.rreader.textkit.model.MetadataLimits
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -70,6 +71,18 @@ class CatalogDownloadsTest {
         val job = workManager.getWorkInfosForUniqueWork(DownloadWork.uniqueName(DOM_CASMURRO.id)).get().single()
 
         assertThat(job.tags.filter { DOM_CASMURRO.id.toString() in it }).isEmpty()
+    }
+
+    @Test
+    fun `queues the download of a book whose title is far larger than a job's data may be`() {
+        val huge = CatalogEntry(DOM_CASMURRO.id, "Dom Casmurro ".repeat(2_000), null)
+        val downloads = WorkManagerCatalogDownloads(workManager)
+
+        downloads.download(huge)
+
+        assertThat(runBlocking { downloads.states(setOf(huge.id)).first() })
+            .containsExactly(huge.id, DownloadState.Waiting)
+        assertThat(DownloadWork.titleOf(DownloadWork.input(huge)).length).isAtMost(MetadataLimits.MAX_TITLE_LENGTH)
     }
 
     @Test

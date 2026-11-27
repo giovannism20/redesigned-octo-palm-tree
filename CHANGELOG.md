@@ -101,6 +101,7 @@ All notable user-visible changes are documented here. The format follows
 - Sharing a book from an app that misbehaves no longer closes R Reader: it
   says the book could not be saved. The same book shared twice at the same
   time is added once.
+- A catalogue book with an extremely long title can be downloaded.
 
 ### Security
 

@@ -9,6 +9,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import com.giovannimartins.rreader.textkit.model.MetadataLimits
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -93,7 +94,12 @@ internal object DownloadWork {
     /** The unique name of ebook [id]'s download job, by which it is found; never logged by WorkManager. */
     fun uniqueName(id: Int) = "catalog-download-$id"
 
-    fun input(entry: CatalogEntry): Data = workDataOf(Keys.ID to entry.id, Keys.TITLE to entry.title)
+    /**
+     * What the job of [entry] needs: its ebook number, and its title until the book's own is read, cut to the title
+     * limit so that it always fits in WorkManager's 10 KB of [Data] (a longer title made queuing the download fail).
+     */
+    fun input(entry: CatalogEntry): Data =
+        workDataOf(Keys.ID to entry.id, Keys.TITLE to MetadataLimits.title(entry.title))
 
     /** The ebook number in [input], or null when it holds none. */
     fun idOf(input: Data): Int? = input.getInt(Keys.ID, 0).takeIf { it > 0 }

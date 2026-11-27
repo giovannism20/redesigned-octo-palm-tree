@@ -1,5 +1,6 @@
 package com.giovannimartins.rreader.textkit.gutenberg
 
+import com.giovannimartins.rreader.textkit.model.MetadataLimits
 import com.google.common.truth.Truth.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -95,6 +96,18 @@ class GutenbergFeedParserTest {
 
         assertThat(GutenbergFeedParser.parse(xml)?.books)
             .containsExactly(FeedBook(67740, "Iracema com uma noticia biographica do auctor", "José de Alencar"))
+    }
+
+    @Test
+    fun `SR-13 cuts a huge title and author to their limits`() {
+        val xml = feed(searchEntry(55752, "Dom Casmurro ".repeat(2_000), "Machado de Assis ".repeat(2_000)))
+
+        val book = GutenbergFeedParser.parse(xml)!!.books.single()
+
+        assertThat(book.title.length).isAtMost(MetadataLimits.MAX_TITLE_LENGTH)
+        assertThat(book.title).startsWith("Dom Casmurro Dom Casmurro")
+        assertThat(book.title).endsWith("…")
+        assertThat(book.author!!.length).isAtMost(MetadataLimits.MAX_AUTHOR_LENGTH)
     }
 
     @Test
