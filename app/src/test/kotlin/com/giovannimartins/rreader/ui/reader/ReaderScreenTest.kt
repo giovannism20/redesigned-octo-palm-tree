@@ -14,7 +14,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.dp
+import com.giovannimartins.rreader.ui.assertAllTextReadableOn
 import com.giovannimartins.rreader.ui.player.previewNowPlaying
+import com.giovannimartins.rreader.ui.theme.Ink
 import com.giovannimartins.rreader.ui.theme.RReaderTheme
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
@@ -120,6 +122,13 @@ class ReaderScreenTest {
         show(reading.copy(paragraphs = null))
 
         compose.onNodeWithContentDescription("Opening the chapter…").assertExists()
+    }
+
+    @Test
+    fun `all text is readable on the dark background`() {
+        show(reading)
+
+        compose.assertAllTextReadableOn(Ink)
     }
 
     @Test

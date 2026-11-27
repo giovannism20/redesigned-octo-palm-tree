@@ -25,6 +25,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.giovannimartins.rreader.ui.components.ScreenSurface
 import com.giovannimartins.rreader.ui.explore.ExploreRoute
 import com.giovannimartins.rreader.ui.importer.ImportScreen
 import com.giovannimartins.rreader.ui.importer.ImportViewModel
@@ -75,7 +76,7 @@ fun RReaderApp(
     }
 
     val current = nowPlaying
-    Box(modifier = modifier.fillMaxSize()) {
+    ScreenSurface(modifier = modifier) {
         if (playerOpen && current != null) {
             PlayerAndReader(
                 readerOpen = readerOpen,

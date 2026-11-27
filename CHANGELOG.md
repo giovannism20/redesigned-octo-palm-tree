@@ -91,6 +91,11 @@ All notable user-visible changes are documented here. The format follows
 
 ### Fixed
 
+- The player and the follow-along text showed some text, the times and the
+  15-second buttons in black on the dark background, and the player's speed,
+  timer, chapters and text buttons were below the edge of the screen. Both
+  screens now use the app's colours, and the player fits on one screen
+  (it scrolls only with very large system text).
 - A book whose preparation failed in an unexpected way, or kept stopping, no
   longer stays "Preparing the book…" forever: it says why it could not be
   prepared, and adding the same file again tries again.

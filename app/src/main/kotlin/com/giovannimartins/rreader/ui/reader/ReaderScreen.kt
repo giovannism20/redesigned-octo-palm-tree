@@ -1,6 +1,5 @@
 package com.giovannimartins.rreader.ui.reader
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.giovannimartins.rreader.R
+import com.giovannimartins.rreader.ui.components.ScreenSurface
 import com.giovannimartins.rreader.ui.player.NowPlaying
 import com.giovannimartins.rreader.ui.player.PlayPauseButton
 import com.giovannimartins.rreader.ui.player.PlayerIconButton
@@ -87,45 +87,44 @@ fun ReaderScreen(
     onSeekForward: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .safeDrawingPadding(),
-    ) {
-        ReaderTopBar(
-            title = state.chapterTitle,
-            canShrinkText = state.canShrinkText,
-            canEnlargeText = state.canEnlargeText,
-            onClose = onClose,
-            onShrinkText = onShrinkText,
-            onEnlargeText = onEnlargeText,
-        )
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            ReaderBody(state = state, onUserScroll = onUserScroll, onReadFrom = onReadFrom)
-            if (!state.following && state.paragraphs != null) {
-                Button(
-                    onClick = onBackToReading,
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp).heightIn(min = 56.dp),
-                ) {
-                    Text(stringResource(R.string.reader_back_to_reading), style = MaterialTheme.typography.labelLarge)
+    ScreenSurface(modifier = modifier) {
+        Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
+            ReaderTopBar(
+                title = state.chapterTitle,
+                canShrinkText = state.canShrinkText,
+                canEnlargeText = state.canEnlargeText,
+                onClose = onClose,
+                onShrinkText = onShrinkText,
+                onEnlargeText = onEnlargeText,
+            )
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                ReaderBody(state = state, onUserScroll = onUserScroll, onReadFrom = onReadFrom)
+                if (!state.following && state.paragraphs != null) {
+                    Button(
+                        onClick = onBackToReading,
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp).heightIn(min = 56.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.reader_back_to_reading),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
                 }
             }
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            PlayerIconButton(R.drawable.ic_replay_15, R.string.player_back_15, onClick = onSeekBack, size = 56.dp)
-            PlayPauseButton(nowPlaying = nowPlaying, onClick = onTogglePlayPause, size = 72.dp)
-            PlayerIconButton(
-                R.drawable.ic_forward_15,
-                R.string.player_forward_15,
-                onClick = onSeekForward,
-                size = 56.dp,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                PlayerIconButton(R.drawable.ic_replay_15, R.string.player_back_15, onClick = onSeekBack, size = 56.dp)
+                PlayPauseButton(nowPlaying = nowPlaying, onClick = onTogglePlayPause, size = 72.dp)
+                PlayerIconButton(
+                    R.drawable.ic_forward_15,
+                    R.string.player_forward_15,
+                    onClick = onSeekForward,
+                    size = 56.dp,
+                )
+            }
         }
     }
 }

@@ -1,8 +1,8 @@
 package com.giovannimartins.rreader.ui.player
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -49,6 +49,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -57,6 +58,7 @@ import com.giovannimartins.rreader.R
 import com.giovannimartins.rreader.playback.SleepTimerSetting
 import com.giovannimartins.rreader.playback.SleepTimerState
 import com.giovannimartins.rreader.ui.components.BookCover
+import com.giovannimartins.rreader.ui.components.ScreenSurface
 import com.giovannimartins.rreader.ui.components.timeLeft
 import com.giovannimartins.rreader.ui.theme.RReaderTheme
 import kotlin.time.Duration.Companion.minutes
@@ -114,50 +116,49 @@ fun PlayerScreen(
 ) {
     var showChapters by rememberSaveable { mutableStateOf(false) }
     val title = nowPlaying.title.ifBlank { stringResource(R.string.library_untitled) }
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .safeDrawingPadding()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(20.dp),
-    ) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            PlayerIconButton(
-                icon = R.drawable.ic_minimize,
-                label = R.string.player_minimize,
-                onClick = onMinimize,
-                size = 56.dp,
-            )
-            Text(
-                text = stringResource(R.string.player_now_playing),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(start = 8.dp).semantics { heading() },
-            )
+    ScreenSurface(modifier = modifier) {
+        // Fills exactly one screen while everything fits (the cover takes the space left over) and scrolls only
+        // when the system text is very large, so no control is ever cut off below the screen edge.
+        BoxWithConstraints(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .heightIn(min = maxHeight)
+                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                PlayerTopBar(onMinimize = onMinimize)
+                Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                    BookCover(
+                        title = title,
+                        coverFile = nowPlaying.coverFile,
+                        modifier = Modifier.widthIn(max = 220.dp),
+                    )
+                }
+                BookHeading(nowPlaying = nowPlaying, title = title)
+                ChapterProgress(nowPlaying = nowPlaying, onSeekTo = onSeekTo)
+                TimeLeftLines(nowPlaying = nowPlaying)
+                TransportControls(
+                    nowPlaying = nowPlaying,
+                    onSeekBack = onSeekBack,
+                    onTogglePlayPause = onTogglePlayPause,
+                    onSeekForward = onSeekForward,
+                )
+                PlayerOptions(
+                    speed = nowPlaying.speed,
+                    sleepTimer = sleepTimer,
+                    onSpeedChange = onSpeedChange,
+                    onSetSleepTimer = onSetSleepTimer,
+                    onCancelSleepTimer = onCancelSleepTimer,
+                    onShowChapters = { showChapters = true },
+                    onOpenReader = onOpenReader,
+                )
+                PlayerStatus(nowPlaying = nowPlaying, onRetry = onRetry, onOpenVoices = onOpenVoices)
+            }
         }
-        BookCover(title = title, coverFile = nowPlaying.coverFile, modifier = Modifier.widthIn(max = 200.dp))
-        BookHeading(nowPlaying = nowPlaying, title = title)
-        ChapterProgress(nowPlaying = nowPlaying, onSeekTo = onSeekTo)
-        TimeLeftLines(nowPlaying = nowPlaying)
-        TransportControls(
-            nowPlaying = nowPlaying,
-            onSeekBack = onSeekBack,
-            onTogglePlayPause = onTogglePlayPause,
-            onSeekForward = onSeekForward,
-        )
-        PlayerOptions(
-            speed = nowPlaying.speed,
-            sleepTimer = sleepTimer,
-            onSpeedChange = onSpeedChange,
-            onSetSleepTimer = onSetSleepTimer,
-            onCancelSleepTimer = onCancelSleepTimer,
-            onShowChapters = { showChapters = true },
-            onOpenReader = onOpenReader,
-        )
-        PlayerStatus(nowPlaying = nowPlaying, onRetry = onRetry, onOpenVoices = onOpenVoices)
         if (showChapters) {
             ChapterSheet(
                 nowPlaying = nowPlaying,
@@ -168,6 +169,26 @@ fun PlayerScreen(
                 onDismiss = { showChapters = false },
             )
         }
+    }
+}
+
+@Composable
+private fun PlayerTopBar(
+    onMinimize: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        PlayerIconButton(
+            icon = R.drawable.ic_minimize,
+            label = R.string.player_minimize,
+            onClick = onMinimize,
+            size = 56.dp,
+        )
+        Text(
+            text = stringResource(R.string.player_now_playing),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(start = 8.dp).semantics { heading() },
+        )
     }
 }
 
@@ -186,6 +207,8 @@ private fun BookHeading(
             text = title,
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.semantics { heading() },
         )
         if (nowPlaying.authors.isNotBlank()) {
@@ -201,6 +224,8 @@ private fun BookHeading(
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.primary,
             textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
         )
         if (nowPlaying.chapterCount > 1) {
             Text(
