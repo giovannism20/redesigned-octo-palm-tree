@@ -8,6 +8,7 @@ All notable user-visible changes are documented here. The format follows
 
 ### Added
 
+- Swipe down on the player to minimize it, besides its minimize button.
 - New app icon "Livro Aberto" (an open book formed by two R's with a
   bookmark ribbon), with a themed version for Android 13+, a launch screen and
   the app's colours taken from it.

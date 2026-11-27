@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,6 +40,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
@@ -58,6 +61,7 @@ import com.giovannimartins.rreader.R
 import com.giovannimartins.rreader.playback.SleepTimerSetting
 import com.giovannimartins.rreader.playback.SleepTimerState
 import com.giovannimartins.rreader.ui.components.BookCover
+import com.giovannimartins.rreader.ui.components.FitOrScrollColumn
 import com.giovannimartins.rreader.ui.components.ScreenSurface
 import com.giovannimartins.rreader.ui.components.timeLeft
 import com.giovannimartins.rreader.ui.theme.RReaderTheme
@@ -116,48 +120,46 @@ fun PlayerScreen(
 ) {
     var showChapters by rememberSaveable { mutableStateOf(false) }
     val title = nowPlaying.title.ifBlank { stringResource(R.string.library_untitled) }
+    val swipeToMinimize = rememberSwipeToMinimize(onMinimize)
     ScreenSurface(modifier = modifier) {
-        // Fills exactly one screen while everything fits (the cover takes the space left over) and scrolls only
-        // when the system text is very large, so no control is ever cut off below the screen edge.
-        BoxWithConstraints(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                        .heightIn(min = maxHeight)
-                        .padding(horizontal = 24.dp, vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                PlayerTopBar(onMinimize = onMinimize)
-                Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                    BookCover(
-                        title = title,
-                        coverFile = nowPlaying.coverFile,
-                        modifier = Modifier.widthIn(max = 220.dp),
-                    )
-                }
-                BookHeading(nowPlaying = nowPlaying, title = title)
-                ChapterProgress(nowPlaying = nowPlaying, onSeekTo = onSeekTo)
-                TimeLeftLines(nowPlaying = nowPlaying)
-                TransportControls(
-                    nowPlaying = nowPlaying,
-                    onSeekBack = onSeekBack,
-                    onTogglePlayPause = onTogglePlayPause,
-                    onSeekForward = onSeekForward,
+        FitOrScrollColumn(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .nestedScroll(swipeToMinimize)
+                    .graphicsLayer { translationY = swipeToMinimize.offset }
+                    .safeDrawingPadding(),
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            PlayerTopBar(onMinimize = onMinimize)
+            Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                BookCover(
+                    title = title,
+                    coverFile = nowPlaying.coverFile,
+                    modifier = Modifier.widthIn(max = 220.dp),
                 )
-                PlayerOptions(
-                    speed = nowPlaying.speed,
-                    sleepTimer = sleepTimer,
-                    onSpeedChange = onSpeedChange,
-                    onSetSleepTimer = onSetSleepTimer,
-                    onCancelSleepTimer = onCancelSleepTimer,
-                    onShowChapters = { showChapters = true },
-                    onOpenReader = onOpenReader,
-                )
-                PlayerStatus(nowPlaying = nowPlaying, onRetry = onRetry, onOpenVoices = onOpenVoices)
             }
+            BookHeading(nowPlaying = nowPlaying, title = title)
+            ChapterProgress(nowPlaying = nowPlaying, onSeekTo = onSeekTo)
+            TimeLeftLines(nowPlaying = nowPlaying)
+            TransportControls(
+                nowPlaying = nowPlaying,
+                onSeekBack = onSeekBack,
+                onTogglePlayPause = onTogglePlayPause,
+                onSeekForward = onSeekForward,
+            )
+            PlayerOptions(
+                speed = nowPlaying.speed,
+                sleepTimer = sleepTimer,
+                onSpeedChange = onSpeedChange,
+                onSetSleepTimer = onSetSleepTimer,
+                onCancelSleepTimer = onCancelSleepTimer,
+                onShowChapters = { showChapters = true },
+                onOpenReader = onOpenReader,
+            )
+            PlayerStatus(nowPlaying = nowPlaying, onRetry = onRetry, onOpenVoices = onOpenVoices)
         }
         if (showChapters) {
             ChapterSheet(

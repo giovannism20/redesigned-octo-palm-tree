@@ -1,14 +1,18 @@
 package com.giovannimartins.rreader.ui.player
 
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.unit.dp
 import com.giovannimartins.rreader.playback.SleepTimerState
 import com.giovannimartins.rreader.ui.theme.RReaderTheme
@@ -65,6 +69,26 @@ class PlayerScreenTest {
 
         compose.onNodeWithText("4 min left in this chapter").assertExists()
         compose.onNodeWithText("2 h 44 min left in the book").assertExists()
+    }
+
+    @Test
+    fun `swiping down minimizes the player`() {
+        show(previewNowPlaying())
+
+        compose.onRoot().performTouchInput { swipeDown(startY = centerY, endY = bottom) }
+
+        assertThat(events).containsExactly("minimize")
+    }
+
+    @Test
+    fun `a short slow pull springs back without minimizing`() {
+        show(previewNowPlaying())
+
+        compose.onRoot().performTouchInput { swipeDown(startY = centerY, endY = centerY + 60f, durationMillis = 1_000) }
+        compose.waitForIdle()
+
+        assertThat(events).isEmpty()
+        compose.onNodeWithContentDescription("Pause").assertIsDisplayed()
     }
 
     @Test
