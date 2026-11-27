@@ -1,6 +1,7 @@
 package com.giovannimartins.rreader.textkit.epub
 
 import java.io.File
+import kotlin.time.TimeSource
 
 /**
  * Turns an EPUB 2 or EPUB 3 file into a [NormalizedBook][com.giovannimartins.rreader.textkit.model.NormalizedBook].
@@ -32,22 +33,34 @@ import java.io.File
  *
  * Instances keep no state between calls and can be shared across threads.
  */
-public class EpubParser(
-    private val limits: ArchiveLimits = ArchiveLimits(),
+public class EpubParser internal constructor(
+    private val limits: ArchiveLimits,
+    private val timeSource: TimeSource,
 ) {
+    public constructor(limits: ArchiveLimits = ArchiveLimits()) : this(limits, TimeSource.Monotonic)
+
     /**
      * Parses [file]; [fallbackTitle] is used when the package has no usable title (the file name is a good choice).
-     * Never throws for bad input: every problem with the file is reported as an [EpubResult.Failure].
+     * Never throws for bad input: every problem with the file is reported as an [EpubResult.Failure], a parse that
+     * runs longer than [ArchiveLimits.maxParseTime] included. Throws [InterruptedException] when its thread is
+     * interrupted, which is how a caller cancels a parse.
      */
     public fun parse(
         file: File,
         fallbackTitle: String,
-    ): EpubResult =
-        try {
-            EpubArchive.open(file, limits).use { archive ->
-                EpubResult.Success(EpubBookReader(archive).read(fallbackTitle))
+    ): EpubResult {
+        val result =
+            try {
+                val budget = ParseBudget(limits.maxParseTime, timeSource)
+                EpubArchive.open(file, limits).use { archive ->
+                    EpubResult.Success(EpubBookReader(archive, budget).read(fallbackTitle))
+                }
+            } catch (failure: EpubParseException) {
+                EpubResult.Failure(failure.error)
             }
-        } catch (failure: EpubParseException) {
-            EpubResult.Failure(failure.error)
-        }
+        // jsoup reads the input of an interrupted thread as if it ended there, so a cancelled parse can look like a
+        // damaged or shorter book: it is reported as cancelled instead.
+        if (Thread.currentThread().isInterrupted) throw InterruptedException("EPUB parse cancelled")
+        return result
+    }
 }

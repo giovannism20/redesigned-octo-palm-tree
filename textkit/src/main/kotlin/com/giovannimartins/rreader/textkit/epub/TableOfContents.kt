@@ -23,6 +23,7 @@ internal object TableOfContents {
     fun fromNavigationDocument(
         archive: EpubArchive,
         path: String,
+        budget: ParseBudget = ParseBudget.UNLIMITED,
     ): List<TocEntry> {
         val toc =
             archive
@@ -31,6 +32,7 @@ internal object TableOfContents {
                 ?.elementsNamed("nav")
                 ?.firstOrNull { "toc" in it.attributeTokens("epub:type") }
         return toc?.elementsNamed("a").orEmpty().mapNotNull { link ->
+            budget.check()
             val depth = link.ancestorsUpTo(toc).count { it.localName == "li" }
             entry(path, link.attr("href"), ContentExtractor.inlineText(link), depth)
         }
@@ -42,6 +44,7 @@ internal object TableOfContents {
     fun fromNcx(
         archive: EpubArchive,
         path: String,
+        budget: ParseBudget = ParseBudget.UNLIMITED,
     ): List<TocEntry> {
         val navMap =
             archive
@@ -50,6 +53,7 @@ internal object TableOfContents {
                 ?.elementsNamed("navmap")
                 ?.firstOrNull()
         return navMap?.elementsNamed("navpoint").orEmpty().mapNotNull { point ->
+            budget.check()
             val label =
                 point
                     .childrenNamed("navlabel")

@@ -60,9 +60,13 @@ documentation link check.
 - **Secret guard:** `scripts/test-secret-guard.sh` must pass (also in CI).
 - **Malicious EPUBs** (built in tests): path traversal entry names
   (`../../x`), zip bomb (huge declared/actual sizes, too many entries),
-  XML with external entities or DTDs, missing/garbled container or OPF.
-  Expected: a typed failure and a friendly message, never a crash, never a
-  file written outside the book directory.
+  XML with external entities or DTDs, missing/garbled container or OPF,
+  metadata of megabytes, tables of contents hundreds of levels deep,
+  millions of asterisks around Gutenberg's markers, a clock that runs past
+  the parse time limit and an interrupted parse. Expected: a typed failure
+  and a friendly message, or bounded processing time; never a crash, never a
+  file written outside the book directory. Tests of time use a generous
+  limit (`assertTimeoutPreemptively`) that only a hang exceeds.
 - **Corrupted and huge PDFs** (built in test code with PdfBox-Android,
   `PdfSecurityTest`): truncated, garbage and password-protected files,
   documents over the page, time, glyph and buffer limits, a looping outline

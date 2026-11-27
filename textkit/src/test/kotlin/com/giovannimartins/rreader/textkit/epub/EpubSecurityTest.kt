@@ -4,8 +4,15 @@ import com.giovannimartins.rreader.textkit.model.Chapter
 import com.giovannimartins.rreader.textkit.model.MetadataLimits
 import com.google.common.truth.Truth.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.assertTimeoutPreemptively
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import java.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 
 /** Hostile EPUBs for security requirements SR-1 to SR-3 (see `docs/security.md`). */
 class EpubSecurityTest {
@@ -111,6 +118,52 @@ class EpubSecurityTest {
     }
 
     @Test
+    fun `SR-2 a parse that runs longer than its time limit fails as too complex`() {
+        val file = threeChapters()
+        val slowClock = EpubParser(ArchiveLimits(), SteppingTimeSource(step = 1.minutes))
+        val fastClock = EpubParser(ArchiveLimits(), SteppingTimeSource(step = 1.milliseconds))
+
+        assertThat(parseError(file, slowClock)).isEqualTo(EpubError.TooComplex)
+        assertThat(parseBook(file, fastClock).chapters).hasSize(3)
+    }
+
+    @Test
+    fun `SR-2 a parse stops as soon as its thread is interrupted`() {
+        val file = threeChapters()
+
+        Thread.currentThread().interrupt()
+        try {
+            assertThrows<InterruptedException> { EpubParser().parse(file, FALLBACK_TITLE) }
+        } finally {
+            Thread.interrupted()
+        }
+    }
+
+    @Test
+    fun `SR-2 a table of contents hundreds of levels deep with many entries is read in bounded time`() {
+        // Many entries at the top level and a chain of nested ones below: every level examined costs a pass over all
+        // entries, and a last section holding most of the text keeps every level "too coarse", so each one is.
+        val topLevel = 150_000
+        val levels = 400
+        val anchors = (0 until topLevel + levels).joinToString("") { "<p id=\"a$it\">x</p>" }
+        val nav = StringBuilder("<ol>")
+        repeat(topLevel) { nav.append("<li><a href=\"livro.xhtml#a$it\">x</a></li>") }
+        repeat(levels) { nav.append("<li><a href=\"livro.xhtml#a${topLevel + it}\">x</a><ol>") }
+        repeat(levels) { nav.append("</ol></li>") }
+        nav.append("</ol>")
+        val fixture =
+            EpubFixture().apply {
+                document("livro.xhtml", anchors + prose("o fim", characters = 500_000))
+                entry(pathOf(EpubFixture.NAV_FILE), xhtml("<nav epub:type=\"toc\">$nav</nav>"))
+            }
+        val file = fixture.writeTo(File(directory, "livro.epub"))
+
+        val book = assertTimeoutPreemptively(Duration.ofSeconds(PATHOLOGICAL_TIME_LIMIT_S)) { parseBook(file) }
+
+        assertThat(book.chapters).isNotEmpty()
+    }
+
+    @Test
     fun `SR-13 a huge title, author list, language and description are cut to their limits`() {
         val fixture =
             EpubFixture().apply {
@@ -176,5 +229,35 @@ class EpubSecurityTest {
 
         assertThat(metadata.title).isEqualTo("&xxe;")
         assertThat(metadata.description).isEqualTo("&lol6;")
+    }
+
+    private fun threeChapters(): File =
+        EpubFixture()
+            .apply { (1..3).forEach { document("c$it.xhtml", prose("o capítulo $it"), tocTitle = "Capítulo $it") } }
+            .writeTo(File(directory, "livro.epub"))
+
+    /** A clock that moves forward [step] each time a parse asks how long it has run. */
+    private class SteppingTimeSource(
+        private val step: kotlin.time.Duration,
+    ) : TimeSource {
+        private var now = kotlin.time.Duration.ZERO
+
+        override fun markNow(): TimeMark {
+            val start = now
+            return object : TimeMark {
+                override fun elapsedNow(): kotlin.time.Duration {
+                    now += step
+                    return now - start
+                }
+            }
+        }
+    }
+
+    private companion object {
+        /**
+         * A hang detector, generous for slow machines: such a book takes about a second and a half here, and about
+         * five times as long when every level of its table of contents is examined.
+         */
+        const val PATHOLOGICAL_TIME_LIMIT_S = 30L
     }
 }

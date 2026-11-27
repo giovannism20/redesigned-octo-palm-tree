@@ -46,6 +46,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 |--------|-----------|------|----------|------------|
 | Tampering / EoP | EPUB parser (B1) | High | ZIP entry `../../databases/x` overwrites app files (zip slip) | Never write files using archive entry names; read entries in memory by exact name |
 | DoS | EPUB parser (B1) | Medium | Zip bomb or millions of entries exhaust memory/storage | Caps on entry count, per-entry and total uncompressed size; streaming reads |
+| DoS | EPUB parser (B1) | Medium | A book built to be slow to read (huge or deeply nested tables of contents, pathological markup) keeps the import busy for hours | A two-minute time limit per parse, checked before every spine document, at every element walked and in the loops that assemble chapters, ending in a typed "too complex" failure; only the first eight levels of a nested table of contents are examined; a cancelled import interrupts the parse (SR-2) |
 | DoS | Project Gutenberg markers (B1) | Medium | A paragraph of millions of asterisks makes the regular expressions that find Gutenberg's `*** START OF …` and `*** END OF …` lines retry every position of the run, in quadratic time, so the import never ends | The opening asterisks are matched only from the first asterisk of a run and never given back (`(?<!\*)\*{2,}+\s*+`), so each run is scanned once; 8 million asterisks take well under a second (`GutenbergBoilerplateTest`) |
 | Info disclosure / DoS | XML parsing (B1) | Medium | External entities or DTD expansion (XXE, billion laughs) | DTD and external entities disabled on every XML parser |
 | DoS | Book metadata (B1) | High | An EPUB, PDF or shared file name carries a title, author list, language or description of several megabytes; stored whole, the book's database row no longer fits in a cursor window, and reading the library crashes the app at every launch | Titles of books, chapters and catalogue entries, authors, languages and descriptions are cut where they are read (SR-13); the library reads only the columns it shows, cut again in SQL; the library and Explore screens turn a read failure into a message instead of a crash |
@@ -76,8 +77,17 @@ Each requirement is testable; reference its ID in tests and reviews.
 - **SR-1** Archive entry names are never used to build file-system paths
   (verified by `EpubSecurityTest`).
 - **SR-2** EPUB reading enforces limits: entry count, per-entry and total
-  uncompressed size; violations yield a typed `ImportError` (verified by
-  `EpubSecurityTest`).
+  uncompressed size, and time; violations yield a typed `ImportError`
+  (verified by `EpubSecurityTest`). (`ArchiveLimits.maxParseTime`, two
+  minutes, is checked before every spine document, at every element of a
+  content document or table of contents and in the loops that assemble
+  chapters, and a parse past it fails with `EpubError.TooComplex`, shown as
+  "too complex". Only the first eight levels of a nested table of contents
+  are examined (`TocDepth`), and Project Gutenberg's markers are matched in
+  linear time. Interrupting the parsing thread, as a cancelled import does,
+  stops the parse with `InterruptedException`, also when jsoup had already
+  read the rest of a document as missing. Verified by `EpubSecurityTest`,
+  `EpubChapterTest` and `GutenbergBoilerplateTest`.)
 - **SR-3** Every XML parser disables DTDs and external entities (verified by
   `EpubSecurityTest`, and for catalogue feeds by `GutenbergFeedParserTest`).
 - **SR-4** PDF extraction and OCR run with page, time and memory limits.

@@ -29,6 +29,8 @@ internal data class ChapterStart(
  *    else by the heading that started it, else by its first `h1`–`h3` heading. Chapters without text are dropped.
  * 5. **Project Gutenberg.** The header and license Gutenberg adds are removed ([GutenbergBoilerplate]).
  * 6. **Short chapters** join a neighbour in the same document ([ShortChapters]).
+ *
+ * Every step checks the parse's [ParseBudget], so a hostile book cannot keep it busy for long.
  */
 internal object ChapterAssembler {
     /** Sections longer than this many characters (about an hour of listening) are too long for one chapter. */
@@ -37,13 +39,18 @@ internal object ChapterAssembler {
     fun assemble(
         documents: List<SpineDocument>,
         tablesOfContents: Sequence<List<TocEntry>>,
+        budget: ParseBudget = ParseBudget.UNLIMITED,
     ): List<Chapter> {
         val text = SpineText(documents)
         val paths = documents.mapTo(HashSet()) { it.path }
         val toc = tablesOfContents.firstOrNull { entries -> entries.any { it.path in paths } }
-        val tocStarts = pullBack(toc?.let { TocStarts.resolve(it, text) } ?: everyDocument(documents, text), text)
-        val starts = pullBack(merged(tocStarts + HeadingStarts.inLongSections(tocStarts, text)), text)
-        return ShortChapters.merge(withoutGutenbergBoilerplate(chapters(starts, text)))
+        budget.check()
+        val tocStarts =
+            pullBack(toc?.let { TocStarts.resolve(it, text, budget) } ?: everyDocument(documents, text), text)
+        val starts = pullBack(merged(tocStarts + HeadingStarts.inLongSections(tocStarts, text, budget)), text)
+        val chapters = chapters(starts, text, budget)
+        budget.check()
+        return ShortChapters.merge(withoutGutenbergBoilerplate(chapters))
     }
 
     private fun everyDocument(
@@ -90,10 +97,12 @@ internal object ChapterAssembler {
     private fun chapters(
         starts: List<ChapterStart>,
         text: SpineText,
+        budget: ParseBudget,
     ): List<AssembledChapter> {
         val all = if (starts.firstOrNull()?.paragraph == 0) starts else listOf(ChapterStart(0, null)) + starts
         val ends = all.drop(1).map { it.paragraph } + text.size
         return all.zip(ends).filter { (start, end) -> end > start.paragraph }.map { (start, end) ->
+            budget.check()
             val title = start.title ?: text.titleIn(start.paragraph, end)
             val chapter = Chapter.fromParagraphs(title, text.paragraphs.subList(start.paragraph, end))
             AssembledChapter(chapter, text.opensDocument(start.paragraph))

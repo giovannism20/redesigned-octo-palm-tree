@@ -45,7 +45,7 @@
     <string name="import_failure_scanned_pdf">No readable text could be recognized in this scanned PDF.</string>
     <string name="import_failure_password">This PDF is protected by a password and cannot be opened.</string>
     <string name="import_failure_too_many_pages">This PDF has too many pages (limit: 3,000).</string>
-    <string name="import_failure_too_complex">This PDF is too complex to prepare on this phone.</string>
+    <string name="import_failure_too_complex">This book is too complex to prepare on this phone.</string>
     <string name="import_recognizing_text">Recognizing text: page %1$d of %2$d</string>
     <string name="import_notification_title">Preparing a book</string>
     <string name="import_notification_channel">Books being prepared</string>

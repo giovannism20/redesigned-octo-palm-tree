@@ -18,12 +18,16 @@ internal object HeadingStarts {
     fun inLongSections(
         starts: List<ChapterStart>,
         text: SpineText,
+        budget: ParseBudget = ParseBudget.UNLIMITED,
     ): List<ChapterStart> {
         val bounds = (listOf(0) + starts.map { it.paragraph } + text.size).distinct().sorted()
         return bounds
             .zipWithNext()
             .filter { (from, to) -> text.length(from, to) > ChapterAssembler.LONG_SECTION_LENGTH }
-            .flatMap { (from, to) -> split(from, to, text) }
+            .flatMap { (from, to) ->
+                budget.check()
+                split(from, to, text)
+            }
     }
 
     private fun split(

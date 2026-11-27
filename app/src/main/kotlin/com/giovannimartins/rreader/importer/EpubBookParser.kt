@@ -29,6 +29,8 @@ internal fun EpubError.toImportFailure(): ImportFailure =
 
         EpubError.NoReadableText -> ImportFailure.NO_READABLE_TEXT
 
+        EpubError.TooComplex -> ImportFailure.TOO_COMPLEX
+
         EpubError.NotAZipArchive,
         EpubError.MissingContainer,
         EpubError.MissingPackageDocument,

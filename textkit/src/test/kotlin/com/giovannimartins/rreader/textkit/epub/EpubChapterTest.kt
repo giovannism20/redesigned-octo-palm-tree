@@ -93,6 +93,27 @@ class EpubChapterTest {
     }
 
     @Test
+    fun `never starts chapters at entries nested deeper than eight levels`() {
+        val sections = 12
+        val body = (1..sections).joinToString("") { "<h2 id=\"s$it\">Seção $it</h2>${prose("a seção $it", 3_500)}" }
+        val nested =
+            (sections downTo 1).fold(emptyArray<String>()) { inner, level ->
+                arrayOf(navItem("Seção $level", "livro.xhtml#s$level", *inner))
+            }
+        val fixture =
+            EpubFixture().apply {
+                document("livro.xhtml", body)
+                tableOfContents(*nested)
+            }
+
+        val chapters = parseBook(fixture.writeTo(file())).chapters
+
+        assertThat(chapters.map { it.title })
+            .containsExactlyElementsIn((1..TocDepth.MAX_LEVELS).map { "Seção $it" })
+            .inOrder()
+    }
+
+    @Test
     fun `starts chapters at anchors on inline and empty elements`() {
         val body =
             "<p><a id=\"c1\"/>Capítulo 1</p>${prose("um")}<p>Última frase do capítulo um.<a id=\"c2\"/></p>" +

@@ -57,7 +57,7 @@ enum class ImportFailure {
     /** A PDF over the page limit of the extractor (SR-4). */
     TOO_MANY_PAGES,
 
-    /** A PDF that exceeded the extractor's time, text or memory limits (SR-4). */
+    /** A PDF that exceeded the extractor's time, text or memory limits (SR-4), or an EPUB its time limit (SR-2). */
     TOO_COMPLEX,
 
     /** On-device text recognition failed on a scanned PDF (ADR 0015). */

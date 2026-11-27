@@ -56,8 +56,14 @@ internal class HeadingBlock(
  * doc-endnote). All text goes through [TextCleaner.clean].
  */
 internal object ContentExtractor {
-    /** Extracts the paragraphs of the tree under [root] and where its headings, anchors and chapter divisions are. */
-    fun extract(root: Node): ContentDocument = ParagraphCollector().apply { traverse(root) }.finish()
+    /**
+     * Extracts the paragraphs of the tree under [root] and where its headings, anchors and chapter divisions are,
+     * checking [budget] at every element.
+     */
+    fun extract(
+        root: Node,
+        budget: ParseBudget = ParseBudget.UNLIMITED,
+    ): ContentDocument = ParagraphCollector(budget).apply { traverse(root) }.finish()
 
     /** The readable text of [element] on a single line, as used for titles and labels. */
     fun inlineText(element: Element): String = extract(element).paragraphs.joinToString(" ")
@@ -113,7 +119,9 @@ private val NOTE_SEMANTICS =
  * Walks a tree once, cutting paragraphs at block boundaries, skipping content that is not read aloud and noting the
  * headings, anchors and chapter divisions it passes.
  */
-private class ParagraphCollector : NodeFilter {
+private class ParagraphCollector(
+    private val budget: ParseBudget,
+) : NodeFilter {
     private val paragraphs = mutableListOf<String>()
     private val pending = StringBuilder()
     private val headings = mutableListOf<HeadingBlock>()
@@ -139,6 +147,7 @@ private class ParagraphCollector : NodeFilter {
             }
 
             is Element -> {
+                budget.check()
                 enter(node)
             }
 

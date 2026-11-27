@@ -32,6 +32,7 @@ class EpubBookParserTest {
             EpubError.LimitExceeded(ArchiveLimit.MAX_TOTAL_BYTES).toImportFailure(),
         ).isEqualTo(ImportFailure.TOO_LARGE)
         assertThat(EpubError.NoReadableText.toImportFailure()).isEqualTo(ImportFailure.NO_READABLE_TEXT)
+        assertThat(EpubError.TooComplex.toImportFailure()).isEqualTo(ImportFailure.TOO_COMPLEX)
         listOf(
             EpubError.NotAZipArchive,
             EpubError.MissingContainer,

@@ -31,4 +31,10 @@ public sealed interface EpubError {
 
     /** The book has no text that can be read aloud, for example because it only contains images. */
     public data object NoReadableText : EpubError
+
+    /**
+     * Reading the book took longer than [ArchiveLimits.maxParseTime]: its structure is far too complex, or it was
+     * built to make reading it slow.
+     */
+    public data object TooComplex : EpubError
 }

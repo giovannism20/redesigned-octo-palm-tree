@@ -28,12 +28,15 @@ when (val result = EpubParser().parse(file, fallbackTitle = file.nameWithoutExte
 
 - `parse` never throws for bad input. Failures are typed: `NotAZipArchive`,
   `MissingContainer`, `MissingPackageDocument`, `DrmProtected`,
-  `LimitExceeded(limit)`, `MalformedDocument(path)` and `NoReadableText`.
+  `LimitExceeded(limit)`, `MalformedDocument(path)`, `NoReadableText` and
+  `TooComplex`. It throws `InterruptedException` when its thread is
+  interrupted, which is how a caller cancels it.
 - `ArchiveLimits` caps the entry count and the decompressed bytes per entry
   and per parse (defaults: 10,000 entries, 32 MiB, 256 MiB), counting bytes
-  actually inflated rather than declared sizes. Entries are read in memory
-  by exact name, never written to disk, and XML goes through jsoup's parser,
-  which loads no DTDs or external entities (SR-1 to SR-3 in
+  actually inflated rather than declared sizes, and the time a parse may
+  take (two minutes, then `TooComplex`). Entries are read in memory by exact
+  name, never written to disk, and XML goes through jsoup's parser, which
+  loads no DTDs or external entities (SR-1 to SR-3 in
   [docs/security.md](../docs/security.md)).
 - Chapters come from the table of contents, down to the elements its entries
   point to inside files, and long sections are split at their chapter
@@ -81,7 +84,7 @@ rules:
   nested under parts or under a title-page entry are used even when they are
   short, while numbered sub-sections inside chapters, title-page lines and
   "FIM" entries nested below chapters are not. Entries for whole files
-  always count.
+  always count, and only the first eight levels are examined.
 - **Long sections.** A section longer than 50,000 characters, as in a book
   whose table of contents lists only the title page, the parts or the
   license, is split at its chapter headings when it holds at least two:

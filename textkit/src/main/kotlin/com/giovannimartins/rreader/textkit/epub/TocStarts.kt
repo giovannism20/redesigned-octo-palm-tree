@@ -21,9 +21,10 @@ internal object TocStarts {
     fun resolve(
         entries: List<TocEntry>,
         text: SpineText,
+        budget: ParseBudget = ParseBudget.UNLIMITED,
     ): List<ChapterStart> {
         val targets = entries.mapNotNull { target(it, text) }
-        val depth = TocDepth.choose(targets, text)
+        val depth = TocDepth.choose(targets, text, budget)
         return targets
             .filter { (it.depth ?: 0) <= depth }
             .groupBy { it.paragraph }
@@ -56,19 +57,35 @@ internal object TocStarts {
  * characters do (whole volumes or parts). So chapters nested under parts or under a title-page entry count even when
  * they are short, while short numbered sub-sections inside chapters, title-page lines and closing "FIM" entries
  * nested below chapters do not.
+ *
+ * Only the first [MAX_LEVELS] levels are considered, so entries nested deeper never start chapters: each level costs
+ * a pass over every entry, and a hostile table of contents can nest hundreds of levels.
  */
 internal object TocDepth {
     /** Median length the sections of a deeper level need when the level above is not too coarse (3.5 minutes). */
     const val MIN_SUBSECTION_LENGTH: Long = 3_000
 
+    /** The most levels of a nested table of contents considered; books nest parts, chapters and a few sections. */
+    const val MAX_LEVELS: Int = 8
+
     /** The deepest depth whose element entries start chapters. */
     fun choose(
         targets: List<TocTarget>,
         text: SpineText,
+        budget: ParseBudget = ParseBudget.UNLIMITED,
     ): Int {
         val levels = Levels(targets, text)
-        val depths = targets.mapNotNull { it.depth }.distinct().sorted()
-        val deeper = depths.zipWithNext().takeWhile { (current, next) -> levels.refines(current, next) }
+        val depths =
+            targets
+                .mapNotNull { it.depth }
+                .distinct()
+                .sorted()
+                .take(MAX_LEVELS)
+        val deeper =
+            depths.zipWithNext().takeWhile { (current, next) ->
+                budget.check()
+                levels.refines(current, next)
+            }
         return deeper.lastOrNull()?.second ?: depths.firstOrNull() ?: 0
     }
 

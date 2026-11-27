@@ -75,6 +75,20 @@ All notable user-visible changes are documented here. The format follows
 - Repository foundation: secret guard (pre-commit hook and CI scan),
   security policy, AI-first documentation and architecture decisions.
 
+### Changed
+
+- The message for a book that is too complex to prepare no longer says
+  "PDF", since EPUB books can get it too.
+- EPUB books that keep many chapters in a few large files, as most Project
+  Gutenberg books in the Explore tab do, now have their real chapters, each
+  with its title, in the chapter list, for next and previous and for the time
+  left in the chapter: Dom Casmurro has its 148 chapters instead of 3. A
+  chapter number printed above the title stays with its chapter, title pages
+  and part titles are read at the start of the chapter that follows them, and
+  books whose table of contents lists only the title page or the parts are
+  split at their "CAPÍTULO I" headings. Books already in the library keep
+  their chapters until they are removed and added again.
+
 ### Security
 
 - A book with an enormous title, list of authors or description, or shared
@@ -85,15 +99,5 @@ All notable user-visible changes are documented here. The format follows
   timer or "read from here") by sending commands to the app's playback
   service; the app itself, the notification, the lock screen and headsets
   still can.
-
-### Changed
-
-- EPUB books that keep many chapters in a few large files, as most Project
-  Gutenberg books in the Explore tab do, now have their real chapters, each
-  with its title, in the chapter list, for next and previous and for the time
-  left in the chapter: Dom Casmurro has its 148 chapters instead of 3. A
-  chapter number printed above the title stays with its chapter, title pages
-  and part titles are read at the start of the chapter that follows them, and
-  books whose table of contents lists only the title page or the parts are
-  split at their "CAPÍTULO I" headings. Books already in the library keep
-  their chapters until they are removed and added again.
+- An EPUB built to keep its preparation busy for hours now stops after two
+  minutes with a clear message.
