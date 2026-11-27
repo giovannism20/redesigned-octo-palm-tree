@@ -7,30 +7,44 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
-/** A segment's text as a neural voice reads it: [text] after a pause of [leadingPauseMillis]. */
+/**
+ * A segment's text as a neural voice reads it: after a pause of [leadingPauseMillis], the [parts] in order, with a
+ * dialogue pause ([NeuralText.DIALOGUE_PAUSE_MILLIS]) between two parts.
+ */
 internal data class PreparedText(
-    val text: String,
+    val parts: List<String>,
     val leadingPauseMillis: Int,
 )
 
 /** How segment text is handed to the neural voices. */
 internal object NeuralText {
-    /** The pause that replaces a dialogue dash at the start of a segment. */
+    /** The pause that replaces a dialogue dash. */
     const val DIALOGUE_PAUSE_MILLIS = 300
 
     /** Em dash, en dash and horizontal bar, which open dialogue lines in Portuguese books. */
     private val DIALOGUE_DASHES = setOf('—', '–', '―')
 
     /**
-     * Trims [text] and turns a leading dialogue dash into a pause: read as a symbol it can be spoken as a spurious
-     * vowel (voice evaluation, ADR 0018). A hyphen counts as a dash only when a space follows it, so "-5" stays.
+     * A dash that opens a new line of dialogue inside a segment, with the spaces around it: after the end of a
+     * sentence or a colon (and a closing quote), as in ". — Não." or "disse: — Não.". A hyphen counts only with a space
+     * after it, and a dash after a word, as in "Uma noite — disse ele — fria", is left to the voice.
+     */
+    private val INNER_DIALOGUE_DASH = Regex("""(?<=[.!?…:][»”"’)]?)\s+(?:[—–―]|-(?=\s))\s*""")
+
+    /**
+     * Trims [text] and turns its dialogue dashes into pauses: read as a symbol a dash can be spoken as a spurious
+     * vowel (voice evaluation, ADR 0018). A dash at the start is a pause before the speech; a dash that opens a new
+     * line of dialogue inside the segment (merged short sentences) splits the text into parts with a pause between
+     * them. A hyphen counts as a dash only when a space follows it, so "-5" stays.
      */
     fun prepare(text: String): PreparedText {
         val trimmed = text.trim()
-        val dash =
+        val leadingDash =
             trimmed.firstOrNull() in DIALOGUE_DASHES ||
                 (trimmed.startsWith("-") && trimmed.getOrNull(1)?.isWhitespace() == true)
-        return if (dash) PreparedText(trimmed.drop(1).trimStart(), DIALOGUE_PAUSE_MILLIS) else PreparedText(trimmed, 0)
+        val rest = if (leadingDash) trimmed.drop(1) else trimmed
+        val parts = rest.split(INNER_DIALOGUE_DASH).map(String::trim).filter(String::isNotEmpty)
+        return PreparedText(parts, if (leadingDash) DIALOGUE_PAUSE_MILLIS else 0)
     }
 }
 
@@ -67,9 +81,11 @@ internal object KokoroPhonemes {
 }
 
 /**
- * Turns a neural voice's raw samples into the audio of one segment: a 20 Hz high-pass removes the DC offset Kokoro
- * leaves in its output, silence at both ends is trimmed to [EDGE_MILLIS], the voice's gain brings it to the common
- * level (never past [PEAK_LIMIT]), and fixed pauses go before (a dialogue dash) and after (between segments).
+ * Turns a neural voice's raw samples into the audio of one segment: notch filters remove the narrow tones a model
+ * leaves (Kokoro's, [withoutTones]), a 20 Hz high-pass removes the DC offset Kokoro leaves in its output, silence at
+ * both ends of each part is trimmed to [EDGE_MILLIS], parts are joined with a dialogue pause, the voice's gain brings
+ * it to the common level (never past [PEAK_LIMIT]), and fixed pauses go before (a dialogue dash) and after (between
+ * segments).
  */
 internal object NeuralAudio {
     const val HIGH_PASS_HZ = 20.0
@@ -100,8 +116,22 @@ internal object NeuralAudio {
         gainDb: Float,
         leadingPauseMillis: Int,
         tones: List<Double> = emptyList(),
+    ): ShortArray = finish(listOf(samples), sampleRate, gainDb, leadingPauseMillis, tones)
+
+    /**
+     * 16-bit PCM of [parts] (each in [-1, 1] at [sampleRate]) spoken one after the other, a dialogue pause apart, for
+     * a voice with [gainDb], as described above, without the model's narrow [tones]. Parts that are only silence leave
+     * no pause.
+     */
+    fun finish(
+        parts: List<FloatArray>,
+        sampleRate: Int,
+        gainDb: Float,
+        leadingPauseMillis: Int,
+        tones: List<Double> = emptyList(),
     ): ShortArray {
-        val speech = trimmed(highPassed(withoutTones(samples, sampleRate, tones), sampleRate), sampleRate)
+        val cleaned = parts.map { trimmed(highPassed(withoutTones(it, sampleRate, tones), sampleRate), sampleRate) }
+        val speech = joined(cleaned, sampleRate)
         val peak = speech.maxOfOrNull { abs(it) } ?: 0f
         val gain = 10.0.pow(gainDb / DECIBELS_PER_TENFOLD).toFloat()
         val scale = if (peak > 0f) minOf(gain, PEAK_LIMIT / peak) else gain
@@ -155,6 +185,22 @@ internal object NeuralAudio {
     }
 
     private fun toPcm(value: Float): Short = (value.coerceIn(-1f, 1f) * FULL_SCALE).roundToInt().toShort()
+
+    /** The non-empty [parts] one after the other, with a dialogue pause of silence between two of them. */
+    private fun joined(
+        parts: List<FloatArray>,
+        sampleRate: Int,
+    ): FloatArray {
+        val spoken = parts.filter(FloatArray::isNotEmpty)
+        val gap = samplesFor(NeuralText.DIALOGUE_PAUSE_MILLIS, sampleRate)
+        val speech = FloatArray(spoken.sumOf(FloatArray::size) + gap * (spoken.size - 1).coerceAtLeast(0))
+        var start = 0
+        spoken.forEach { part ->
+            part.copyInto(speech, start)
+            start += part.size + gap
+        }
+        return speech
+    }
 
     /** A one-pole DC blocker with its cut-off at [HIGH_PASS_HZ]. */
     fun highPassed(

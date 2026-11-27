@@ -470,8 +470,13 @@ Kit, the Creative Commons licences of the Piper voices) open in the browser.
 `SherpaOnnxEngine` renders a segment for a neural voice into the same WAV
 cache as the phone's voices, so playback does not change (ADR 0003):
 
-1. **Text.** `NeuralText` trims the segment and turns a leading dialogue dash
-   into a 300 ms pause (read as a symbol it can become a spurious vowel).
+1. **Text.** `NeuralText` trims the segment and turns its dialogue dashes into
+   300 ms pauses (read as a symbol a dash can become a spurious vowel): a dash
+   at the start is a pause before the speech, and a dash that opens a new line
+   of dialogue inside a segment of merged sentences (after the end of a
+   sentence or a colon, as in ". — Não.") splits it into parts spoken one after
+   the other with the pause between them. A dash after a word ("Uma noite —
+   disse ele — fria") is left to the voice.
 2. **Phonemes.** sherpa-onnx 2.x no longer phonemizes text, so
    `SherpaOnnxRuntime` asks piper-phonemize (espeak-ng, voice `pt-br`, for
    every voice: Kokoro's default is English) for one array of IPA code points
@@ -499,7 +504,8 @@ cache as the phone's voices, so playback does not change (ADR 0003):
    thin metallic whistle on headphones; Q 60, two passes per tone, the sound
    around them changes by less than 0.1 dB). It then removes the DC offset with
    a 20 Hz high-pass,
-   trims silence at both ends to 40 ms, applies the voice's gain (measured in
+   trims silence at both ends of each part to 40 ms, joins the parts with the
+   dialogue pause, applies the voice's gain (measured in
    the evaluation so every voice is about as loud, never past 0.98 of full
    scale) and adds a 250 ms pause after the speech; `PcmWav` writes 16-bit
    mono PCM at the model's rate (24 kHz Kokoro, 22.05 or 16 kHz Piper).

@@ -69,6 +69,18 @@ class SherpaOnnxEngineTest {
     }
 
     @Test
+    fun `a new line of dialogue inside a merged segment is spoken apart, after a pause`() {
+        install(NeuralVoices.CADU)
+
+        val result = synthesize(cadu, "— Sim. — Não.")
+
+        assertThat(runtime.phonemized).containsExactly("Sim.", "Não.").inOrder()
+        assertThat(runtime.generated).containsExactly(listOf("Sim") to 0, listOf("Não") to 0).inOrder()
+        // A 300 ms pause for each dash, 3 phonemes of 10 ms in each part and 250 ms after.
+        assertThat((result as SynthesisResult.Rendered).durationMillis).isEqualTo(300L + 30 + 300 + 30 + 250)
+    }
+
+    @Test
     fun `speaks Piper voices with speaker 0 and their phonemes as they are`() {
         install(NeuralVoices.CADU)
 

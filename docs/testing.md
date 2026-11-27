@@ -45,7 +45,8 @@ device with scans drawn by the test itself (`PdfPageRasterizerTest`,
 
 The neural voices are tested without native code: `SherpaOnnxEngine` runs
 over a fake `NeuralRuntime` (phonemes from characters, a tone per phoneme), so
-speaker ids, Kokoro's merged phonemes, the dialogue pause, model loading and
+speaker ids, Kokoro's merged phonemes, the dialogue pauses (also for a dash
+that opens a new line of dialogue inside a segment), model loading and
 replacement, typed failures (also for `LinkageError` and `OutOfMemoryError`),
 cancellation, a package deleted while a render runs and another waits, and
 releasing the model after two idle minutes (on a `TestScope` clock) or when

@@ -20,13 +20,29 @@ class NeuralSpeechTest {
 
     @Test
     fun `a leading dialogue dash becomes a pause and the rest is read`() {
-        assertThat(NeuralText.prepare("— Capítulo 12.")).isEqualTo(PreparedText("Capítulo 12.", 300))
-        assertThat(NeuralText.prepare("  – Sim, disse ele.")).isEqualTo(PreparedText("Sim, disse ele.", 300))
-        assertThat(NeuralText.prepare("- Venha cá.")).isEqualTo(PreparedText("Venha cá.", 300))
-        assertThat(NeuralText.prepare("-5 graus lá fora.")).isEqualTo(PreparedText("-5 graus lá fora.", 0))
-        assertThat(
-            NeuralText.prepare("Uma noite — disse ele — fria."),
-        ).isEqualTo(PreparedText("Uma noite — disse ele — fria.", 0))
+        assertThat(NeuralText.prepare("— Capítulo 12.")).isEqualTo(PreparedText(listOf("Capítulo 12."), 300))
+        assertThat(NeuralText.prepare("  – Sim, disse ele.")).isEqualTo(PreparedText(listOf("Sim, disse ele."), 300))
+        assertThat(NeuralText.prepare("- Venha cá.")).isEqualTo(PreparedText(listOf("Venha cá."), 300))
+        assertThat(NeuralText.prepare("-5 graus lá fora.")).isEqualTo(PreparedText(listOf("-5 graus lá fora."), 0))
+        assertThat(NeuralText.prepare("Uma noite — disse ele — fria."))
+            .isEqualTo(PreparedText(listOf("Uma noite — disse ele — fria."), 0))
+    }
+
+    @Test
+    fun `a dialogue dash that opens a new line inside a merged segment becomes a pause too`() {
+        assertThat(NeuralText.prepare("— Sim. — Não.")).isEqualTo(PreparedText(listOf("Sim.", "Não."), 300))
+        assertThat(NeuralText.prepare("Ela olhou. – Quem é? - Eu! ― Bom…  — Até."))
+            .isEqualTo(PreparedText(listOf("Ela olhou.", "Quem é?", "Eu!", "Bom…", "Até."), 0))
+        assertThat(NeuralText.prepare("E disse: — Vamos.")).isEqualTo(PreparedText(listOf("E disse:", "Vamos."), 0))
+        assertThat(NeuralText.prepare("“Saia.” — Não.")).isEqualTo(PreparedText(listOf("“Saia.”", "Não."), 0))
+    }
+
+    @Test
+    fun `dashes that do not open a line of dialogue stay as they are`() {
+        assertThat(NeuralText.prepare("Ano 2. -5 graus. Sim — disse — e saiu."))
+            .isEqualTo(PreparedText(listOf("Ano 2. -5 graus. Sim — disse — e saiu."), 0))
+        assertThat(NeuralText.prepare("Fim. —")).isEqualTo(PreparedText(listOf("Fim."), 0))
+        assertThat(NeuralText.prepare("—")).isEqualTo(PreparedText(emptyList(), 300))
     }
 
     @Test
@@ -67,6 +83,26 @@ class NeuralSpeechTest {
         assertThat(pcm.size).isWithin(2 * edge + 4).of(lead + speech.size + 2 * edge + tail)
         assertThat(pcm.take(lead).all { it == 0.toShort() }).isTrue()
         assertThat(pcm.takeLast(tail).all { it == 0.toShort() }).isTrue()
+    }
+
+    @Test
+    fun `parts are joined with a dialogue pause, and a silent part leaves none`() {
+        val rate = 10_000
+        val speech = FloatArray(1_000) { 0.5f * sin(2 * PI * 300 * it / rate).toFloat() }
+
+        val pcm = NeuralAudio.finish(listOf(speech, FloatArray(800), speech), rate, gainDb = 0f, leadingPauseMillis = 0)
+
+        val edge = NeuralAudio.EDGE_MILLIS * rate / 1_000
+        val gap = NeuralText.DIALOGUE_PAUSE_MILLIS * rate / 1_000
+        val tail = NeuralAudio.SEGMENT_PAUSE_MILLIS * rate / 1_000
+        assertThat(pcm.size).isWithin(4 * edge + 4).of(2 * speech.size + gap + tail)
+        val silentRun =
+            pcm
+                .dropLast(tail)
+                .joinToString("") { if (it == 0.toShort()) "0" else "1" }
+                .split("1")
+                .maxOf(String::length)
+        assertThat(silentRun).isAtLeast(gap)
     }
 
     @Test

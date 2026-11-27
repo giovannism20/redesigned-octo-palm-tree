@@ -30,7 +30,7 @@ import kotlin.time.Duration.Companion.minutes
 
 /**
  * [SpeechEngine] for the offline neural voices (ADR 0018), writing WAV files into the same rendering pipeline as the
- * phone's voices (ADR 0003). A segment's text is prepared ([NeuralText]: a leading dialogue dash becomes a pause),
+ * phone's voices (ADR 0003). A segment's text is prepared ([NeuralText]: dialogue dashes become pauses),
  * phonemized in Brazilian Portuguese (Kokoro's phonemes merged as [KokoroPhonemes] says), spoken by the voice's
  * model with its speaker id, and finished by [NeuralAudio] (DC offset removed, edges trimmed, the voice's gain, a
  * pause after it). Renders run one at a time; the model of the last package used stays loaded, and is replaced when
@@ -170,7 +170,13 @@ class SherpaOnnxEngine
             startPhonemizer()
             val model = modelOf(voice.pkg)
             val job = currentCoroutineContext().job
-            val samples = calls.run(speak) { spoken(model, voice, prepared.text) { job.isActive } }
+            val samples =
+                calls.run(speak) {
+                    prepared.parts.map { part ->
+                        job.ensureActive()
+                        spoken(model, voice, part) { job.isActive }
+                    }
+                }
             job.ensureActive()
             val tones = voice.pkg.family.artifactTones(model.sampleRate)
             return Speech(
