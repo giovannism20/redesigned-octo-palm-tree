@@ -57,10 +57,27 @@ class CatalogDownloadsTest {
         downloads.download(DOM_CASMURRO)
 
         val job = workManager.getWorkInfosForUniqueWork(DownloadWork.uniqueName(DOM_CASMURRO.id)).get().single()
-        assertThat(job.tags).containsAtLeast(DownloadWork.TAG, DownloadWork.bookTag(DOM_CASMURRO.id))
         assertThat(job.constraints.requiredNetworkType).isEqualTo(NetworkType.CONNECTED)
         assertThat(job.state).isEqualTo(WorkInfo.State.ENQUEUED)
-        assertThat(runBlocking { downloads.states.first() }).containsExactly(DOM_CASMURRO.id, DownloadState.Waiting)
+        assertThat(runBlocking { downloads.states(setOf(DOM_CASMURRO.id, IRACEMA.id)).first() })
+            .containsExactly(DOM_CASMURRO.id, DownloadState.Waiting)
+    }
+
+    @Test
+    fun `SR-8 no tag of a download job names its book, since WorkManager logs tags`() {
+        WorkManagerCatalogDownloads(workManager).download(DOM_CASMURRO)
+
+        val job = workManager.getWorkInfosForUniqueWork(DownloadWork.uniqueName(DOM_CASMURRO.id)).get().single()
+
+        assertThat(job.tags.filter { DOM_CASMURRO.id.toString() in it }).isEmpty()
+    }
+
+    @Test
+    fun `knows no download of books never asked for`() {
+        val downloads = WorkManagerCatalogDownloads(workManager)
+
+        assertThat(runBlocking { downloads.states(setOf(IRACEMA.id)).first() }).isEmpty()
+        assertThat(runBlocking { downloads.states(emptySet()).first() }).isEmpty()
     }
 
     @Test
@@ -81,20 +98,10 @@ class CatalogDownloadsTest {
         assertThat(state(WorkInfo.State.CANCELLED)).isNull()
     }
 
-    @Test
-    fun `ignores jobs without a book`() {
-        val job = WorkInfo(UUID.randomUUID(), WorkInfo.State.ENQUEUED, setOf(DownloadWork.TAG))
-
-        assertThat(DownloadWork.stateOf(job)).isNull()
-    }
-
     private fun state(
         state: WorkInfo.State,
         output: Data = Data.EMPTY,
         progress: Data = Data.EMPTY,
-    ): DownloadState? {
-        val tags = setOf(DownloadWork.TAG, DownloadWork.bookTag(DOM_CASMURRO.id))
-        val job = WorkInfo(UUID.randomUUID(), state, tags, outputData = output, progress = progress)
-        return DownloadWork.stateOf(job)?.also { assertThat(it.first).isEqualTo(DOM_CASMURRO.id) }?.second
-    }
+    ): DownloadState? =
+        DownloadWork.stateOf(WorkInfo(UUID.randomUUID(), state, emptySet(), outputData = output, progress = progress))
 }

@@ -14,6 +14,7 @@ import com.giovannimartins.rreader.catalog.SearchResult
 import com.giovannimartins.rreader.data.library.LibraryBook
 import com.giovannimartins.rreader.data.library.LibraryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +22,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
@@ -95,9 +98,20 @@ class ExploreViewModel
                     emit(null)
                 }
 
-        /** The downloads, leaving out books that are no longer in the library (all of them kept when unknown). */
+        /** The ebook numbers of the books the screen shows: the curated classics and the books found. */
+        private val shownIds: Flow<Set<Int>> =
+            combine(curated, search) { classics, search ->
+                val found = (search as? SearchUiState.Results)?.entries.orEmpty()
+                (classics + found).mapTo(HashSet()) { it.id }
+            }.distinctUntilChanged()
+
+        /**
+         * The downloads of the books shown, leaving out books that are no longer in the library (all of them kept when
+         * that is unknown).
+         */
+        @OptIn(ExperimentalCoroutinesApi::class)
         private val downloadStates: Flow<Map<Int, DownloadState>> =
-            combine(downloads.states, libraryIds) { states, ids ->
+            combine(shownIds.flatMapLatest(downloads::states), libraryIds) { states, ids ->
                 states.filterValues { it !is DownloadState.InLibrary || ids == null || it.bookId in ids }
             }
 

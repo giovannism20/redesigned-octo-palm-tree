@@ -328,7 +328,9 @@ The Explore tab offers free public-domain books from Project Gutenberg
   busy server (HTTP 429, 5xx) is retried with an exponential backoff from
   30 seconds, at most four attempts in all. The job publishes its
   percentage and ends with the book's id or a `DownloadFailure`, read back by
-  ebook number as a `DownloadState`.
+  ebook number as a `DownloadState` for the books the screen shows. Jobs are
+  found by their unique names and carry no tag naming their book, since
+  WorkManager logs tags (SR-8).
 - **License.** The EPUB parser drops Gutenberg's header, credits and license
   (`GutenbergBoilerplate`), so listening starts with the book itself.
 - **Screen.** `ExploreViewModel` combines the curated classics, the search

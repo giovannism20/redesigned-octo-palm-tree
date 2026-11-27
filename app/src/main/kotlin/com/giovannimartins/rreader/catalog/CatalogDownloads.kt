@@ -10,7 +10,9 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import java.time.Duration
 import javax.inject.Inject
@@ -42,14 +44,15 @@ interface CatalogDownloads {
     /** Downloads [entry] into the library, unless it is already queued or downloading. */
     fun download(entry: CatalogEntry)
 
-    /** The downloads WorkManager knows about, by Gutenberg ebook number. */
-    val states: Flow<Map<Int, DownloadState>>
+    /** Where the downloads of the books [ids] stand, by Gutenberg ebook number; books never asked for are absent. */
+    fun states(ids: Set<Int>): Flow<Map<Int, DownloadState>>
 }
 
 /**
  * [CatalogDownloads] on WorkManager: one unique [DownloadBookWorker] job per ebook that waits for a connection
  * (`NetworkType.CONNECTED`), so a book asked for offline downloads as soon as the phone is back online, and failures
- * that may pass are retried with an exponential backoff from [RETRY_DELAY].
+ * that may pass are retried with an exponential backoff from [RETRY_DELAY]. A job is found by its unique name
+ * ([DownloadWork.uniqueName]) and carries no tag naming its book: WorkManager writes tags to the log (SR-8).
  */
 class WorkManagerCatalogDownloads
     @Inject
@@ -62,17 +65,22 @@ class WorkManagerCatalogDownloads
                     .setInputData(DownloadWork.input(entry))
                     .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
                     .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, RETRY_DELAY)
-                    .addTag(DownloadWork.TAG)
-                    .addTag(DownloadWork.bookTag(entry.id))
                     .build()
             workManager.enqueueUniqueWork(DownloadWork.uniqueName(entry.id), ExistingWorkPolicy.KEEP, request)
         }
 
-        override val states: Flow<Map<Int, DownloadState>> =
-            workManager
-                .getWorkInfosByTagFlow(DownloadWork.TAG)
-                .map { jobs -> jobs.mapNotNull(DownloadWork::stateOf).toMap() }
-                .distinctUntilChanged()
+        override fun states(ids: Set<Int>): Flow<Map<Int, DownloadState>> =
+            if (ids.isEmpty()) {
+                flowOf(emptyMap())
+            } else {
+                combine(ids.map(::stateOf)) { states -> states.filterNotNull().toMap() }.distinctUntilChanged()
+            }
+
+        /** Where the download of ebook [id] stands, from its unique job; null when it was never asked for. */
+        private fun stateOf(id: Int): Flow<Pair<Int, DownloadState>?> =
+            workManager.getWorkInfosForUniqueWorkFlow(DownloadWork.uniqueName(id)).map { jobs ->
+                jobs.lastOrNull()?.let(DownloadWork::stateOf)?.let { id to it }
+            }
 
         companion object {
             /** The wait before the first retry; it doubles after each failed attempt. */
@@ -80,14 +88,10 @@ class WorkManagerCatalogDownloads
         }
     }
 
-/** How download jobs are named and tagged, and what they keep in WorkManager's [Data]. */
+/** How download jobs are named, and what they keep in WorkManager's [Data]. */
 internal object DownloadWork {
-    /** Tag of every download job. */
-    const val TAG = "catalog-download"
-
+    /** The unique name of ebook [id]'s download job, by which it is found; never logged by WorkManager. */
     fun uniqueName(id: Int) = "catalog-download-$id"
-
-    fun bookTag(id: Int) = "${Keys.BOOK_TAG_PREFIX}$id"
 
     fun input(entry: CatalogEntry): Data = workDataOf(Keys.ID to entry.id, Keys.TITLE to entry.title)
 
@@ -104,24 +108,19 @@ internal object DownloadWork {
 
     fun failed(reason: DownloadFailure): Data = workDataOf(Keys.FAILURE to reason.name)
 
-    /** The ebook number and the state of the download job [job], or null for a job that tells nothing. */
-    fun stateOf(job: WorkInfo): Pair<Int, DownloadState>? {
-        val id = JobData.bookId(job.tags)
-        val state =
-            when (job.state) {
-                WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED -> DownloadState.Waiting
-                WorkInfo.State.RUNNING -> DownloadState.Downloading(JobData.fraction(job.progress))
-                WorkInfo.State.SUCCEEDED -> JobData.inLibrary(job.outputData)
-                WorkInfo.State.FAILED -> DownloadState.Failed(JobData.failure(job.outputData))
-                WorkInfo.State.CANCELLED -> null
-            }
-        return if (id == null || state == null) null else id to state
-    }
+    /** The state of the download job [job], or null for a cancelled job. */
+    fun stateOf(job: WorkInfo): DownloadState? =
+        when (job.state) {
+            WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED -> DownloadState.Waiting
+            WorkInfo.State.RUNNING -> DownloadState.Downloading(JobData.fraction(job.progress))
+            WorkInfo.State.SUCCEEDED -> JobData.inLibrary(job.outputData)
+            WorkInfo.State.FAILED -> DownloadState.Failed(JobData.failure(job.outputData))
+            WorkInfo.State.CANCELLED -> null
+        }
 }
 
-/** The tag prefix and the [Data] keys of download jobs. */
+/** The [Data] keys of download jobs. */
 private object Keys {
-    const val BOOK_TAG_PREFIX = "catalog-book:"
     const val ID = "id"
     const val TITLE = "title"
     const val PERCENT = "percent"
@@ -134,11 +133,6 @@ private object Keys {
 /** Reads back what download jobs keep. */
 private object JobData {
     private const val PERCENT = 100f
-
-    fun bookId(tags: Set<String>): Int? =
-        tags.firstNotNullOfOrNull { tag ->
-            tag.takeIf { it.startsWith(Keys.BOOK_TAG_PREFIX) }?.removePrefix(Keys.BOOK_TAG_PREFIX)?.toIntOrNull()
-        }
 
     fun fraction(progress: Data): Float? =
         progress.getInt(Keys.PERCENT, Keys.UNKNOWN).takeIf { it in 0..PERCENT.toInt() }?.let { it / PERCENT }

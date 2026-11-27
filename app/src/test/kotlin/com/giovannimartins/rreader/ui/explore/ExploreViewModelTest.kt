@@ -32,8 +32,10 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -280,11 +282,13 @@ class ExploreViewModelTest {
 
     private class FakeCatalogDownloads : CatalogDownloads {
         val requested = mutableListOf<CatalogEntry>()
-        override val states = MutableStateFlow<Map<Int, DownloadState>>(emptyMap())
+        val states = MutableStateFlow<Map<Int, DownloadState>>(emptyMap())
 
         override fun download(entry: CatalogEntry) {
             requested += entry
         }
+
+        override fun states(ids: Set<Int>): Flow<Map<Int, DownloadState>> = states.map { it.filterKeys(ids::contains) }
     }
 
     private class FakeNetworkStatus : NetworkStatus {

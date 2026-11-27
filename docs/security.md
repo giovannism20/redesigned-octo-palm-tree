@@ -66,7 +66,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | Tampering | Media session start intents (B2) | Medium | Another app sends the exported service a media button (`ACTION_MEDIA_BUTTON`) or a custom notification action as a start intent: Media3 finds the session by the URI of Media3's default session id, or asks for a session on behalf of an unknown caller, and the media notification's controller, which runs as the app, relays the action, so the app's reader commands (read from a position, sleep timer) and media keys could be triggered from outside | The session has a random id, so its URI is known only to the notification's own pending intents; the service gives its session to trusted controllers only, so the unknown caller of a start intent gets none; the media notification's controller does not get the reader commands (its −15 s and +15 s buttons are player commands); `ReaderSessionCallback` refuses reader commands from any other controller (SR-7) |
 | Info disclosure | ML Kit (B5) | Medium | The OCR library logs its usage to Google, or downloads models, and could send data off the phone | Bundled model only, no download path; the `datatransport` upload backend is removed from the merged manifest, so its logs are dropped (ADR 0015, verified by `MergedManifestTest`); the app has `INTERNET` for the catalogue only, and TLS to Google's hosts fails (network security config, ADR 0017) |
 | Info disclosure | Libraries with the network (B5) | Medium | A library uses the `INTERNET` permission the catalogue needs to reach its own servers | The network security config trusts no CA for hosts other than `gutenberg.org`, so their TLS connections fail; cleartext is disabled for all |
-| Info disclosure | Logs | Low | Book text or file names in logs | No content/file names in release logs |
+| Info disclosure | Logs | Low | Book text, file names or the numbers of the books downloaded in logs (WorkManager logs every job's tags and outcome) | No content/file names in release logs; WorkManager logs errors only in release builds, download jobs carry no tag naming their book, and R8 removes verbose, debug and information logging from the release build (SR-8) |
 | Info disclosure | Backups | Low | Cloud backup copies reading history | Cloud backup disabled; device-to-device transfer allowed |
 | Tampering | Supply chain (B5) | Medium | Compromised dependency, wrapper or action | Wrapper validation, pinned Actions, Dependabot, CodeQL, minimal permissions |
 | Info disclosure | Repository (B6) | High | A key or keystore is committed | Pre-commit hook, CI scan, GitHub push protection, `.gitignore`, review |
@@ -177,7 +177,13 @@ Each requirement is testable; reference its ID in tests and reviews.
   holds.)
 - **SR-8** Release builds log no book content, file names or personal data. (`Diagnostics` logs only
   exception types. Catalogue addresses, which hold the search words, and the
-  downloaded books' titles are never logged.)
+  downloaded books' titles are never logged. WorkManager logs every job's
+  tags and outcome at the information level, so it logs only errors in
+  release builds (`RReaderApplication`), and catalogue download jobs carry no
+  tag naming their book: they are found by their unique names. R8 removes
+  verbose, debug and information logging calls from the release build,
+  libraries included (`proguard-rules.pro`); warnings and errors stay.
+  Verified by `CatalogDownloadsTest` and `RReaderApplicationTest`.)
 - **SR-9** Cloud backup is disabled; device-to-device transfer is allowed.
 - **SR-10** No secrets in the repository (see the layers below).
 - **SR-11** Dependencies are pinned in the version catalog and monitored by

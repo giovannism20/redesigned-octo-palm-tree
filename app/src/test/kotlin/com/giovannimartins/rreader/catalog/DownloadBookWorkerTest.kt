@@ -154,10 +154,10 @@ class DownloadBookWorkerTest {
             WorkInfo(
                 id = UUID.randomUUID(),
                 state = state,
-                tags = setOf(DownloadWork.TAG, DownloadWork.bookTag(DOM_CASMURRO.id)),
+                tags = emptySet(),
                 outputData = result.outputData,
             )
-        return DownloadWork.stateOf(job)?.second
+        return DownloadWork.stateOf(job)
     }
 
     private fun fractionOf(progress: Data): Float? {
@@ -165,10 +165,10 @@ class DownloadBookWorkerTest {
             WorkInfo(
                 id = UUID.randomUUID(),
                 state = WorkInfo.State.RUNNING,
-                tags = setOf(DownloadWork.bookTag(DOM_CASMURRO.id)),
+                tags = emptySet(),
                 progress = progress,
             )
-        return (DownloadWork.stateOf(job)?.second as? DownloadState.Downloading)?.fraction
+        return (DownloadWork.stateOf(job) as? DownloadState.Downloading)?.fraction
     }
 
     private fun factory() =
