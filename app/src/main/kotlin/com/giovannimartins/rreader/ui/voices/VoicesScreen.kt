@@ -1,9 +1,5 @@
 package com.giovannimartins.rreader.ui.voices
 
-import android.content.ActivityNotFoundException
-import android.content.Context
-import android.content.Intent
-import android.provider.Settings
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -33,7 +29,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.giovannimartins.rreader.Diagnostics
 import com.giovannimartins.rreader.R
 import com.giovannimartins.rreader.tts.Voice
 
@@ -194,16 +189,5 @@ private fun NoVoices(
         Button(onClick = onOpenSystemSettings, modifier = Modifier.heightIn(min = 56.dp)) {
             Text(stringResource(R.string.voices_install), style = MaterialTheme.typography.labelLarge)
         }
-    }
-}
-
-/** Opens the system text-to-speech settings, where voices can be downloaded. */
-private fun openTextToSpeechSettings(context: Context) {
-    val tts = Intent("com.android.settings.TTS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    try {
-        context.startActivity(tts)
-    } catch (e: ActivityNotFoundException) {
-        Diagnostics.recordHandled("open TTS settings", e)
-        context.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 }
