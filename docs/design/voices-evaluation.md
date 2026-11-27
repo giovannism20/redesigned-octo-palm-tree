@@ -70,6 +70,34 @@ tone), which take both below the background while the rest of the spectrum
 changes by 0.005 dB on average (0.09 dB at most), measured on the phone's
 audio. The bundled Kokoro samples were made again with the same filters.
 
+## Render speed on a modest phone (2026-11-27)
+
+The owner reported that Dora and Alex stall every three or four sentences at
+1.25×, while the phone's voice does not. `NeuralSpeedBenchmark` measured, on a
+2023 mid-range test phone (Snapdragon 695: two fast and six efficient cores,
+Android 15), a 20-second passage. "Listen ratio" is the render time divided by
+the time the passage takes to hear at 1.25×; above 1.0 the player runs out of
+audio.
+
+| Model | Threads | Speed in the model | RTF | Listen ratio at 1.25× |
+|---|---|---|---|---|
+| Kokoro int8 (shipped) | 2 / 4 / 6 / 8 | 1.0 (player stretches) | 1.40 / 1.45 / 1.41 / 1.69 | 1.75 / 1.82 / 1.77 / 2.11 |
+| Kokoro int8 (shipped) | 2 / 4 / 6 / 8 | 1.25 | 1.41 / 1.46 / 1.42 / 1.73 | 1.41 / 1.46 / 1.42 / 1.73 |
+| Kokoro fp32 (350 MB) | 2 / 4 / 6 | 1.0 | 1.16 / 1.28 / 1.06 | 1.45 / 1.60 / 1.32 |
+| Kokoro fp32 (350 MB) | 2 / 4 / 6 | 1.25 | 1.17 / 1.33 / 1.08 | 1.17 / 1.33 / 1.08 |
+| Piper (Cadu) | 2 / 4 / 6 / 8 | 1.0 | 0.14 / 0.15 / 0.14 / 0.15 | 0.18 / 0.19 / 0.17 / 0.18 |
+| Piper (Cadu) | 2 / 4 / 6 / 8 | 1.25 | 0.15 / 0.16 / 0.14 / 0.15 | 0.15 / 0.16 / 0.14 / 0.15 |
+
+- Kokoro is slower than real time on such a phone even at 1.0×, so live
+  listening stalls whatever the settings; only rendering ahead avoids it.
+- More threads do not help Kokoro (eight is worse: the efficient cores slow
+  the work down); the current cap of four is kept.
+- Generating at the listening speed in the model instead of stretching in the
+  player saves about 20 % of the render time for both families.
+- The fp32 model is only about 20 % faster here (3× on the development PC), not
+  enough to justify a 350 MB download.
+- Piper renders about seven times faster than real time: it never stalls.
+
 ## Decisions (owner, 2026-11-27)
 
 - Offer all nine voices in the Voices tab, each with its own small emblem and

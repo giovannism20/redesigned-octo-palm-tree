@@ -102,7 +102,10 @@ alphabets (such text crashed it in native code before the English, German,
 French and Polish dictionaries shipped); the JVM test `EspeakDictionariesTest`
 checks that every dictionary a shipped one switches to is shipped too, and
 `EspeakDataTest` that the data is copied whole, and copied again when its copy
-was never marked complete. Run instrumented tests on the owner's phone with
+was never marked complete. `NeuralSpeedBenchmark` is not a pass/fail test: it
+logs how fast each installed neural voice renders on the phone (per thread
+count and generation speed; options in its KDoc) and is run alone, by hand.
+Run instrumented tests on the owner's phone with
 `adb install -r` and `adb shell am instrument`, not `connectedDebugAndroidTest`,
 which uninstalls the app and deletes its books and voices.
 
