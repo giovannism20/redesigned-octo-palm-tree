@@ -31,11 +31,13 @@ import com.giovannimartins.rreader.net.FakeTransport.Companion.ok
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.job
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -73,9 +75,12 @@ class ExploreViewModelTest {
 
     @After
     fun tearDown() {
-        // Stop the view models' collectors (WhileSubscribed keeps them alive for a while) before
-        // closing the database and restoring Dispatchers.Main, so nothing resumes on Main meanwhile.
-        viewModels.forEach { it.viewModelScope.cancel() }
+        // Stop the view models' collectors (WhileSubscribed keeps them alive for a while) and wait until they
+        // have stopped before closing the database and restoring Dispatchers.Main: a query still running on
+        // Room's thread when they are cancelled resumes on Main as it ends, and must not do so while Main is
+        // being restored.
+        val jobs = viewModels.map { it.viewModelScope.coroutineContext.job }
+        runBlocking { jobs.forEach { it.cancelAndJoin() } }
         database.close()
         Dispatchers.resetMain()
     }
