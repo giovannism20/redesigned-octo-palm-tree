@@ -5,8 +5,8 @@ import java.text.BreakIterator
 import java.util.Locale
 
 /**
- * Splits text, usually a chapter's, into sentences: the units that segments are built from and that
- * playback resumes from.
+ * Splits text, usually a chapter's, into sentences: the units that [SegmentPlanner] groups into segments
+ * and that playback resumes from.
  *
  * For any input, the returned ranges:
  * - never cross a line break, so never a paragraph boundary

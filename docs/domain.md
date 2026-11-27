@@ -14,6 +14,7 @@ Names used in code and docs. Add a term here when you introduce it.
 | **Paragraph** | A block of chapter text separated by a blank line in normalized form. |
 | **Sentence** | A unit produced by the sentence segmenter: pt-BR aware (abbreviations, initials, decimals, dialogue dashes) and never across a line break or paragraph. Sentences longer than 280 characters are split at punctuation. |
 | **Segment** | One or more consecutive sentences rendered as a single audio clip. The unit of rendering, playback items and highlighting. |
+| **Segment planner** | Groups a chapter's sentences into segments: a sentence shorter than 24 characters is merged with the next one in the same paragraph, up to 320 characters. Also finds the segment holding a reading position, whose start is where playback resumes. |
 | **Layout line** | A line of text with its page, bounding box and font size, produced by PDF extraction or OCR and consumed by the cleanup step. |
 | **Cleanup** | Removing repeated headers/footers and page numbers, joining hyphenated words (keeping Portuguese enclisis such as "fazê-lo"), and rebuilding paragraphs from layout lines. |
 | **Speech normalization** | Small rewrites applied only when audio is rendered (never to the stored chapter text): Roman numerals in headings to numbers, ALL-CAPS headings to sentence case, symbols that voices read badly. |
