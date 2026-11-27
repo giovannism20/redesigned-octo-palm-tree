@@ -11,11 +11,11 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 - [x] License (MIT) and security policy
 - [x] AI-first docs: `AGENTS.md`, product, architecture, domain, roadmap, testing, security, ADRs 0001–0013, runbooks
 - [x] Project agents vendored in `.claude/agents/` with third-party notices
-- [ ] Gradle project: wrapper, version catalog, `:app` + `:textkit`, Compose theme placeholder, Hilt
-- [ ] Quality gates: Spotless + ktlint, detekt, Android Lint, hooks installed by Gradle
-- [ ] `secrets.properties` pattern wired into Gradle (`BuildConfig`), release signing from properties outside the repo
+- [x] Gradle project: wrapper, version catalog, `:app` + `:textkit`, Compose theme placeholder, Hilt
+- [x] Quality gates: Spotless + ktlint, detekt, Android Lint, hooks installed by Gradle
+- [x] `secrets.properties` pattern wired into Gradle (`BuildConfig`), release signing from properties outside the repo
 - [ ] CI: build, unit tests, lint, detekt, formatting, Gradle wrapper validation, CodeQL, documentation link check
-- [ ] Enable private vulnerability reporting on GitHub
+- [x] Enable private vulnerability reporting on GitHub
 - [ ] Feasibility spike on a real phone: `synthesizeToFile` speed/quality with the Google pt-BR voice
 - [ ] Feasibility spike on a real phone: sequential sentence playback for 30+ minutes with the screen locked
 

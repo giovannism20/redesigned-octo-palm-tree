@@ -26,8 +26,8 @@ free, on-device voices.
 
 ## Building
 
-Requirements: JDK 21 or newer, Android SDK (API 36), and `gitleaks` for the
-pre-commit secret guard.
+Requirements: any Java 17+ runtime to start Gradle (the build provisions its
+own JDK 21), the Android SDK, and `gitleaks` for the pre-commit secret guard.
 
 ```bash
 git config core.hooksPath .githooks

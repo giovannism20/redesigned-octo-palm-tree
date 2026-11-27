@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Provisional "R" mark inside the adaptive-icon safe zone; replaced in Phase 0b. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFF2B84B"
+        android:fillType="evenOdd"
+        android:pathData="M38,30 L58,30 A13,13 0 0,1 58,56 L57,56 L71,78 L61.5,78 L48,56 L46,56 L46,78 L38,78 Z M46,37 L46,49 L58,49 A6,6 0 0,0 58,37 Z" />
+</vector>

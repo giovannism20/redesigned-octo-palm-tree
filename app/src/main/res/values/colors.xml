@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Window background shown before Compose draws; matches the theme's Ink color. -->
+    <color name="window_background">#FF111214</color>
+    <!-- Provisional launcher icon colors until the logo is defined (roadmap Phase 0b). -->
+    <color name="launcher_background">#FF111214</color>
+</resources>

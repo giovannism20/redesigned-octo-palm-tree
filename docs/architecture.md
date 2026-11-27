@@ -40,12 +40,24 @@ See [ADR 0003](decisions/0003-sentence-audio-rendering-with-media3.md).
 
 | Module | Kind | Responsibility | Status |
 |--------|------|----------------|--------|
-| `:textkit` | Pure Kotlin/JVM library | Book model, EPUB parsing, PDF/OCR text cleanup, chapter detection, sentence segmentation, speech normalization, progress and time estimates | planned |
-| `:app` | Android application | UI, import, PDF/OCR adapters, TTS engines, rendering, playback service, persistence | planned |
+| `:textkit` | Pure Kotlin/JVM library | Book model, EPUB parsing, PDF/OCR text cleanup, chapter detection, sentence segmentation, speech normalization, progress and time estimates | in progress (format detection) |
+| `:app` | Android application | UI, import, PDF/OCR adapters, TTS engines, rendering, playback service, persistence | in progress (app shell) |
 
 `:app` depends on `:textkit`; `:textkit` never depends on Android. Anything
 that can be pure Kotlin goes to `:textkit` so it is fast to test
 ([ADR 0004](decisions/0004-pure-jvm-textkit-module.md)).
+
+## Build facts
+
+- Gradle 9.9 (wrapper with pinned checksum), AGP 9.5 with built-in Kotlin,
+  Kotlin 2.4, KSP, Hilt; versions live in `gradle/libs.versions.toml`.
+- `compileSdk` 37.2 (required by current AndroidX), `targetSdk` 36,
+  `minSdk` 26; Java/Kotlin bytecode target 17.
+- The Gradle daemon runs on a provisioned Temurin JDK 21
+  (`gradle/gradle-daemon-jvm.properties`).
+- Quality gates in `./gradlew check`: unit tests, Android Lint (warnings
+  reviewed, missing translations are errors), detekt (`config/detekt/`),
+  Spotless + ktlint with Compose rules.
 
 ## `:app` packages
 
@@ -59,7 +71,7 @@ Base package: `com.giovannimartins.rreader`.
 | `tts` | `SpeechEngine` interface, `SystemTtsEngine`, later `SherpaOnnxEngine`; `SegmentRenderer` and audio cache | planned |
 | `playback` | `PlaybackService` (`MediaSessionService`), facade player, progress saving, sleep timer | planned |
 | `catalog` | Public-domain catalogue client and downloads | planned |
-| `ui` | Compose screens, ViewModels, navigation, theme, design system | planned |
+| `ui` | Compose screens, ViewModels, navigation, theme, design system | in progress (theme, empty library) |
 | `di` | Hilt modules | planned |
 
 ## Layering rules

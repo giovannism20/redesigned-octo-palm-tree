@@ -65,6 +65,9 @@ feature count. It is a personal open-source project (MIT).
 | `scripts/` | Repository scripts (for example the secret-guard self-test). |
 | `.github/` | CI workflows and Dependabot configuration. |
 | `.claude/agents/` | Specialist agent definitions for AI-assisted work (see below). |
+| `.claude/skills/` | Short task recipes for agents: build-and-install, new-adr, release. |
+| `config/` | Static analysis configuration (detekt). |
+| `gradle/` | Version catalog (`libs.versions.toml`), wrapper and daemon JDK criteria. |
 
 The module and package layout is described in
 [docs/architecture.md](docs/architecture.md). Update that file when it changes.
@@ -79,7 +82,9 @@ GOBIN=$HOME/.local/bin go install github.com/zricethezav/gitleaks/v8@latest
 scripts/test-secret-guard.sh                  # proves the hook blocks secrets
 ```
 
-Everyday commands (JDK 21+ and the Android SDK are required):
+Everyday commands. Gradle provisions its own JDK 21 (see
+`gradle/gradle-daemon-jvm.properties`), so any Java 17+ runtime can start the
+wrapper; the Android SDK must be installed (`local.properties` or `ANDROID_HOME`).
 
 | Task | Command |
 |------|---------|

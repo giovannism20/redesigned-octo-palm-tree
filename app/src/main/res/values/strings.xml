@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">R Reader</string>
+    <string name="library_title">Library</string>
+    <string name="library_empty_title">Your library is empty</string>
+    <string name="library_empty_body">Import a PDF or EPUB to start listening.</string>
+</resources>

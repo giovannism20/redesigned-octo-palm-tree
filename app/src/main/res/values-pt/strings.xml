@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_title">Biblioteca</string>
+    <string name="library_empty_title">Sua biblioteca está vazia</string>
+    <string name="library_empty_body">Importe um PDF ou EPUB para começar a ouvir.</string>
+</resources>

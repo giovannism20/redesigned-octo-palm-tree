@@ -12,6 +12,9 @@
 | Security tests | `textkit` + `app` | Malicious EPUB/PDF inputs, secret guard | see below |
 | Manual device checklist | real phone | End-to-end behaviour that emulators fake poorly | see below |
 
+Frameworks: `:textkit` uses JUnit Jupiter 6 with Truth; `:app` uses JUnit 4
+(the Android default) with Truth, AndroidX Test and the Compose test APIs.
+
 `./gradlew check` is the local gate and runs unit tests, lint, detekt and
 formatting checks. CI runs the same plus the secret scan, CodeQL and the
 documentation link check.
