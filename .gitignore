@@ -1,0 +1,59 @@
+# ---------------------------------------------------------------------------
+# Secrets and signing material — NEVER commit these (see docs/runbooks/secrets.md)
+# ---------------------------------------------------------------------------
+local.properties
+secrets.properties
+keystore.properties
+signing.properties
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+*.der
+*.gpg
+*.mobileprovision
+google-services.json
+GoogleService-Info.plist
+service-account*.json
+id_rsa*
+id_ed25519*
+
+# ---------------------------------------------------------------------------
+# Build outputs and packaged apps
+# ---------------------------------------------------------------------------
+build/
+.gradle/
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+output-metadata.json
+
+# ---------------------------------------------------------------------------
+# IDEs, OS and local tooling
+# ---------------------------------------------------------------------------
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.log
+.claude/settings.local.json
+.claude/worktrees/
+
+# ---------------------------------------------------------------------------
+# Local reference material (screenshots, recordings, personal notes)
+# ---------------------------------------------------------------------------
+/reference/
+/scratch/

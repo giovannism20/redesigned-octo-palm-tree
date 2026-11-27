@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Pre-commit secret guard. Blocks secret-bearing files (even when force-added)
+# and scans the staged diff with gitleaks. Never bypass it with --no-verify.
+# Setup: `git config core.hooksPath .githooks` (the Gradle build does it too).
+set -euo pipefail
+
+forbidden_regex='(^|/)(local\.properties|secrets\.properties|keystore\.properties|signing\.properties|google-services\.json|GoogleService-Info\.plist|service-account[^/]*\.json|\.env(\.[^/]*)?|id_rsa[^/]*|id_ed25519[^/]*)$|\.(jks|keystore|p12|pfx|pem|key|der|gpg|mobileprovision|apk|aab)$'
+
+blocked=$(git diff --cached --name-only --diff-filter=ACMR | grep -E "$forbidden_regex" | grep -vE '(^|/)\.env\.example$' || true)
+if [ -n "$blocked" ]; then
+  echo "pre-commit: refusing to commit secret-bearing or binary release files:" >&2
+  printf '  %s\n' $blocked >&2
+  echo "Unstage them (git restore --staged <file>). See docs/runbooks/secrets.md." >&2
+  exit 1
+fi
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-commit: gitleaks is not installed, so the secret scan cannot run." >&2
+  echo "Install it: GOBIN=\$HOME/.local/bin go install github.com/zricethezav/gitleaks/v8@latest" >&2
+  exit 1
+fi
+
+if ! gitleaks git --pre-commit --staged --redact --no-banner --log-level warn; then
+  echo "pre-commit: gitleaks found a possible secret in the staged changes." >&2
+  echo "Move it to secrets.properties (git-ignored). See docs/runbooks/secrets.md." >&2
+  exit 1
+fi

@@ -1,0 +1,7 @@
+# Gitleaks configuration for R Reader.
+# Uses the default rule set. Keep the allowlist empty unless an entry is
+# justified in docs/security.md (never allowlist a real credential).
+title = "R Reader secret scan"
+
+[extend]
+useDefault = true
