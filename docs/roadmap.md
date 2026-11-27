@@ -36,13 +36,14 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 - [x] Data: Room schema, chapter files, library repository
 - [x] Data: settings (DataStore: default voice, speed, text size)
 - [x] Library screen with "Continue listening", progress, failures and removal
-- [ ] Library: time left (needs `textkit.estimate`) and tap to open the player
+- [x] Library: tap a book to play it and open the player
+- [ ] Library and player: time left from `ReadingEstimates` and persisted speaking rates
 - [x] Wire the EPUB parser into `ImporterModule`
 - [ ] EPUB: split chapters at TOC fragment anchors inside a single file (books shipped as one big XHTML)
 - [x] `SystemTtsEngine` (multi-engine, offline-first voices) + audio cache
-- [ ] `SegmentRenderer` (render-ahead window, speaking-rate updates)
-- [ ] `PlaybackService` with facade player: background, lock screen, headset, ±15 s, speed, chapters, resume
-- [ ] Mini-player and full player screens
+- [x] `SegmentRenderer` (render-ahead window, speaking-rate updates)
+- [x] `PlaybackService` with facade player: background, lock screen, headset, ±15 s, speed, chapters, resume
+- [x] Mini-player and full player screens
 - [x] Voices screen (installed pt voices, sample, default voice)
 - [ ] Device checklist passed; installed on the primary user's phone
 
