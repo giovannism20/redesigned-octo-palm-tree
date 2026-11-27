@@ -39,7 +39,7 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 - [x] Library: tap a book to play it and open the player
 - [x] Library and player: time left from `ReadingEstimates` and persisted speaking rates
 - [x] Wire the EPUB parser into `ImporterModule`
-- [ ] EPUB: split chapters at TOC fragment anchors inside a single file (books shipped as one big XHTML) — **priority**: Gutenberg EPUBs come as 2–4 large files
+- [x] EPUB: split chapters at TOC fragment anchors and chapter headings inside large files (Dom Casmurro: 3 → 148 chapters)
 - [x] `SystemTtsEngine` (multi-engine, offline-first voices) + audio cache
 - [x] `SegmentRenderer` (render-ahead window, speaking-rate updates)
 - [x] `PlaybackService` with facade player: background, lock screen, headset, ±15 s, speed, chapters, resume
