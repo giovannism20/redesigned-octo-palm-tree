@@ -2,7 +2,6 @@ package com.giovannimartins.rreader.playback
 
 import android.content.Context
 import android.os.Looper
-import android.os.SystemClock
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -21,10 +20,16 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import java.io.File
 import java.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 /**
- * A [ReaderPlayer] over a real internal ExoPlayer on an auto-advancing [FakeClock], rendering with [engine]
- * into an audio cache in [cacheDir] and reading [content]. Use it under Robolectric and release [player].
+ * A [ReaderPlayer] over a real internal ExoPlayer, rendering with [engine] into an audio cache in [cacheDir]
+ * and reading [content]. Use it under Robolectric and release [player].
+ *
+ * The internal player runs on its own auto-advancing fake clock. The facade's [clock] (sleep timer, pause
+ * lengths, save throttling) is a separate fake clock that only moves when a test advances it, so timers and
+ * long pauses are deterministic while the audio plays on. The sleep timer fades over a short [sleepFade].
  */
 @kotlin.OptIn(ExperimentalCoroutinesApi::class)
 @OptIn(UnstableApi::class)
@@ -32,14 +37,15 @@ internal class ReaderPlayerFixture(
     cacheDir: File,
     val content: FakePlaybackContent,
     val engine: FakeSpeechEngine = FakeSpeechEngine(),
+    sleepFade: Duration = 1.seconds,
 ) {
     private val context: Context = ApplicationProvider.getApplicationContext()
-    val clock = FakeClock(true)
+    val clock = FakeClock(false)
     val status = ListeningStatus()
     val internal: ExoPlayer =
         ExoPlayer
             .Builder(context)
-            .setClock(clock)
+            .setClock(FakeClock(true))
             .setAudioAttributes(AudioAttributes.Builder().setContentType(C.AUDIO_CONTENT_TYPE_SPEECH).build(), true)
             .build()
     val player: ReaderPlayer
@@ -65,7 +71,8 @@ internal class ReaderPlayerFixture(
                 internal,
                 dependencies,
                 { index -> "Chapter ${index + 1}" },
-                SystemClock::elapsedRealtime,
+                clock,
+                sleepFade,
             )
     }
 

@@ -70,7 +70,7 @@ Base package: `com.giovannimartins.rreader`.
 | `importer` | `BookIntake` (picker/share/view URIs → signature check, size-limited copy, SHA-256 dedupe, book row), `ImportBookWorker` + `BookImportProcessor` (parse and persist), `BookParser` per format (`EpubBookParser`, `PdfBookParser`) | implemented |
 | `pdf` | PdfBox text extraction (`PdfLayoutExtractor`: positioned lines, outline and document info within `PdfLimits`), `PdfRenderer` page rendering (`FirstPageCoverRenderer`: first page → JPEG cover), ML Kit OCR → layout lines | in progress (text-layer PDFs; OCR in Phase 4) |
 | `tts` | `SpeechEngine` interface and `SystemTtsEngine` (multi-engine Android TTS → WAV), `AudioCache`, `WavInfo`, `SegmentRenderer` (segment → cached WAV, 300 MB LRU trim), `SpeakingRateTracker` (per-voice rate learned from rendered audio); later `SherpaOnnxEngine` | implemented (neural voices in Phase 5) |
-| `playback` | `PlaybackService` (`MediaSessionService`, trusted controllers only), `ReaderPlayer` facade (chapter playlist over an internal ExoPlayer), `SegmentFeeder` (render-ahead window), `ChapterPlans`, `SeekTargets`, `PositionSaver`, `PlaybackRepository`, `ListeningStatus` (spoken segment for the UI), `ReaderCommands` (custom session commands); later the sleep timer | implemented (sleep timer in Phase 3) |
+| `playback` | `PlaybackService` (`MediaSessionService`, trusted controllers only), `ReaderPlayer` facade (chapter playlist over an internal ExoPlayer), `SegmentFeeder` (render-ahead window), `ChapterPlans`, `SeekTargets`, `PositionSaver`, `PlaybackRepository`, `ListeningStatus` (spoken segment and sleep timer for the UI), `ReaderCommands` (custom session commands), `SleepTimer` | implemented |
 | `catalog` | Public-domain catalogue client and downloads | planned |
 | `ui` | Compose screens, ViewModels, navigation, theme, design system; `ui/player`: `PlaybackConnection` (`MediaController` while the app is visible), mini player, full player with speed and chapters | in progress (shell, library, add book, voices, player) |
 | `di` | Hilt modules (dispatchers, application scope, database, WorkManager) | implemented |
@@ -97,9 +97,9 @@ flowchart TB
 - Repositories own data access and map errors to sealed types.
 - The playback service is the only owner of the player; the UI talks to it
   through a `MediaController`. Commands Media3 has no name for ("read from
-  here") are custom session commands (`ReaderCommands`), and state it does
-  not model (the segment being spoken) reaches the UI through
-  `ListeningStatus` (see [Spoken segment and app commands](#spoken-segment-and-app-commands)).
+  here", the sleep timer) are custom session commands (`ReaderCommands`), and
+  state it does not model (the segment being spoken, the sleep timer) reaches
+  the UI through `ListeningStatus` (see [Spoken segment and app commands](#spoken-segment-and-app-commands)).
 
 ## Key flows
 
@@ -184,8 +184,9 @@ flowchart LR
 ```
 
 - **State to the UI.** The facade publishes the segment being spoken
-  (`SpokenSegment`: book, chapter, character range) in `ListeningStatus`, a
-  Hilt singleton that the player and the ViewModels share. It changes when the
+  (`SpokenSegment`: book, chapter, character range) and the sleep timer
+  (`SleepTimerState`) in `ListeningStatus`, a Hilt singleton that the player
+  and the ViewModels share. It changes when the
   internal player moves to another segment and as soon as a seek or the start
   position is resolved (before its audio is rendered), and clears when a book
   closes or the player is released. This works because the playback service
@@ -196,11 +197,35 @@ flowchart LR
 - **Commands from the UI.** `ReaderCommands` encodes commands Media3 has no
   name for as custom session commands: `READ_FROM` carries a reading
   position (chapter, offset) and plays from the start of the segment that
-  holds it. `ReaderSessionCallback` grants them only to controllers that run
+  holds it; `SET_SLEEP_TIMER` carries a duration (up to 12 hours) or "end of
+  chapter", and `CANCEL_SLEEP_TIMER` turns the timer off. `ReaderSessionCallback` grants them only to controllers that run
   as this app (same uid, which the system reports), validates the arguments
   and passes a typed `ReaderCommand` to `ReaderPlayer.handle`; invalid
   requests get `ERROR_BAD_VALUE`, requests that do not apply (no book open)
   get `ERROR_INVALID_STATE`.
+
+### Sleep timer
+
+The `SleepTimer` lives in the facade player, inside the `mediaPlayback`
+foreground service, so it works with the screen off and is allowed to change
+the volume on Android 17 ([ADR 0014](decisions/0014-target-android-17.md)).
+
+- **After a duration** (the player offers 5, 10, 15, 30, 45 and 60 minutes):
+  the time runs only while audio plays (`isPlaying`), so pauses, phone calls
+  and waits for rendered audio do not use it up. During the last 10 seconds
+  the internal player's volume falls linearly to zero in 100 ms steps; then
+  the facade pauses (saving the position) and only afterwards restores the
+  full volume, so the next play starts at normal volume.
+- **End of chapter**: the fade follows the audio left in the chapter being
+  played (queued segment durations ÷ speed), known once the chapter's last
+  segment is queued. Listening pauses when the internal player moves on to
+  the next chapter, or when it runs out of rendered audio right at the end of
+  a chapter. The end of the book turns the timer off.
+- The timer is a listening-session setting: it keeps running when another
+  book is opened, ends with the player, and is not persisted. Its state is
+  published in `ListeningStatus` (the countdown in whole seconds).
+- It is scheduled with Media3's `Clock`, which the facade receives
+  (`Clock.DEFAULT` in the app), so tests drive it with a `FakeClock`.
 
 ## Persistence
 

@@ -1,5 +1,6 @@
 package com.giovannimartins.rreader.ui.player
 
+import com.giovannimartins.rreader.playback.SleepTimerSetting
 import com.giovannimartins.rreader.textkit.model.ReadingPosition
 import kotlinx.coroutines.flow.StateFlow
 
@@ -30,4 +31,9 @@ interface PlaybackControls {
 
     /** Starts listening from the start of the segment that holds [position] in the open book. */
     fun readFrom(position: ReadingPosition)
+
+    /** Starts the sleep timer for the open book, replacing a running one. */
+    fun setSleepTimer(setting: SleepTimerSetting)
+
+    fun cancelSleepTimer()
 }

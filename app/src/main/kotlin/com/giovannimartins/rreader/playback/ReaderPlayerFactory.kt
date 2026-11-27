@@ -2,10 +2,10 @@ package com.giovannimartins.rreader.playback
 
 import android.content.Context
 import android.os.Looper
-import android.os.SystemClock
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.util.Clock
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.giovannimartins.rreader.R
@@ -32,7 +32,7 @@ class ReaderPlayerFactory
                     .setWakeMode(C.WAKE_MODE_LOCAL)
                     .build()
             val labeler = ChapterLabeler { index -> context.getString(R.string.player_chapter_number, index + 1) }
-            return ReaderPlayer(Looper.getMainLooper(), internal, dependencies, labeler, SystemClock::elapsedRealtime)
+            return ReaderPlayer(Looper.getMainLooper(), internal, dependencies, labeler, Clock.DEFAULT)
         }
 
         private companion object {

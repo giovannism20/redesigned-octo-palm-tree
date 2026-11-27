@@ -17,6 +17,7 @@ import com.giovannimartins.rreader.playback.BookMediaItems
 import com.giovannimartins.rreader.playback.PlaybackService
 import com.giovannimartins.rreader.playback.ReaderCommand
 import com.giovannimartins.rreader.playback.ReaderCommands
+import com.giovannimartins.rreader.playback.SleepTimerSetting
 import com.giovannimartins.rreader.textkit.model.ReadingPosition
 import com.google.common.util.concurrent.FutureCallback
 import com.google.common.util.concurrent.Futures
@@ -123,6 +124,10 @@ class PlaybackConnection
         override fun setSpeed(speed: Float) = withController { it.setPlaybackSpeed(speed) }
 
         override fun readFrom(position: ReadingPosition) = send(ReaderCommand.ReadFrom(position))
+
+        override fun setSleepTimer(setting: SleepTimerSetting) = send(ReaderCommand.SetSleepTimer(setting))
+
+        override fun cancelSleepTimer() = send(ReaderCommand.CancelSleepTimer)
 
         /** Sends a custom [command]; the service may refuse it, for example when no book is open anymore. */
         private fun send(command: ReaderCommand) =

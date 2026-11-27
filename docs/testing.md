@@ -20,7 +20,10 @@ internal ExoPlayer on Media3's `FakeClock` (`media3-test-utils-robolectric`,
 `TestPlayerRunHelper`) and a fake speech engine that writes small silent WAV
 files, so rendering, playlists, seeks, focus changes and the end of the book
 run for real in milliseconds. Audio focus changes are delivered through
-Robolectric's `ShadowAudioManager`. Player screens also run under
+Robolectric's `ShadowAudioManager`. The facade itself gets a separate,
+manually advanced `FakeClock` (`ReaderPlayerFixture`): sleep timers and long
+pauses then run deterministically while the audio plays on, and the timer
+logic is also tested on its own (`SleepTimerTest`). Player screens also run under
 Robolectric with `createComposeRule` (on a phone-sized screen) to check
 spoken labels, touch targets of at least 56 dp and the actions they send.
 

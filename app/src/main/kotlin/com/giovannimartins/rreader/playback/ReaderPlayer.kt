@@ -10,6 +10,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.SimpleBasePlayer
+import androidx.media3.common.util.Clock
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.giovannimartins.rreader.Diagnostics
@@ -34,6 +35,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.math.abs
+import kotlin.math.roundToLong
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 /** Collaborators of [ReaderPlayer]. */
@@ -63,8 +66,8 @@ data class ReaderPlayerDependencies
  *
  * Controllers open a book with `setMediaItem(MediaItem.Builder().setMediaId(bookId).build())`, then `prepare()`
  * and `play()`; it resumes at the start of the segment that holds the saved position. The position is saved
- * on every segment change, pause, stop and seek (throttled). The segment being spoken is published in
- * [ListeningStatus], and [handle] runs the app's custom commands ([ReaderCommands]).
+ * on every segment change, pause, stop and seek (throttled). The segment being spoken and the [SleepTimer] are
+ * published in [ListeningStatus], and [handle] runs the app's custom commands ([ReaderCommands]).
  */
 @OptIn(UnstableApi::class)
 class ReaderPlayer internal constructor(
@@ -72,7 +75,9 @@ class ReaderPlayer internal constructor(
     private val exo: ExoPlayer,
     private val deps: ReaderPlayerDependencies,
     private val labeler: ChapterLabeler,
-    elapsedMillis: () -> Long,
+    /** Measures elapsed time and schedules the sleep timer; a fake clock in tests. */
+    private val clock: Clock,
+    sleepFade: Duration = SleepTimer.DEFAULT_FADE,
 ) : SimpleBasePlayer(looper) {
     private val handler = Handler(looper)
     private val scope =
@@ -88,7 +93,9 @@ class ReaderPlayer internal constructor(
     private val feeder = SegmentFeeder(exo, deps.renderer, plans, deps.speech, scope, FeederEvents())
     private val position = PlaybackPosition(feeder)
     private val loader = BookLoader(scope, deps.content) { handler.post(it) }
-    private val saver = PositionSaver(deps.saveScope, elapsedMillis, deps.content::savePosition)
+    private val saver = PositionSaver(deps.saveScope, clock::elapsedRealtime, deps.content::savePosition)
+    private val sleepHost = SleepTimerHost()
+    private val sleepTimer = SleepTimer(clock, looper, sleepHost, sleepFade)
 
     private var book: PlaybackBook? = null
     private var playlist: List<MediaItemData> = emptyList()
@@ -104,6 +111,7 @@ class ReaderPlayer internal constructor(
 
     init {
         exo.addListener(InternalPlayerListener())
+        addListener(sleepHost)
     }
 
     override fun getState(): State {
@@ -203,6 +211,8 @@ class ReaderPlayer internal constructor(
     override fun handleRelease(): ListenableFuture<*> {
         savePosition(force = true)
         deps.status.publishSegment(null)
+        sleepTimer.release()
+        deps.status.publishSleepTimer(SleepTimerState.Off)
         saver.close()
         loader.cancel()
         scope.cancel()
@@ -262,7 +272,8 @@ class ReaderPlayer internal constructor(
      * [ReaderCommand.ReadFrom] plays the open book from the start of the segment that holds its position (the
      * reader's "read from here"), preparing the player again when it was stopped or failed; it does not apply
      * when no book is open or the position is not in it. An offset past the end of its chapter means the end
-     * of that chapter.
+     * of that chapter. [ReaderCommand.SetSleepTimer] needs an open book; the timer then keeps running when
+     * another book is opened, and turns off at the end of a book.
      */
     fun handle(command: ReaderCommand): Boolean =
         when (command) {
@@ -276,6 +287,17 @@ class ReaderPlayer internal constructor(
                     play()
                 }
                 length != null
+            }
+
+            is ReaderCommand.SetSleepTimer -> {
+                val open = book != null
+                if (open) sleepTimer.start(command.setting)
+                open
+            }
+
+            ReaderCommand.CancelSleepTimer -> {
+                sleepTimer.cancel()
+                true
             }
         }
 
@@ -379,6 +401,7 @@ class ReaderPlayer internal constructor(
             ended = true
             position.anchor = book.end
             saver.save(book.id, book.end, force = true)
+            sleepTimer.cancel()
         }
     }
 
@@ -404,8 +427,9 @@ class ReaderPlayer internal constructor(
             val segment = feeder.current()
             val book = book
             if (segment != null && book != null) {
-                if (segment.chapterIndex != reportedChapter && discontinuity == null) {
-                    // The listener reached the next chapter: a natural transition, not a seek.
+                // The listener reached the next chapter: a natural transition, not a seek.
+                val reachedNextChapter = segment.chapterIndex != reportedChapter && discontinuity == null
+                if (reachedNextChapter) {
                     discontinuity = Player.DISCONTINUITY_REASON_AUTO_TRANSITION
                     book.voice?.let { refreshClock(book, it) }
                 }
@@ -414,11 +438,14 @@ class ReaderPlayer internal constructor(
                 saver.save(book.id, position.anchor, force = true)
                 feeder.onAdvanced()
                 invalidateState()
+                if (reachedNextChapter) sleepTimer.onChapterEnded()
             }
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
             finishBookIfDrained()
+            // Out of rendered audio right at the end of a chapter: the chapter ended before the next one is ready.
+            if (playbackState == Player.STATE_ENDED && !ended && feeder.isOnChapterEnd) sleepTimer.onChapterEnded()
             invalidateState()
         }
 
@@ -445,6 +472,25 @@ class ReaderPlayer internal constructor(
             feeder.current()?.let { segment -> scope.launch { deps.renderer.discard(segment.file) } }
             fail(error)
         }
+    }
+
+    /** Gives the sleep timer what it needs from the player, and tells it when audio starts or stops. */
+    private inner class SleepTimerHost :
+        SleepTimer.Host,
+        Player.Listener {
+        override val isPlaying: Boolean get() = this@ReaderPlayer.isPlaying
+
+        override fun chapterAudioLeftMillis(): Long? = feeder.audioLeftInChapter?.let { (it / speed).roundToLong() }
+
+        override fun setVolume(volume: Float) {
+            exo.volume = volume
+        }
+
+        override fun sleep() = pause()
+
+        override fun onStateChanged(state: SleepTimerState) = deps.status.publishSleepTimer(state)
+
+        override fun onIsPlayingChanged(isPlaying: Boolean) = sleepTimer.onPlayingChanged()
     }
 
     private inner class FeederEvents : SegmentFeeder.Events {

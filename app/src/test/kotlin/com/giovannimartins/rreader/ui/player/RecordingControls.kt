@@ -1,5 +1,6 @@
 package com.giovannimartins.rreader.ui.player
 
+import com.giovannimartins.rreader.playback.SleepTimerSetting
 import com.giovannimartins.rreader.textkit.model.ReadingPosition
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,5 +45,13 @@ internal class RecordingControls : PlaybackControls {
 
     override fun readFrom(position: ReadingPosition) {
         calls += "readFrom ${position.chapterIndex}:${position.charOffset}"
+    }
+
+    override fun setSleepTimer(setting: SleepTimerSetting) {
+        calls += "sleepTimer $setting"
+    }
+
+    override fun cancelSleepTimer() {
+        calls += "cancelSleepTimer"
     }
 }

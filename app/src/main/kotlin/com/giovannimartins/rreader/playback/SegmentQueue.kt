@@ -58,6 +58,30 @@ internal class SegmentQueue {
         return Lookahead(after.size, after.sumOf { it.durationMillis })
     }
 
+    /**
+     * Audio left in the chapter of the segment whose media id is [currentKey], [positionMillis] into it, at
+     * 1.0×. Null when that segment is not queued, or the chapter's last segment may not be queued yet: no later
+     * chapter is queued, the last queued segment of the chapter does not reach its end ([chapterLength]) and
+     * the book has more to render ([exhausted] is false).
+     */
+    fun audioLeftInChapter(
+        currentKey: String?,
+        positionMillis: Long,
+        chapterLength: Int,
+        exhausted: Boolean,
+    ): Long? {
+        val index = entries.indexOfFirst { it.key == currentKey }
+        val current = entries.getOrNull(index) ?: return null
+        val rest = entries.subList(index, entries.size)
+        val inChapter = rest.takeWhile { it.chapterIndex == current.chapterIndex }
+        val complete = inChapter.size < rest.size || inChapter.last().spanEnd >= chapterLength || exhausted
+        return if (complete) {
+            inChapter.sumOf { it.durationMillis } - positionMillis.coerceIn(0, current.durationMillis)
+        } else {
+            null
+        }
+    }
+
     /** Removes the first [count] segments, which the player has already played. */
     fun dropFirst(count: Int) {
         entries.subList(0, count.coerceIn(0, entries.size)).clear()

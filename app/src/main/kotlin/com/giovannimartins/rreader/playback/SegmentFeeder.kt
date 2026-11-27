@@ -93,6 +93,21 @@ internal class SegmentFeeder(
             else -> (exo.currentPosition.toDouble() / segment.durationMillis).coerceIn(0.0, 1.0)
         }
 
+    /** Audio left at 1.0× in the chapter being played; null while that is unknown (see [SegmentQueue]). */
+    val audioLeftInChapter: Long?
+        get() =
+            current()?.let { segment ->
+                plans.chapterLength(segment.chapterIndex)?.let { length ->
+                    queue.audioLeftInChapter(segment.key, exo.currentPosition, length, isExhausted)
+                }
+            }
+
+    /** Whether the internal player is on the last segment of its chapter. */
+    val isOnChapterEnd: Boolean
+        get() =
+            current()?.let { segment -> plans.chapterLength(segment.chapterIndex)?.let { segment.spanEnd >= it } } ==
+                true
+
     /** The internal player moved to another segment: drops played items and renders further ahead. */
     fun onAdvanced() {
         val played = exo.currentMediaItemIndex

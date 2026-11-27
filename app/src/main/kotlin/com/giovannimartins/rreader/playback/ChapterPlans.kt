@@ -55,6 +55,9 @@ internal class ChapterPlans(
         cache.clear()
     }
 
+    /** Characters of chapter [chapterIndex] of the book being planned, or null when it has no such chapter. */
+    fun chapterLength(chapterIndex: Int): Int? = book?.chapters?.getOrNull(chapterIndex)?.length
+
     /** End of the span that holds [position], if its chapter is already planned. */
     fun spanEndAt(position: ReadingPosition): Int? =
         cache[position.chapterIndex]?.let { plan ->

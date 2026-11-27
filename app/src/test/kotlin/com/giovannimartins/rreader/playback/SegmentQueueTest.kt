@@ -44,6 +44,23 @@ class SegmentQueueTest {
     }
 
     @Test
+    fun `the audio left in a chapter is known once its last segment or a later chapter is queued`() {
+        val first = segment(0, durationMillis = 3_000)
+        val second = segment(1, durationMillis = 2_000)
+        queue.add(first)
+        queue.add(second)
+
+        assertThat(queue.audioLeftInChapter(first.key, 1_000, chapterLength = 30, exhausted = false)).isNull()
+        assertThat(queue.audioLeftInChapter(first.key, 1_000, chapterLength = 20, exhausted = false)).isEqualTo(4_000)
+        assertThat(queue.audioLeftInChapter(first.key, 1_000, chapterLength = 30, exhausted = true)).isEqualTo(4_000)
+
+        queue.add(segment(0, chapter = 1, durationMillis = 5_000))
+
+        assertThat(queue.audioLeftInChapter(second.key, 500, chapterLength = 30, exhausted = false)).isEqualTo(1_500)
+        assertThat(queue.audioLeftInChapter(null, 0, chapterLength = 30, exhausted = true)).isNull()
+    }
+
+    @Test
     fun `a segment's span runs to the next segment`() {
         val segment = QueuedSegment(0, TextRange(10, 40), spanEnd = 42, file = File("x.wav"), durationMillis = 1_000)
 

@@ -16,7 +16,7 @@ data class SpokenSegment(
 
 /**
  * Playback state that Media3's player state does not model, published by the [ReaderPlayer] for the UI: the
- * segment being spoken, which the follow-along reader highlights.
+ * segment being spoken, which the follow-along reader highlights, and the sleep timer.
  *
  * The playback service runs in the app's own process, so the player and the UI share this singleton instead
  * of encoding the state in session extras. It is read-only for the UI: commands still go through the
@@ -29,10 +29,19 @@ class ListeningStatus
     constructor() {
         private val segment = MutableStateFlow<SpokenSegment?>(null)
 
+        private val timer = MutableStateFlow<SleepTimerState>(SleepTimerState.Off)
+
         /** The segment being spoken, or about to be after a seek; null while no book is open. */
         val spokenSegment: StateFlow<SpokenSegment?> = segment.asStateFlow()
 
+        /** The sleep timer and, while it counts down, the listening time left. */
+        val sleepTimer: StateFlow<SleepTimerState> = timer.asStateFlow()
+
         internal fun publishSegment(spoken: SpokenSegment?) {
             segment.value = spoken
+        }
+
+        internal fun publishSleepTimer(state: SleepTimerState) {
+            timer.value = state
         }
     }
