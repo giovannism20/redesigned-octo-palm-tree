@@ -62,6 +62,9 @@ public sealed interface LayoutError {
     /** Most pages are pictures without a text layer, so the book needs OCR (see [ScannedDocumentDetector]). */
     public data object ScannedDocument : LayoutError
 
-    /** There is no text to read aloud, for example in an empty document or one of only page numbers. */
+    /**
+     * There is no text to read aloud, as in a document without pages. Pages that only carry running lines, or nothing,
+     * make a [ScannedDocument] instead.
+     */
     public data object NoReadableText : LayoutError
 }
