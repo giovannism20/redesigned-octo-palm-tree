@@ -49,6 +49,7 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 - [x] `PlaybackService` with facade player: background, lock screen, headset, ±15 s, speed, chapters, resume
 - [x] Mini-player and full player screens
 - [x] Full player fits one screen (cover shrinks first, scrolls only with very large text); swipe down to minimize
+- [x] A backup run by the phone no longer stops playback: the app is out of Android backup ([ADR 0021](decisions/0021-leave-the-app-out-of-android-backup.md)); verified with `bmgr` on the phone
 - [x] Voices screen (installed pt voices, sample, default voice)
 - [ ] Device checklist passed; installed on the primary user's phone
 
