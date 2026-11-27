@@ -31,7 +31,7 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 ## Phase 1 — EPUB MVP (first version on the phone)
 
 - [x] `textkit`: book model, EPUB 2/3 parser (container, OPF, spine, nav/NCX, cover, DRM detection), safe ZIP/XML handling
-- [ ] `textkit`: sentence segmentation (pt-BR abbreviations), speech normalization, estimates
+- [x] `textkit`: sentence segmentation (pt-BR abbreviations), speech normalization, estimates
 - [x] Import: picker + share/view intents, signature detection, copy + SHA-256 dedupe, WorkManager job, error messages
 - [x] Data: Room schema, chapter files, library repository
 - [x] Data: settings (DataStore: default voice, speed, text size)
