@@ -9,7 +9,12 @@ this folder when it is missing (`fetchVendoredLibraries`, before every build;
 the files are git-ignored), and refuses any file whose SHA-256 differs from
 [`SHA256SUMS`](SHA256SUMS). The values below are the ones GitHub publishes for
 the release assets and were checked against fresh downloads on 2026-11-27.
-The first build therefore needs access to github.com.
+The first build therefore needs access to github.com. A download is tried
+twice, an unfinished one is deleted, and nothing over 128 MiB is downloaded or
+hashed. A build with `--offline` never downloads: when a file is missing or
+different it fails and says where to get it, so it can be put here by hand
+(download it from the release linked below, then run `sha256sum -c SHA256SUMS`
+in this folder).
 
 | File | Release | License | SHA-256 |
 |------|---------|---------|---------|

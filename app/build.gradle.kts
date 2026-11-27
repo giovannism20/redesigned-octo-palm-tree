@@ -1,3 +1,4 @@
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URI
 import java.nio.file.Files
@@ -144,10 +145,17 @@ val fetchVendoredLibraries by tasks.registering {
     val libs = layout.projectDirectory.dir("libs").asFile
     val sums = layout.projectDirectory.file("libs/SHA256SUMS").asFile
     val urls = vendoredLibraryUrls
+    // Read here: task actions may not reach Gradle's model under the configuration cache, whose key includes
+    // --offline, so a cached entry never carries the other mode's value.
+    val offline = gradle.startParameter.isOffline
     inputs.file(sums)
     inputs.property("urls", urls)
     outputs.files(urls.keys.map { File(libs, it) })
     doLast {
+        // More than any vendored library (the largest is about 40 MB): nothing larger is downloaded or hashed.
+        val maxBytes = 128L * 1024 * 1024
+        val attempts = 2
+
         fun sha256Of(file: File): String {
             val digest = MessageDigest.getInstance("SHA-256")
             file.inputStream().use { input ->
@@ -160,6 +168,46 @@ val fetchVendoredLibraries by tasks.registering {
             }
             return digest.digest().joinToString("") { "%02x".format(it) }
         }
+
+        fun matches(
+            file: File,
+            sha256: String,
+        ) = file.isFile && file.length() <= maxBytes && sha256Of(file) == sha256
+
+        // Writes the body of url into partial; at most maxBytes, announced or counted.
+        fun download(
+            url: String,
+            partial: File,
+        ) {
+            val connection = URI(url).toURL().openConnection() as HttpURLConnection
+            connection.connectTimeout = 30_000
+            connection.readTimeout = 60_000
+            try {
+                val status = connection.responseCode
+                if (status != HttpURLConnection.HTTP_OK) throw IOException("HTTP $status")
+                if (connection.contentLengthLong > maxBytes) {
+                    throw GradleException("$url announces more than the $maxBytes bytes a library may have")
+                }
+                connection.inputStream.use { input ->
+                    partial.outputStream().use { output ->
+                        val buffer = ByteArray(1 shl 16)
+                        var total = 0L
+                        while (true) {
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            total += read
+                            if (total > maxBytes) {
+                                throw GradleException("$url sends more than the $maxBytes bytes a library may have")
+                            }
+                            output.write(buffer, 0, read)
+                        }
+                    }
+                }
+            } finally {
+                connection.disconnect()
+            }
+        }
+
         val expected =
             sums.readLines().filter(String::isNotBlank).associate { line ->
                 val (sha256, name) = line.trim().split(Regex("\\s+\\*?"), limit = 2)
@@ -170,17 +218,39 @@ val fetchVendoredLibraries by tasks.registering {
         }
         expected.forEach { (name, sha256) ->
             val file = File(libs, name)
-            if (file.isFile && sha256Of(file) == sha256) return@forEach
+            if (matches(file, sha256)) return@forEach
             val url = urls.getValue(name)
+            if (offline) {
+                throw GradleException(
+                    "app/libs/$name is missing or does not match app/libs/SHA256SUMS, and Gradle runs offline. " +
+                        "Run the build once without --offline to download it, or download $url into app/libs/ " +
+                        "and check it with `sha256sum -c SHA256SUMS` there (app/libs/README.md).",
+                )
+            }
             val partial = File(libs, "$name.part")
-            val connection = URI(url).toURL().openConnection() as HttpURLConnection
-            connection.connectTimeout = 30_000
-            connection.readTimeout = 60_000
-            connection.inputStream.use { input -> partial.outputStream().use { input.copyTo(it) } }
+            for (attempt in 1..attempts) {
+                try {
+                    download(url, partial)
+                    break
+                } catch (e: IOException) {
+                    partial.delete()
+                    if (attempt == attempts) {
+                        throw GradleException(
+                            "Could not download $name from $url: ${e.message}. Check the connection and build " +
+                                "again, or put the file in app/libs/ yourself (app/libs/README.md).",
+                            e,
+                        )
+                    }
+                    logger.warn("Downloading $name failed (${e.message}); trying once more.")
+                } catch (e: GradleException) {
+                    partial.delete()
+                    throw e
+                }
+            }
             val actual = sha256Of(partial)
             if (actual != sha256) {
                 partial.delete()
-                error("$name from $url has SHA-256 $actual, but app/libs/SHA256SUMS expects $sha256")
+                throw GradleException("$name from $url has SHA-256 $actual, but app/libs/SHA256SUMS expects $sha256")
             }
             Files.move(partial.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
         }
