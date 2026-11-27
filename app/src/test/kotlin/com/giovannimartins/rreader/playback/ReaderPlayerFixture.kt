@@ -66,7 +66,7 @@ internal class ReaderPlayerFixture(
                 speech = SpeechNormalizer(),
                 rates = rates,
                 status = status,
-                prerender = PrerenderJobs { bookId -> prerendered += bookId },
+                prerender = PrerenderJobs { bookId, _ -> prerendered += bookId },
                 saveScope = CoroutineScope(io),
                 cpu = io,
             )

@@ -126,7 +126,8 @@ internal class SegmentFeeder(
     private fun pump() {
         val source = source
         if (source != null && !isExhausted && job?.isActive != true) {
-            job = scope.launch { renderAhead(source) }
+            // Listening waits for these renders, so background renders hold back until the window is full.
+            job = scope.launch { renderer.inForeground { renderAhead(source) } }
         }
     }
 

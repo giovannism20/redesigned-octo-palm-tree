@@ -21,8 +21,10 @@ import com.giovannimartins.rreader.tts.SegmentRenderer
 import com.giovannimartins.rreader.tts.SpeakingRateTracker
 import com.giovannimartins.rreader.tts.SynthesisFailure
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Rule
@@ -63,10 +65,11 @@ class PrerenderTest {
         FakePlaybackContent(book(texts, voice = slow, position = ReadingPosition(0, segments[2].start)), texts)
     private val engine = FakeSpeechEngine()
     private val cache by lazy { AudioCache(folder.root) }
+    private val status = ListeningStatus()
     private val prerenderer by lazy {
         val rates = SpeakingRateTracker(InMemorySpeakingRateStore(), CoroutineScope(Dispatchers.Unconfined))
         val renderer = SegmentRenderer(engine, cache, rates, Clock.systemUTC(), Dispatchers.Unconfined)
-        Prerenderer(content, renderer, SegmentPlanner(), SpeechNormalizer(), Dispatchers.Unconfined)
+        Prerenderer(content, renderer, SegmentPlanner(), SpeechNormalizer(), status, Dispatchers.Unconfined)
     }
 
     @After
@@ -131,6 +134,46 @@ class PrerenderTest {
     }
 
     @Test
+    fun `listening holds it back, and starting to listen stops it after the segment being rendered`() {
+        status.publishSession(ListeningSession(BOOK_ID, slow, listening = true))
+        assertThat(runBlocking { prerenderer.prerender(BOOK_ID) }).isEqualTo(PrerenderOutcome.Yielded)
+        assertThat(engine.spoken).isEmpty()
+        status.publishSession(ListeningSession(BOOK_ID, slow, listening = false))
+        engine.gate = CompletableDeferred()
+        engine.rendersBeforeGate = 2
+
+        val outcome =
+            runBlocking {
+                val rendering = async(Dispatchers.Default) { prerenderer.prerender(BOOK_ID) }
+                engine.atGate.await()
+                status.publishSession(ListeningSession(BOOK_ID, slow, listening = true))
+                rendering.await()
+            }
+
+        assertThat(outcome).isEqualTo(PrerenderOutcome.Yielded)
+        assertThat(engine.spoken).hasSize(2)
+        assertThat(
+            folder.root
+                .walkTopDown()
+                .filter { it.name.endsWith(".part") }
+                .toList(),
+        ).isEmpty()
+    }
+
+    @Test
+    fun `a book open with a voice of another model holds it back, so the listener's model stays loaded`() {
+        status.publishSession(ListeningSession(OTHER_BOOK, voice(id = "neural:cadu"), listening = false))
+        assertThat(runBlocking { prerenderer.prerender(BOOK_ID) }).isEqualTo(PrerenderOutcome.Yielded)
+        assertThat(engine.spoken).isEmpty()
+
+        status.publishSession(ListeningSession(OTHER_BOOK, voice(id = "neural:alex"), listening = false))
+        assertThat(runBlocking { prerenderer.prerender(BOOK_ID) }).isInstanceOf(PrerenderOutcome.Ready::class.java)
+        status.publishSession(ListeningSession(OTHER_BOOK, voice(id = "system:engine:pt-br"), listening = false))
+        assertThat(runBlocking { prerenderer.prerender(BOOK_ID) }).isInstanceOf(PrerenderOutcome.Ready::class.java)
+        assertThat(engine.spoken).isNotEmpty()
+    }
+
+    @Test
     fun `a job started three times without ending is given up, so a crash in it cannot repeat for good`() {
         val givenUp = runBlocking { worker(runAttempts = PrerenderWorker.MAX_RUN_ATTEMPTS).doWork() }
 
@@ -154,8 +197,8 @@ class PrerenderTest {
         val workManager = WorkManager.getInstance(context)
         val jobs = WorkManagerPrerenderJobs(workManager)
 
-        jobs.schedule("book-1")
-        jobs.schedule(BOOK_ID)
+        jobs.schedule(OTHER_BOOK, slow.id)
+        jobs.schedule(BOOK_ID, slow.id)
 
         val job =
             workManager
@@ -165,5 +208,41 @@ class PrerenderTest {
         assertThat(job.constraints.requiresCharging()).isTrue()
         assertThat(job.constraints.requiresBatteryNotLow()).isTrue()
         assertThat(job.tags.none { BOOK_ID in it }).isTrue()
+    }
+
+    @Test
+    fun `asking again for the same book and voice keeps the job, another book or voice replaces it`() {
+        WorkManagerTestInitHelper.initializeTestWorkManager(
+            context,
+            Configuration
+                .Builder()
+                .setExecutor(SynchronousExecutor())
+                .setTaskExecutor(SynchronousExecutor())
+                .build(),
+        )
+        val workManager = WorkManager.getInstance(context)
+        val jobs = WorkManagerPrerenderJobs(workManager)
+        val pending = {
+            workManager
+                .getWorkInfosForUniqueWork(WorkManagerPrerenderJobs.UNIQUE_NAME)
+                .get()
+                .single { !it.state.isFinished }
+                .id
+        }
+
+        jobs.schedule(BOOK_ID, "neural:dora")
+        val first = pending()
+        jobs.schedule(BOOK_ID, "neural:dora")
+        assertThat(pending()).isEqualTo(first)
+        jobs.schedule(BOOK_ID, "neural:alex")
+        val second = pending()
+        jobs.schedule(OTHER_BOOK, "neural:alex")
+
+        assertThat(second).isNotEqualTo(first)
+        assertThat(pending()).isNotEqualTo(second)
+    }
+
+    private companion object {
+        const val OTHER_BOOK = "00000000-0000-0000-0000-000000000002"
     }
 }

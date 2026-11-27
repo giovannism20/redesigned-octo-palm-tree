@@ -125,6 +125,10 @@ All notable user-visible changes are documented here. The format follows
 - A sentence that makes a natural voice close the app no longer stops the
   book for good: if the app closes twice in a row on the same sentence, that
   sentence is skipped with a short pause and listening goes on.
+- Dora, Alex and Santa prepare the next chapters while the phone charges
+  only when nobody is listening: the preparation stops as soon as you press
+  play, so listening starts as fast as without it, and goes on when you
+  pause or stop.
 - A backup started by the phone (for example at night while charging) no
   longer stops the book being read: R Reader takes no part in Android backup.
 - The player and the follow-along text showed some text, the times and the

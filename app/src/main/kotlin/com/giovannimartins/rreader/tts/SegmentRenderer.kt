@@ -2,7 +2,11 @@ package com.giovannimartins.rreader.tts
 
 import com.giovannimartins.rreader.di.IoDispatcher
 import com.giovannimartins.rreader.textkit.model.TextRange
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.time.Clock
@@ -39,6 +43,9 @@ sealed interface SegmentAudio {
  * [SpeakingRateTracker] how fast the voice speaks. Audio is written to a temporary file and moved into place
  * only when complete, so an interrupted render never looks like a cache hit. Every [TRIM_INTERVAL] renders the
  * cache is trimmed to [MAX_CACHE_BYTES], keeping the most recently rendered segments.
+ *
+ * Listening comes first: while the player fills its render-ahead window ([inForeground]), background renders (the
+ * pre-render job) wait before each segment, so the voice works for the listener first.
  */
 @Singleton
 class SegmentRenderer
@@ -54,8 +61,28 @@ class SegmentRenderer
         private val renders = AtomicInteger()
         private val recent = ArrayDeque<File>()
 
-        /** The audio of [request], from the cache or freshly synthesized. */
-        suspend fun render(request: SegmentRequest): SegmentAudio {
+        /** How many foreground bursts of renders are running now. */
+        private val foreground = MutableStateFlow(0)
+
+        /** Runs [block], a burst of renders listening waits for; background renders wait until it ends. */
+        suspend fun <T> inForeground(block: suspend () -> T): T {
+            foreground.update { it + 1 }
+            try {
+                return block()
+            } finally {
+                foreground.update { it - 1 }
+            }
+        }
+
+        /**
+         * The audio of [request], from the cache or freshly synthesized. A [background] render first waits until no
+         * foreground burst runs.
+         */
+        suspend fun render(
+            request: SegmentRequest,
+            background: Boolean = false,
+        ): SegmentAudio {
+            if (background) foreground.first { it == 0 }
             val target =
                 cache.segmentFile(
                     request.bookId,
@@ -93,26 +120,38 @@ class SegmentRenderer
             // A name of its own, so two renders of the same segment (the player's and the pre-render's) never write
             // into each other's file.
             val partial = File(target.parentFile, "${target.name}.${renders.incrementAndGet()}$PARTIAL_SUFFIX")
-            withContext(io) { partial.delete() }
-            val result = engine.synthesize(request.text, request.voice, partial)
-            return withContext(io) {
-                when {
-                    result is SynthesisResult.Failed -> {
-                        partial.delete()
-                        SegmentAudio.Failed(result.reason)
-                    }
-
-                    result is SynthesisResult.Rendered && partial.renameTo(target) -> {
-                        SegmentAudio.Ready(target, result.durationMillis)
-                    }
-
-                    else -> {
-                        partial.delete()
-                        SegmentAudio.Failed(SynthesisFailure.RENDER_ERROR)
-                    }
-                }
+            try {
+                withContext(io) { partial.delete() }
+                val result = engine.synthesize(request.text, request.voice, partial)
+                return withContext(io) { adopt(result, partial, target) }
+            } catch (e: CancellationException) {
+                // A render stopped half-way leaves nothing behind.
+                partial.delete()
+                throw e
             }
         }
+
+        /** Moves the [partial] file [result] wrote into place as [target]; deletes it when the render failed. */
+        private fun adopt(
+            result: SynthesisResult,
+            partial: File,
+            target: File,
+        ): SegmentAudio =
+            when {
+                result is SynthesisResult.Failed -> {
+                    partial.delete()
+                    SegmentAudio.Failed(result.reason)
+                }
+
+                result is SynthesisResult.Rendered && partial.renameTo(target) -> {
+                    SegmentAudio.Ready(target, result.durationMillis)
+                }
+
+                else -> {
+                    partial.delete()
+                    SegmentAudio.Failed(SynthesisFailure.RENDER_ERROR)
+                }
+            }
 
         private suspend fun trimNowAndThen(rendered: File) {
             val keep =

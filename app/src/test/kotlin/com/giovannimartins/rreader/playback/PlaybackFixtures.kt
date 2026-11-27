@@ -68,6 +68,9 @@ internal class FakeSpeechEngine(
     var gate: CompletableDeferred<Unit>? = null
     var rendersBeforeGate = Int.MAX_VALUE
 
+    /** Completes when a render starts waiting at the [gate]. */
+    val atGate = CompletableDeferred<Unit>()
+
     override suspend fun voices(): List<Voice> = listOf(voice())
 
     override suspend fun synthesize(
@@ -75,7 +78,11 @@ internal class FakeSpeechEngine(
         voice: Voice,
         output: File,
     ): SynthesisResult {
-        if (spoken.size >= rendersBeforeGate) gate?.await()
+        val gate = gate?.takeIf { spoken.size >= rendersBeforeGate }
+        if (gate != null) {
+            atGate.complete(Unit)
+            gate.await()
+        }
         spoken += text
         voicesUsed += voice.id
         val failure = failure ?: SynthesisFailure.VOICE_UNAVAILABLE.takeIf { voice.id in unavailableVoices }

@@ -81,7 +81,7 @@ Base package: `com.giovannimartins.rreader`.
 | `importer` | `BookIntake` (picker/share/view URIs → signature check, size-limited copy, SHA-256 dedupe, book row), `ImportBookWorker` + `BookImportProcessor` (parse and persist; recognized pages deleted when the import ends), `BookParser` per format (`EpubBookParser`, `PdfBookParser`: text layer, then `PdfOcr` for scanned pages) taking a `ParseRequest` with an `ImportProgressListener`, `ImportJobs` (one unique WorkManager job per book: enqueue, cancel when the book is removed, observe progress), `ImportNotifications` (progress notification of the `dataSync` foreground service) | implemented |
 | `pdf` | PdfBox text extraction (`PdfLayoutExtractor`: positioned lines, outline and document info within `PdfLimits`), `PdfRenderer` page rendering (`FirstPageCoverRenderer`: first page → JPEG cover; `PdfPageRasterizer`: pages → bitmaps for OCR within `OcrLimits`), text recognition behind `PageTextRecognizer` (`MlKitPageTextRecognizer`: bundled ML Kit Latin model → layout lines through textkit's `OcrPageLayout`), `PdfOcr` (recognizes the pictured pages without a usable text layer within `OcrLimits`, one page at a time app-wide through `OcrGate`, resumable through `OcrPageStore`), `NativeCallMarkers` (notes each call into native code while it runs, so a cover or page that crashes the process twice is skipped) | in progress (text-layer PDFs; OCR in Phase 4) |
 | `tts` | `SpeechEngine` interface; `RoutingSpeechEngine`, the engine the app renders with (neural voices to `SherpaOnnxEngine`, the others to `SystemTtsEngine`, multi-engine Android TTS → WAV); `VoiceIds` (system, neural and "phone" voice ids), `AudioCache`, `WavInfo`, `PcmWav`, `SegmentRenderer` (segment → cached WAV, 300 MB LRU trim), `SpeakingRateTracker` (per-voice rate learned from rendered audio, kept across restarts through `SpeakingRateStore`) | implemented |
-| `playback` | `PlaybackService` (`MediaSessionService`, trusted controllers only), `ReaderPlayer` facade (chapter playlist over an internal ExoPlayer), `SegmentFeeder` (render-ahead window), `Prerenderer` (`PrerenderJobs`/`PrerenderWorker`: slow voices rendered ahead while charging), `VoiceSelector`, `ChapterPlans`, `SeekTargets`, `PositionSaver`, `PlaybackRepository`, `ListeningStatus` (spoken segment and sleep timer for the UI), `ReaderCommands` (custom session commands), `SleepTimer` | implemented |
+| `playback` | `PlaybackService` (`MediaSessionService`, trusted controllers only), `ReaderPlayer` facade (chapter playlist over an internal ExoPlayer), `SegmentFeeder` (render-ahead window), `Prerenderer` (`PrerenderJobs`/`PrerenderWorker`: slow voices rendered ahead while charging and nobody listens), `VoiceSelector`, `ChapterPlans`, `SeekTargets`, `PositionSaver`, `PlaybackRepository`, `ListeningStatus` (spoken segment, sleep timer and listening session), `ReaderCommands` (custom session commands), `SleepTimer` | implemented |
 | `tts/neural` | Offline neural voices ([ADR 0018](decisions/0018-offline-neural-voices.md)): `NeuralVoices` (the nine voices, most recommended first, and their seven `VoicePackage`s pinned by size and SHA-256), `VoiceModelHttp` (the `HttpsClient` for `VoiceModelHosts`), `VoicePackageStore` (`filesDir/voices/{package}`, installed state), `VoicePackageDownloader` (space check, resumable download, SHA-256, `VoicePackageArchive` unpacking), `VoiceDownloads` (`WorkManagerVoiceDownloads`: one `VoiceDownloadWorker` job per package, Wi-Fi unless mobile data was accepted); `SherpaOnnxEngine` (the neural `SpeechEngine`) over `NeuralRuntime` (`SherpaOnnxRuntime`: piper-phonemize with the shipped Portuguese espeak-ng data, `EspeakData`, and sherpa-onnx models), with `NeuralText`, `KokoroPhonemes` and `NeuralAudio` preparing text, phonemes and audio, and `NeuralCallMarkers` noting each native call so one that killed the app twice is not made again | implemented |
 | `nativecall` | `NativeCallNote`: the note on disk of the call into native code being made, under a key of ids and numbers only; the next process reads the note a crash left behind, and a call in which the process died twice in a row is skipped (SR-4). PDF imports use it through `NativeCallMarkers`, the neural voices through `NeuralCallMarkers` | implemented |
 | `work` | Helpers shared by WorkManager jobs (`reportingProgress`: conflated progress publishing) | implemented |
@@ -201,8 +201,10 @@ flowchart LR
 ```
 
 - **State to the UI.** The facade publishes the segment being spoken
-  (`SpokenSegment`: book, chapter, character range) and the sleep timer
-  (`SleepTimerState`) in `ListeningStatus`, a Hilt singleton that the player
+  (`SpokenSegment`: book, chapter, character range), the sleep timer
+  (`SleepTimerState`) and the listening session (`ListeningSession`: the open
+  book, its voice and whether it is being listened to, which the pre-render
+  job also reads) in `ListeningStatus`, a Hilt singleton that the player
   and the ViewModels share. It changes when the
   internal player moves to another segment and as soon as a seek or the start
   position is resolved (before its audio is rendered), and clears when a book
@@ -625,17 +627,30 @@ sequenceDiagram
   connection (`NetworkType.CONNECTED`, or `UNMETERED` for a voice package
   waiting for Wi-Fi). The render-ahead window of the playing book runs inside
   the playback service instead.
-- **Rendering ahead while charging.** When a book opens, or its voice
-  changes, with a voice that may be slower than real time (`Voice.slowToRender`:
-  the Kokoro voices), the player asks `PrerenderJobs` to render it ahead. One
-  WorkManager job for the whole app (`prerender`, the latest book replaces
-  the previous one; no tag names the book) runs only while the phone charges
-  with enough battery and storage, and stops when it is unplugged.
+- **Rendering ahead while charging.** While a book whose voice may be slower
+  than real time (`Voice.slowToRender`: the Kokoro voices) is open but not
+  being listened to (just opened, paused, stopped), the player asks
+  `PrerenderJobs` to render it ahead: when it opens or its voice changes
+  that way, and each time listening stops. One WorkManager job for the whole
+  app (`prerender`; no tag names the book) runs only while the phone charges
+  with enough battery and storage, and stops when it is unplugged. Asking
+  again for the book and voice asked for last keeps the job as it is
+  (`ExistingWorkPolicy.KEEP`: a running job goes on, and the count of its
+  runs stays); another book or voice replaces it. The last request is kept
+  in memory only, so the first one after the app starts replaces the job.
   `Prerenderer` renders from the book's saved position, with the same
   segments, speech text and cache files as the `SegmentFeeder`, up to an hour
   of audio (about 170 MB, within the 300 MB cache), so listening later finds
-  the audio ready. Each render writes its own temporary file, so the player
-  and the job never write into each other's file. WorkManager runs a job again
+  the audio ready. It never competes with listening, which the voice serves
+  one render at a time: it reads the listening session (`ListeningStatus`)
+  and does not start, or stops after the sentence being spoken, while a book
+  is listened to (playing, or waiting for audio) or while the open book is
+  read by a neural voice of another package, whose model it would replace
+  (Kokoro is 142 MB, a Piper model about 63 MB); and its renders are
+  background renders, which wait before each segment while the player fills
+  its render-ahead window (`SegmentRenderer.inForeground`). Each render
+  writes its own temporary file, deleted if the render stops half-way, so the
+  player and the job never write into each other's file. WorkManager runs a job again
   when the process died in it, so a job started three times without ending is
   given up (`PrerenderWorker.MAX_RUN_ATTEMPTS`); a segment that crashes the
   native code is skipped after two deaths anyway (see [Neural speech](#neural-speech)).

@@ -50,7 +50,7 @@ data class ReaderPlayerDependencies
         val rates: SpeakingRateTracker,
         /** Where the segment being spoken is published for the UI. */
         val status: ListeningStatus,
-        /** Renders slow voices ahead while the phone charges. */
+        /** Renders slow voices ahead while the phone charges and the book is not being listened to. */
         val prerender: PrerenderJobs,
         /** Outlives the player, so the last position and speed are saved even after a release. */
         @ApplicationScope val saveScope: CoroutineScope,
@@ -70,7 +70,9 @@ data class ReaderPlayerDependencies
  * and `play()`; it resumes at the start of the segment that holds the saved position. The position is saved
  * on every segment change, pause, stop and seek (throttled). The segment being spoken and the [SleepTimer] are
  * published in [ListeningStatus], and [handle] runs the app's custom commands ([ReaderCommands]), among them a voice
- * change, which takes effect at the segment being spoken without reopening the book.
+ * change, which takes effect at the segment being spoken without reopening the book. The listening session (book,
+ * voice, listening or not) is published there too; a slow voice's book is rendered ahead only while it is not being
+ * listened to.
  */
 @OptIn(UnstableApi::class)
 class ReaderPlayer internal constructor(
@@ -101,6 +103,7 @@ class ReaderPlayer internal constructor(
     private val sleepTimer = SleepTimer(clock, looper, sleepHost, sleepFade)
     private val pauses = PauseClock(clock)
     private val voiceSwitch = VoiceSwitch()
+    private val sessionHost = SessionHost()
 
     private var book: PlaybackBook? = null
     private var playlist: List<MediaItemData> = emptyList()
@@ -120,6 +123,7 @@ class ReaderPlayer internal constructor(
     init {
         exo.addListener(InternalPlayerListener())
         addListener(sleepHost)
+        addListener(sessionHost)
     }
 
     override fun getState(): State {
@@ -231,6 +235,7 @@ class ReaderPlayer internal constructor(
     override fun handleRelease(): ListenableFuture<*> {
         savePosition(force = true)
         deps.status.publishSegment(null)
+        deps.status.publishSession(null)
         sleepTimer.release()
         deps.status.publishSleepTimer(SleepTimerState.Off)
         saver.close()
@@ -351,6 +356,7 @@ class ReaderPlayer internal constructor(
         rewindOnStart = false
         deps.status.publishSegment(null)
         loader.cancel()
+        sessionHost.update()
     }
 
     private fun onBookLoaded(
@@ -369,7 +375,6 @@ class ReaderPlayer internal constructor(
         position.clock = ChapterClock(deps.rates.rateFor(loaded.voice?.id))
         playlist = BookMediaItems.playlist(loaded, position.clock, labeler)
         bookMetadata = BookMediaItems.bookMetadata(loaded)
-        voiceSwitch.renderAheadIfSlow(loaded)
         val requestedChapter = request.chapterIndex?.takeIf { it in loaded.chapters.indices }
         position.anchor = resumeAt ?: requestedChapter?.let { ReadingPosition(it, 0) } ?: loaded.position
         reportedChapter = position.anchor.chapterIndex
@@ -378,6 +383,7 @@ class ReaderPlayer internal constructor(
             rewindOnStart = true
         }
         start()
+        sessionHost.update()
     }
 
     /** Renders from the anchor when the player is prepared and the open book has a voice. */
@@ -546,11 +552,6 @@ class ReaderPlayer internal constructor(
             if (voice?.id != open.voice?.id || voiceFailed) switchTo(open.copy(voice = voice), voiceFailed)
         }
 
-        /** A voice slower than real time renders the book ahead while the phone charges (ADR 0018). */
-        fun renderAheadIfSlow(book: PlaybackBook) {
-            if (book.voice?.slowToRender == true) deps.prerender.schedule(book.id)
-        }
-
         private fun switchTo(
             changed: PlaybackBook,
             voiceFailed: Boolean,
@@ -560,13 +561,51 @@ class ReaderPlayer internal constructor(
                 fail(PlaybackErrors.noVoice())
             } else {
                 if (voiceFailed) error = null
-                renderAheadIfSlow(changed)
                 if (error == null && prepared) {
                     position.anchor = position.current()
                     discontinuity = Player.DISCONTINUITY_REASON_INTERNAL
                     start()
                 }
                 invalidateState()
+            }
+            sessionHost.update()
+        }
+    }
+
+    /**
+     * Publishes the [ListeningSession] when it changes, and while the open book is not being listened to (paused,
+     * stopped, just opened) asks for it to be rendered ahead if its voice is slower than real time (ADR 0018). The
+     * pre-render job stops by itself as soon as listening starts ([Prerenderer]).
+     */
+    private inner class SessionHost : Player.Listener {
+        private var published: ListeningSession? = null
+
+        /** The book and slow voice asked to be rendered ahead, until rendering ahead is not wanted any more. */
+        private var askedAhead: Pair<String, String>? = null
+
+        // The single callbacks run as the state changes; onEvents would come later, in a message of its own.
+        override fun onPlayWhenReadyChanged(
+            playWhenReady: Boolean,
+            reason: Int,
+        ) = update()
+
+        override fun onPlaybackStateChanged(playbackState: Int) = update()
+
+        override fun onPlayerErrorChanged(error: PlaybackException?) = update()
+
+        fun update() {
+            val open = book
+            val listening = open != null && prepared && playWhenReady && error == null && !ended
+            val session = open?.let { ListeningSession(it.id, it.voice, listening) }
+            if (session != published) {
+                published = session
+                deps.status.publishSession(session)
+            }
+            val slowVoice = open?.voice?.takeIf { it.slowToRender && !listening && !ended && error == null }
+            val ahead = slowVoice?.let { open.id to it.id }
+            if (ahead != askedAhead) {
+                askedAhead = ahead
+                ahead?.let { (bookId, voiceId) -> deps.prerender.schedule(bookId, voiceId) }
             }
         }
     }

@@ -3,9 +3,13 @@ package com.giovannimartins.rreader.tts
 import com.giovannimartins.rreader.textkit.estimate.SpeakingRate
 import com.giovannimartins.rreader.textkit.model.TextRange
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
@@ -107,6 +111,25 @@ class SegmentRendererTest {
             renderer.render(request())
 
             assertThat(audio.file.exists()).isTrue()
+            assertThat(engine.calls).isEqualTo(2)
+        }
+
+    @Test
+    fun `a background render waits until the player has filled its window`() =
+        runTest {
+            val renderer = renderer()
+            val window = CompletableDeferred<Unit>()
+            launch { renderer.inForeground { window.await() } }
+            runCurrent()
+
+            val background = async { renderer.render(request(), background = true) }
+            runCurrent()
+            assertThat(engine.calls).isEqualTo(0)
+            renderer.render(request().copy(range = TextRange(0, 10)))
+            assertThat(engine.calls).isEqualTo(1)
+            window.complete(Unit)
+
+            assertThat(background.await()).isInstanceOf(SegmentAudio.Ready::class.java)
             assertThat(engine.calls).isEqualTo(2)
         }
 
