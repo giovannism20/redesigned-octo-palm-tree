@@ -9,6 +9,7 @@ import com.giovannimartins.rreader.tts.Voice
 import kotlinx.coroutines.CompletableDeferred
 import java.io.File
 import java.util.Locale
+import kotlin.time.Duration
 
 internal const val BOOK_ID = "00000000-0000-0000-0000-000000000001"
 
@@ -37,6 +38,7 @@ internal fun book(
     voice: Voice? = voice(),
     position: ReadingPosition = ReadingPosition.START,
     speed: Float = 1f,
+    pausedFor: Duration? = null,
 ) = PlaybackBook(
     id = BOOK_ID,
     title = "Dom Casmurro",
@@ -46,6 +48,7 @@ internal fun book(
     voice = voice,
     position = position,
     speed = speed,
+    pausedFor = pausedFor,
 )
 
 /** Writes silent WAV files lasting [millisPerChar] per character of the text. */

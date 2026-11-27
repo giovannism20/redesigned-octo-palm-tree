@@ -16,6 +16,7 @@ import java.io.IOException
 import java.time.Clock
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 /** [PlaybackContent] backed by the library database, the book files and the listener's preferences. */
 @Singleton
@@ -77,6 +78,7 @@ class PlaybackRepository
                         )
                     }.orEmpty()
                     .map { PlaybackChapter(it.title, it.charCount) }
+            val saved = book?.let { positionDao.find(it.id) }
             return if (book == null || chapters.isEmpty()) {
                 BookLoad.Unavailable
             } else {
@@ -88,8 +90,9 @@ class PlaybackRepository
                         cover = files.coverFile(book.id).takeIf { book.hasCover && it.isFile },
                         chapters = chapters,
                         voice = preferences.voiceFor(book.voiceId),
-                        position = resumePosition(positionDao.find(book.id), chapters),
+                        position = resumePosition(saved, chapters),
                         speed = preferences.speed(),
+                        pausedFor = saved?.let { (clock.millis() - it.updatedAt).coerceAtLeast(0).milliseconds },
                     ),
                 )
             }

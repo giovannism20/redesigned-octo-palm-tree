@@ -66,14 +66,23 @@ internal class ChapterPlans(
 
     /**
      * The segment that holds [position], or the next one when it falls between segments or past the end of
-     * its chapter; null at the end of the book.
+     * its chapter; null at the end of the book. With a positive [rewindChars], the segment that holds the
+     * rewound position instead: one segment or [rewindChars] characters earlier, whichever is the smaller
+     * rewind ([ResumeRewind.target]).
      *
      * @throws java.io.IOException when a chapter's text cannot be read.
      */
-    suspend fun locate(position: ReadingPosition): SegmentCursor? {
-        val plan = plan(position.chapterIndex) ?: return null
-        val index = planner.segmentAt(plan.segments, position.charOffset)
-        return if (index < plan.segments.size) SegmentCursor(plan, index) else firstFrom(plan.index + 1)
+    suspend fun locate(
+        position: ReadingPosition,
+        rewindChars: Int = 0,
+    ): SegmentCursor? {
+        val holding = holding(position)
+        val previous = holding?.takeIf { rewindChars > 0 }?.let { before(it) }
+        return if (previous == null) {
+            holding
+        } else {
+            holding(ResumeRewind.target(position, previous.position, rewindChars, book?.chapterLengths.orEmpty()))
+        }
     }
 
     /**
@@ -87,6 +96,24 @@ internal class ChapterPlans(
         } else {
             firstFrom(cursor.plan.index + 1)
         }
+
+    private suspend fun holding(position: ReadingPosition): SegmentCursor? {
+        val plan = plan(position.chapterIndex) ?: return null
+        val index = planner.segmentAt(plan.segments, position.charOffset)
+        return if (index < plan.segments.size) SegmentCursor(plan, index) else firstFrom(plan.index + 1)
+    }
+
+    /** The segment before [cursor], going back into the previous chapters; null at the first of the book. */
+    private suspend fun before(cursor: SegmentCursor): SegmentCursor? {
+        if (cursor.index > 0) return SegmentCursor(cursor.plan, cursor.index - 1)
+        var index = cursor.plan.index - 1
+        var plan = plan(index)
+        while (plan != null && plan.segments.isEmpty()) {
+            index--
+            plan = plan(index)
+        }
+        return plan?.let { SegmentCursor(it, it.segments.lastIndex) }
+    }
 
     private suspend fun firstFrom(chapterIndex: Int): SegmentCursor? {
         var index = chapterIndex

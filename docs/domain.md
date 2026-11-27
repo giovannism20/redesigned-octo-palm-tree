@@ -37,6 +37,7 @@ Names used in code and docs. Add a term here when you introduce it.
 | **Mini player** | The bar above the bottom navigation while a book is open: cover, title, chapter, −15 s and play/pause. Tapping it opens the full player. |
 | **Full player** | The player screen: cover, book and chapter titles, chapter progress with elapsed and remaining time, −15 s, play/pause, +15 s, speed and the chapter list. |
 | **Sleep timer** | Pauses listening after a duration of listening (the player offers 5–60 minutes) or at the end of the chapter being listened to, fading the volume out over the last 10 seconds; the position is saved. Its time runs only while audio plays. Lives in the facade player (`SleepTimer`), so it works with the screen off. |
+| **Resume rewind** | After a pause of more than 5 minutes (or a book left that long), listening resumes one segment or about 10 seconds of text earlier, whichever is less, from the start of the segment that holds that point; never before the start of the book. Seeks and chapter jumps cancel it. |
 | **Fade-out** | The last 10 seconds of a sleep timer, while the internal player's volume falls to zero before the pause; the full volume is restored after pausing. |
 | **Catalogue entry** | A public-domain book offered for download in the Explore tab. |
 | **OCR page** | A PDF page without a usable text layer whose text is recognized on-device. |

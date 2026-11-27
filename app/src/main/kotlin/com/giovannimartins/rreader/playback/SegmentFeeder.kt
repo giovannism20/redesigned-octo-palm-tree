@@ -45,6 +45,7 @@ internal class SegmentFeeder(
     private val queue = SegmentQueue()
     private var source: Source? = null
     private var pendingStart: ReadingPosition? = null
+    private var pendingRewind = 0
     private var last: SegmentCursor? = null
     private var job: Job? = null
 
@@ -58,15 +59,20 @@ internal class SegmentFeeder(
     /** The last queued segment, or null when nothing is queued. */
     val lastQueued: QueuedSegment? get() = queue.last()
 
-    /** Clears the internal playlist and renders the book from the segment that holds [from]. */
+    /**
+     * Clears the internal playlist and renders the book from the segment that holds [from], or, when
+     * [rewindChars] is positive, from a little before it (see [ResumeRewind.target]).
+     */
     fun restart(
         bookId: String,
         voice: Voice,
         from: ReadingPosition,
+        rewindChars: Int = 0,
     ) {
         clear()
         source = Source(bookId, voice)
         pendingStart = from
+        pendingRewind = rewindChars
         pump()
     }
 
@@ -151,7 +157,7 @@ internal class SegmentFeeder(
         val start = pendingStart
         return if (start != null) {
             pendingStart = null
-            plans.locate(start).also(events::onStartResolved)
+            plans.locate(start, pendingRewind).also(events::onStartResolved)
         } else {
             last?.let { plans.after(it) }
         }

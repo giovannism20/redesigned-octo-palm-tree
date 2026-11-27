@@ -55,6 +55,26 @@ class ChapterPlansTest {
         }
 
     @Test
+    fun `a rewound start is the segment before, across chapters, but not before the book's first segment`() =
+        runTest {
+            val plans = plans()
+            val first = planner.plan(texts[0])
+            val second = planner.plan(texts[1])
+            val rewind = 1_000
+
+            val inChapter = plans.locate(ReadingPosition(0, first[2].start + 4), rewind)
+            val acrossChapters = plans.locate(ReadingPosition(1, 3), rewind)
+            val atStart = plans.locate(ReadingPosition(0, 5), rewind)
+            val short = plans.locate(ReadingPosition(1, second[1].start + 10), rewindChars = 5)
+
+            assertThat(inChapter?.position).isEqualTo(ReadingPosition(0, first[1].start))
+            assertThat(acrossChapters?.position).isEqualTo(ReadingPosition(0, first.last().start))
+            assertThat(atStart?.position).isEqualTo(ReadingPosition.START)
+            // Five characters back stay inside the segment, whose start is where playback resumes.
+            assertThat(short?.position).isEqualTo(ReadingPosition(1, second[1].start))
+        }
+
+    @Test
     fun `spans reach the next segment so positions have no gaps`() =
         runTest {
             val plans = plans()

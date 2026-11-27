@@ -3,6 +3,7 @@ package com.giovannimartins.rreader.playback
 import com.giovannimartins.rreader.textkit.model.ReadingPosition
 import com.giovannimartins.rreader.tts.Voice
 import java.io.File
+import kotlin.time.Duration
 
 /** A book opened for listening: what the facade player presents and renders. */
 data class PlaybackBook(
@@ -20,6 +21,8 @@ data class PlaybackBook(
     val position: ReadingPosition,
     /** Playback speed multiplier from the settings. */
     val speed: Float,
+    /** How long ago listening stopped, when the position was last saved; null when it was never saved. */
+    val pausedFor: Duration? = null,
 ) {
     init {
         require(chapters.isNotEmpty()) { "A book needs at least one chapter" }

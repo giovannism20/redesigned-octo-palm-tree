@@ -150,7 +150,8 @@ sequenceDiagram
 1. The UI connects a `MediaController` to `PlaybackService` while the app is
    visible and opens a book with `setMediaItem(bookId)`, `prepare()` and
    `play()`. The book resumes at the start of the segment that holds its
-   saved reading position.
+   saved reading position, a little earlier when it was left more than five
+   minutes ago (see [Resume rewind](#resume-rewind)).
 2. The `SegmentFeeder` plans each chapter with textkit's `SegmentPlanner`,
    applies `SpeechNormalizer` to each segment (skipping blank speech) and has
    the `SegmentRenderer` turn it into a WAV file in the audio cache. It keeps
@@ -203,6 +204,27 @@ flowchart LR
   and passes a typed `ReaderCommand` to `ReaderPlayer.handle`; invalid
   requests get `ERROR_BAD_VALUE`, requests that do not apply (no book open)
   get `ERROR_INVALID_STATE`.
+
+### Resume rewind
+
+After a long pause the listener has lost the thread, so listening resumes a
+little before where it stopped (`ResumeRewind`):
+
+- A pause is long when it lasted more than 5 minutes. `PauseClock` notes when
+  listening stopped (pause, stop, failure, a focus loss, or the start of an
+  interruption such as a phone call) on the facade's clock, which keeps
+  counting while the phone sleeps.
+- On resume after a long pause (play, or the end of a long interruption),
+  the facade restarts the feeder with a rewind: the start is one segment
+  earlier or 10 seconds of text (media time at 1.0×) earlier, whichever is
+  the smaller rewind, and then, as always, the start of the segment that
+  holds that point. It crosses chapter boundaries and never goes before the
+  start of the book, so the first segment of a book just starts again.
+- A book opened again (for example after the app was closed) applies the same
+  rule to the time since its position was saved (`PlaybackBook.pausedFor`,
+  from the position's `updated_at`), unless a chapter was asked for.
+- Seeks, chapter jumps, "read from here" and opening another book forget the
+  pause: listening then starts exactly where it was sent.
 
 ### Sleep timer
 

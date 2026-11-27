@@ -96,6 +96,7 @@ class ReaderPlayer internal constructor(
     private val saver = PositionSaver(deps.saveScope, clock::elapsedRealtime, deps.content::savePosition)
     private val sleepHost = SleepTimerHost()
     private val sleepTimer = SleepTimer(clock, looper, sleepHost, sleepFade)
+    private val pauses = PauseClock(clock)
 
     private var book: PlaybackBook? = null
     private var playlist: List<MediaItemData> = emptyList()
@@ -109,6 +110,9 @@ class ReaderPlayer internal constructor(
     private var reportedChapter = 0
     private var discontinuity: Int? = null
 
+    /** Whether the next start rewinds a little because listening resumes after a long pause. */
+    private var rewindOnStart = false
+
     init {
         exo.addListener(InternalPlayerListener())
         addListener(sleepHost)
@@ -116,7 +120,13 @@ class ReaderPlayer internal constructor(
 
     override fun getState(): State {
         val book = book
-        val playbackState = playbackState()
+        val playbackState =
+            when {
+                error != null || !prepared -> Player.STATE_IDLE
+                book == null || ended -> Player.STATE_ENDED
+                feeder.current() != null && exo.playbackState == Player.STATE_READY -> Player.STATE_READY
+                else -> Player.STATE_BUFFERING
+            }
         val builder =
             State
                 .Builder()
@@ -189,6 +199,11 @@ class ReaderPlayer internal constructor(
     }
 
     override fun handleSetPlayWhenReady(playWhenReady: Boolean): ListenableFuture<*> {
+        if (!playWhenReady) {
+            pauses.stopped()
+        } else if (pauses.resumesAfterLongPause()) {
+            rewindFromHere()
+        }
         this.playWhenReady = playWhenReady
         playWhenReadyReason = Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST
         exo.playWhenReady = playWhenReady
@@ -198,6 +213,7 @@ class ReaderPlayer internal constructor(
 
     override fun handleStop(): ListenableFuture<*> {
         position.anchor = position.current()
+        pauses.stopped()
         savePosition(force = true)
         position.freeze()
         feeder.clear()
@@ -301,14 +317,6 @@ class ReaderPlayer internal constructor(
             }
         }
 
-    private fun playbackState(): Int =
-        when {
-            error != null || !prepared -> Player.STATE_IDLE
-            book == null || ended -> Player.STATE_ENDED
-            feeder.current() != null && exo.playbackState == Player.STATE_READY -> Player.STATE_READY
-            else -> Player.STATE_BUFFERING
-        }
-
     private fun openBook(
         request: BookRequest,
         resumeAt: ReadingPosition?,
@@ -329,6 +337,8 @@ class ReaderPlayer internal constructor(
         error = null
         ended = false
         position.anchor = ReadingPosition.START
+        pauses.forget()
+        rewindOnStart = false
         deps.status.publishSegment(null)
         loader.cancel()
     }
@@ -352,6 +362,10 @@ class ReaderPlayer internal constructor(
         val requestedChapter = request.chapterIndex?.takeIf { it in loaded.chapters.indices }
         position.anchor = resumeAt ?: requestedChapter?.let { ReadingPosition(it, 0) } ?: loaded.position
         reportedChapter = position.anchor.chapterIndex
+        // Back to a book left a while ago: resume a little earlier, as after a long pause.
+        if (resumeAt == null && requestedChapter == null && loaded.pausedFor?.let(ResumeRewind::isLong) == true) {
+            rewindOnStart = true
+        }
         start()
     }
 
@@ -368,7 +382,9 @@ class ReaderPlayer internal constructor(
             // Preparing before playback starts lets the internal player request audio focus right away,
             // while the listener is still in the app (ADR 0014).
             if (exo.playbackState == Player.STATE_IDLE) exo.prepare()
-            feeder.restart(book.id, voice, position.anchor)
+            val rewindChars = if (rewindOnStart) position.clock.charsFor(MAX_REWIND_MS) else 0
+            rewindOnStart = false
+            feeder.restart(book.id, voice, position.anchor, rewindChars)
         }
     }
 
@@ -388,9 +404,25 @@ class ReaderPlayer internal constructor(
     private fun seekTo(target: ReadingPosition) {
         position.freeze()
         position.anchor = target
+        pauses.forget()
+        rewindOnStart = false
         discontinuity = Player.DISCONTINUITY_REASON_SEEK
         book?.let { saver.save(it.id, target, force = false) }
         if (error == null) start()
+    }
+
+    /**
+     * Restarts a little before where listening stopped ([ResumeRewind]); a player that is not playing the
+     * book yet rewinds when it starts.
+     */
+    private fun rewindFromHere() {
+        rewindOnStart = true
+        if (book != null && prepared && error == null) {
+            position.anchor = position.current()
+            position.freeze()
+            discontinuity = Player.DISCONTINUITY_REASON_SEEK
+            start()
+        }
     }
 
     /** Ends the book once every segment was queued and played. */
@@ -407,6 +439,7 @@ class ReaderPlayer internal constructor(
 
     private fun fail(failure: PlaybackException) {
         position.anchor = position.current()
+        pauses.stopped()
         savePosition(force = true)
         position.freeze()
         feeder.clear()
@@ -457,12 +490,23 @@ class ReaderPlayer internal constructor(
             if (reason != Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST) {
                 this@ReaderPlayer.playWhenReady = playWhenReady
                 playWhenReadyReason = reason
-                if (!playWhenReady) savePosition(force = true)
+                if (!playWhenReady) {
+                    pauses.stopped()
+                    savePosition(force = true)
+                }
             }
             invalidateState()
         }
 
-        override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) = invalidateState()
+        /** A phone call interrupts listening; when it ends after a long while, listening rewinds a little. */
+        override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
+            if (playbackSuppressionReason != Player.PLAYBACK_SUPPRESSION_REASON_NONE) {
+                pauses.stopped()
+            } else if (playWhenReady && pauses.resumesAfterLongPause()) {
+                rewindFromHere()
+            }
+            invalidateState()
+        }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) = invalidateState()
 
@@ -518,6 +562,8 @@ class ReaderPlayer internal constructor(
 
         /** Relative change of the speaking rate below which chapter durations are kept as they are. */
         const val CLOCK_TOLERANCE = 0.02
+
+        val MAX_REWIND_MS = ResumeRewind.MAX_REWIND.inWholeMilliseconds
 
         val COMMANDS: Player.Commands =
             Player.Commands

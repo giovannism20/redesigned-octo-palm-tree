@@ -30,6 +30,7 @@ import java.io.File
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -72,7 +73,19 @@ class PlaybackRepositoryTest {
             assertThat(loaded.voice).isEqualTo(voice())
             assertThat(loaded.speed).isEqualTo(1.25f)
             assertThat(loaded.cover).isEqualTo(files.coverFile(BOOK_ID))
+            assertThat(loaded.pausedFor).isEqualTo((42_000 - 1).milliseconds)
             assertThat(repository.chapterText(BOOK_ID, 1)).isEqualTo(texts[1])
+        }
+
+    @Test
+    fun `a book never listened to has no pause to resume from`() =
+        runTest {
+            insertBook()
+
+            val loaded = (repository().load(BOOK_ID) as BookLoad.Loaded).book
+
+            assertThat(loaded.position).isEqualTo(ReadingPosition.START)
+            assertThat(loaded.pausedFor).isNull()
         }
 
     @Test
