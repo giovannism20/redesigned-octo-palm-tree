@@ -23,10 +23,12 @@ internal data class ChapterStart(
  * 2. **Headings before an anchor.** A start at an element takes the headings right before it in its document when
  *    they follow body text or open the document, so a chapter number printed above the title the table of contents
  *    points to (`<h5>II</h5><h4 id="c2">Do livro.</h4>`) opens its chapter instead of closing the one before.
- * 3. **Titles.** Text before the first start forms a leading chapter. A chapter is titled by the table of contents,
- *    else by its first `h1`–`h3` heading. Chapters without text are dropped.
- * 4. **Project Gutenberg.** The header and license Gutenberg adds are removed ([GutenbergBoilerplate]).
- * 5. **Short chapters** join a neighbour in the same document ([ShortChapters]).
+ * 3. **Long sections.** A section longer than [LONG_SECTION_LENGTH] characters is split at its chapter headings
+ *    ([HeadingStarts]), for books whose table of contents is coarse or missing.
+ * 4. **Titles.** Text before the first start forms a leading chapter. A chapter is titled by the table of contents,
+ *    else by the heading that started it, else by its first `h1`–`h3` heading. Chapters without text are dropped.
+ * 5. **Project Gutenberg.** The header and license Gutenberg adds are removed ([GutenbergBoilerplate]).
+ * 6. **Short chapters** join a neighbour in the same document ([ShortChapters]).
  */
 internal object ChapterAssembler {
     /** Sections longer than this many characters (about an hour of listening) are too long for one chapter. */
@@ -39,7 +41,8 @@ internal object ChapterAssembler {
         val text = SpineText(documents)
         val paths = documents.mapTo(HashSet()) { it.path }
         val toc = tablesOfContents.firstOrNull { entries -> entries.any { it.path in paths } }
-        val starts = pullBack(toc?.let { TocStarts.resolve(it, text) } ?: everyDocument(documents, text), text)
+        val tocStarts = pullBack(toc?.let { TocStarts.resolve(it, text) } ?: everyDocument(documents, text), text)
+        val starts = pullBack(merged(tocStarts + HeadingStarts.inLongSections(tocStarts, text)), text)
         return ShortChapters.merge(withoutGutenbergBoilerplate(chapters(starts, text)))
     }
 
@@ -83,7 +86,7 @@ internal object ChapterAssembler {
         return if (afterBody) first else paragraph
     }
 
-    /** The chapters between consecutive [starts], the text before the first start included (rule 3). */
+    /** The chapters between consecutive [starts], the text before the first start included (rule 4). */
     private fun chapters(
         starts: List<ChapterStart>,
         text: SpineText,

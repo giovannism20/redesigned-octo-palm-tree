@@ -41,6 +41,29 @@ class GutenbergEpubTest {
     }
 
     @Test
+    fun `splits a Gutenberg book kept in one file at its chapter headings, without the license`() {
+        val chapters = listOf("CAPÍTULO I", "CAPÍTULO II", "CAPÍTULO III", "CAPÍTULO IV")
+        val body =
+            HEADER + "<h1 id=\"t\">LIVRO DE TESTE</h1><p>Autora Fictícia</p>" +
+                chapters.joinToString("") { "<div class=\"chapter\"><h2>$it</h2>${prose(it, 13_000)}</div>" } + FOOTER
+        val fixture =
+            EpubFixture().apply {
+                document("h-0.xhtml", body)
+                tableOfContents(
+                    navItem("LIVRO DE TESTE", "h-0.xhtml#t"),
+                    navItem("THE FULL PROJECT GUTENBERG™ LICENSE", "h-0.xhtml#pg-footer-heading"),
+                )
+            }
+
+        val book = parseBook(fixture.writeTo(File(directory, "pg12345-images-3.epub")))
+
+        assertThat(book.chapters.map { it.title }).containsExactlyElementsIn(chapters).inOrder()
+        assertThat(book.chapters.first().text).startsWith("LIVRO DE TESTE\n\nAutora Fictícia\n\nCAPÍTULO I\n\n")
+        assertThat(book.chapters.last().text).endsWith("sem pressa nenhuma de acabar.")
+        assertThat(book.chapters.joinToString { it.text }).ignoringCase().doesNotContain("gutenberg")
+    }
+
+    @Test
     fun `reads a Gutenberg book split into files at anchors, with chapter numbers above the titles`() {
         val fixture =
             EpubFixture().apply {

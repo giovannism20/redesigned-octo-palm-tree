@@ -115,6 +115,56 @@ class ChapterAssemblerTest {
     }
 
     @Test
+    fun `splits a long document without a table of contents at its chapter headings`() {
+        val body =
+            "<h1>LIVRO</h1><p>Autora Fictícia</p>" +
+                listOf("CAPÍTULO I", "CAPITULO SEGUNDO", "III", "IV — O fim")
+                    .joinToString("") { "<h2>$it</h2><h3>Um subtítulo</h3>${prose(it, 13_000)}" }
+
+        val chapters = assemble(listOf(document("livro.xhtml", body)))
+
+        assertThat(chapters.map { it.title })
+            .containsExactly("CAPÍTULO I", "CAPITULO SEGUNDO", "III", "IV — O fim")
+            .inOrder()
+        assertThat(
+            chapters.first().paragraphs().take(3),
+        ).containsExactly("LIVRO", "Autora Fictícia", "CAPÍTULO I").inOrder()
+    }
+
+    @Test
+    fun `splits a long section at chapter divisions, titled by their headings`() {
+        val body =
+            listOf("A partida", "O caminho", "A chegada")
+                .joinToString("") { "<div class=\"chapter\"><h2>$it</h2>${prose(it, 18_000)}</div>" }
+
+        val chapters = assemble(listOf(document("livro.xhtml", body)), entry("Livro", ""))
+
+        assertThat(chapters.map { it.title }).containsExactly("Livro", "O caminho", "A chegada").inOrder()
+    }
+
+    @Test
+    fun `splits a long section at its main headings when it has no chapter headings`() {
+        val body = listOf("A partida", "O caminho", "A chegada").joinToString("") { "<h2>$it</h2>${prose(it, 18_000)}" }
+
+        val chapters = assemble(listOf(document("livro.xhtml", body)))
+
+        assertThat(chapters.map { it.title }).containsExactly("A partida", "O caminho", "A chegada").inOrder()
+    }
+
+    @Test
+    fun `keeps a section of less than an hour whole, whatever headings it has`() {
+        val body = (1..3).joinToString("") { "<h3>$it</h3>${prose("a cena $it", 5_000)}" }
+
+        val chapters =
+            assemble(
+                listOf(document("conto.xhtml", "<h2 id=\"c\">O conto</h2>$body")),
+                entry("O conto", "conto.xhtml#c"),
+            )
+
+        assertThat(chapters.map { it.title }).containsExactly("O conto")
+    }
+
+    @Test
     fun `joins short sections to a neighbour in the same document, never across documents`() {
         val documents =
             listOf(

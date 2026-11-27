@@ -133,6 +133,21 @@ class EpubChapterTest {
             .inOrder()
     }
 
+    @Test
+    fun `splits a long file at its chapter headings when the table of contents does not reach them`() {
+        val headings = listOf("CAPITULO PRIMEIRO", "CAPITULO II", "CAPITULO III", "CAPITULO IV")
+        val body =
+            "<h1>LIVRO</h1><p>Autora Fictícia</p>" + headings.joinToString("") { "<h5>$it</h5>${prose(it, 13_000)}" }
+        val fixture = EpubFixture().apply { document("livro.xhtml", body, tocTitle = "Livro") }
+
+        val chapters = parseBook(fixture.writeTo(file())).chapters
+
+        assertThat(chapters.map { it.title }).containsExactlyElementsIn(headings).inOrder()
+        assertThat(
+            chapters[0].paragraphs().take(3),
+        ).containsExactly("LIVRO", "Autora Fictícia", "CAPITULO PRIMEIRO").inOrder()
+    }
+
     /** Chapter [number] with two short numbered scenes, as `<h2 id="cN">` and `<h3 id="cN-1">`, `<h3 id="cN-2">`. */
     private fun chapterWithScenes(number: Int): String =
         "<h2 id=\"c$number\">Capítulo $number</h2>${prose("a abertura $number", 1_500)}" +

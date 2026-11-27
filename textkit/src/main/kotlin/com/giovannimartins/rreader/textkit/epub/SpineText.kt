@@ -8,8 +8,9 @@ internal class SpineDocument(
 
 /**
  * The paragraphs of the spine documents as one sequence in reading order, with what chapter detection needs to know
- * about them: where each document starts, where its anchors point and which paragraphs are headings. Paragraph
- * indices are positions in this sequence, so a chapter may start in one document and end in another.
+ * about them: where each document starts, where its anchors point, which paragraphs are headings and where chapter
+ * divisions open. Paragraph indices are positions in this sequence, so a chapter may start in one document and end
+ * in another.
  */
 internal class SpineText(
     private val documents: List<SpineDocument>,
@@ -28,6 +29,12 @@ internal class SpineText(
             document.content.headings.map {
                 HeadingBlock(it.level, start + it.firstParagraph, start + it.endParagraph, it.text)
             }
+        }
+
+    /** The first paragraph of each chapter division, as indices into [paragraphs]. */
+    val chapterDivisions: List<Int> =
+        documents.flatMapIndexed { index, document ->
+            document.content.chapterDivisions.map { documentStarts[index] + it }
         }
 
     private val documentIndices: Map<String, Int> = documents.withIndex().associate { it.value.path to it.index }
@@ -73,6 +80,12 @@ internal class SpineText(
         from: Int,
         to: Int,
     ): List<HeadingBlock> = headings.between(from, to) { it.firstParagraph }
+
+    /** The chapter divisions that start from paragraph [from] up to, not including, paragraph [to]. */
+    fun chapterDivisionsIn(
+        from: Int,
+        to: Int,
+    ): List<Int> = chapterDivisions.between(from, to) { it }
 
     /** The text of the first `h1`–`h3` heading from paragraph [from] up to, not including, [to], or null. */
     fun titleIn(

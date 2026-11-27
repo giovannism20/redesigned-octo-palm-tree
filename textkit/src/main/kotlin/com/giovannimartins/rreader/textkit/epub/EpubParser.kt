@@ -17,7 +17,8 @@ import java.io.File
  *   (`file.xhtml#id`) starts a chapter at that element, so books that keep many chapters in a few large files, as
  *   Project Gutenberg's do, are split into their real chapters; the headings printed right before the element join
  *   it. Of a nested table of contents, only the levels that give chapters of a reasonable length count, and short
- *   sections such as title-page lines join a neighbour in the same document. When the table of contents points to no
+ *   sections such as title-page lines join a neighbour in the same document. Sections longer than about an hour of
+ *   listening are split at their chapter headings (`CAPÍTULO I`, `II`, ...). When the table of contents points to no
  *   spine document, every document starts a chapter. Titles come from the table of contents, else from headings.
  *   Chapters without readable text are dropped. The internal `ChapterAssembler` has the details.
  * - Text keeps paragraphs and skips scripts, styles, navigation, ruby annotations and footnotes (references and

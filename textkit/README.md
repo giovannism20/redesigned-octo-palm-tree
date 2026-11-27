@@ -11,7 +11,7 @@ KDoc.
 |---------|----------|--------|
 | `com.giovannimartins.rreader.textkit` | `BookFormat` detection from file signatures | implemented |
 | `...textkit.model` | `NormalizedBook`, `Chapter` (with `Chapter.paragraphRangesOf` for any chapter text), `BookMetadata`, `CoverImage`, `TextRange`, `ReadingPosition` | implemented |
-| `...textkit.epub` | `EpubParser`: EPUB 2/3 container, OPF metadata, spine, chapters from the nav/NCX table of contents (whole files or the anchors its entries point to inside them, nested levels chosen by length, short sections joined), cover and DRM detection, with safe ZIP and XML handling | implemented |
+| `...textkit.epub` | `EpubParser`: EPUB 2/3 container, OPF metadata, spine, chapters from the nav/NCX table of contents (whole files or the anchors its entries point to inside them, nested levels chosen by length, chapter headings in overlong sections, short sections joined), cover and DRM detection, with safe ZIP and XML handling | implemented |
 | `...textkit.text` | `SentenceSegmenter` splits text into pt-BR aware sentence ranges (abbreviations, initials, dialogue dashes; never across paragraphs); `SegmentPlanner` groups them into rendered segments and finds the segment to resume from; `SpeechNormalizer.toSpeech` rewrites a segment or heading for voices at render time | implemented |
 | `...textkit.layout` | `LayoutBookBuilder`: PDF/OCR layout lines → `NormalizedBook` (running headers, footers and page numbers removed, hyphenation joined keeping Portuguese enclisis, paragraphs rebuilt, chapters from outline, headings or page ranges); `OcrPageLayout`: OCR boxes in pixels → layout lines in page units with estimated font sizes; `ScannedDocumentDetector`: pages without a usable text layer, scanned documents; `DocumentInfoCleaner` | implemented |
 | `...textkit.gutenberg` | Project Gutenberg: `GutenbergBoilerplate` removes the English header, production credits and license Gutenberg adds around a book (applied by `EpubParser`); `GutenbergFeedParser` reads its OPDS catalogue feeds (search results) into `FeedPage`s of `FeedBook`s | implemented |
@@ -36,7 +36,8 @@ when (val result = EpubParser().parse(file, fallbackTitle = file.nameWithoutExte
   which loads no DTDs or external entities (SR-1 to SR-3 in
   [docs/security.md](../docs/security.md)).
 - Chapters come from the table of contents, down to the elements its entries
-  point to inside files (see [EPUB chapters](#epub-chapters)).
+  point to inside files, and long sections are split at their chapter
+  headings (see [EPUB chapters](#epub-chapters)).
 - Chapter text keeps paragraphs and leaves out scripts, styles, navigation,
   ruby annotations and footnotes; whitespace is collapsed, soft hyphens and
   zero-width characters are removed and accents are composed (NFC).
@@ -75,8 +76,16 @@ rules:
   short, while numbered sub-sections inside chapters, title-page lines and
   "FIM" entries nested below chapters are not. Entries for whole files
   always count.
-- **Titles.** A chapter is titled by its table-of-contents label, else by its
-  first `h1`–`h3` heading. Text before
+- **Long sections.** A section longer than 50,000 characters, as in a book
+  whose table of contents lists only the title page, the parts or the
+  license, is split at its chapter headings when it holds at least two:
+  `h1`–`h6` headings worded like `CAPÍTULO I`, `CAPITULO PRIMEIRO`,
+  `PARTE II` or `Prólogo`, or a chapter number alone or before a title (`I`,
+  `XII.`, `12`, `IV — A partida`), and Project Gutenberg's
+  `<div class="chapter">` or EPUB 3 `epub:type="chapter"` divisions. Failing
+  that, it is split at its `h1`–`h3` headings, again when it has two.
+- **Titles.** A chapter is titled by its table-of-contents label, else by the
+  heading that started it, else by its first `h1`–`h3` heading. Text before
   the first start forms a leading chapter, and chapters without text are
   dropped. Without a table of contents that points to a spine file, each file
   starts a chapter.

@@ -78,7 +78,8 @@ All notable user-visible changes are documented here. The format follows
   Gutenberg books in the Explore tab do, now have their real chapters, each
   with its title, in the chapter list, for next and previous and for the time
   left in the chapter: Dom Casmurro has its 148 chapters instead of 3. A
-  chapter number printed above the title stays with its chapter, and title
-  pages and part titles are read at the start of the chapter that follows
-  them. Books already in the library keep their chapters until they are
-  removed and added again.
+  chapter number printed above the title stays with its chapter, title pages
+  and part titles are read at the start of the chapter that follows them, and
+  books whose table of contents lists only the title page or the parts are
+  split at their "CAPÍTULO I" headings. Books already in the library keep
+  their chapters until they are removed and added again.
