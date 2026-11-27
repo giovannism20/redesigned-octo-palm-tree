@@ -121,7 +121,11 @@ class Prerenderer
         }
     }
 
-/** The job of [WorkManagerPrerenderJobs]: renders ahead in one book while the phone charges ([Prerenderer]). */
+/**
+ * The job of [WorkManagerPrerenderJobs]: renders ahead in one book while the phone charges ([Prerenderer]). WorkManager
+ * runs a job again when the process died in it, so a job started [MAX_RUN_ATTEMPTS] times without ending is given up:
+ * whatever kills the process there, it cannot keep doing so for good.
+ */
 @HiltWorker
 class PrerenderWorker
     @AssistedInject
@@ -131,7 +135,8 @@ class PrerenderWorker
         private val prerenderer: Prerenderer,
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
-            val bookId = inputData.getString(BOOK_ID) ?: return Result.failure()
+            val bookId = inputData.getString(BOOK_ID)
+            if (bookId == null || runAttemptCount >= MAX_RUN_ATTEMPTS) return Result.failure()
             return try {
                 prerenderer.prerender(bookId)
                 Result.success()
@@ -143,5 +148,8 @@ class PrerenderWorker
 
         companion object {
             const val BOOK_ID = "book_id"
+
+            /** Runs of one job, the first included, before it is given up. */
+            const val MAX_RUN_ATTEMPTS: Int = 3
         }
     }

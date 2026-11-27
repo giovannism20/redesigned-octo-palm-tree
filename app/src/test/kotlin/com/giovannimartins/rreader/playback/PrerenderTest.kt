@@ -3,10 +3,15 @@ package com.giovannimartins.rreader.playback
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.Configuration
+import androidx.work.ListenableWorker
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import androidx.work.WorkerFactory
+import androidx.work.WorkerParameters
 import androidx.work.testing.SynchronousExecutor
+import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
+import androidx.work.workDataOf
 import com.giovannimartins.rreader.textkit.model.ReadingPosition
 import com.giovannimartins.rreader.textkit.text.SegmentPlanner
 import com.giovannimartins.rreader.textkit.text.SpeechNormalizer
@@ -35,6 +40,22 @@ class PrerenderTest {
     val folder = TemporaryFolder()
 
     private val context: Context = ApplicationProvider.getApplicationContext()
+
+    /** The job for [BOOK_ID] on its [runAttempts]th run (0 is the first). */
+    private fun worker(runAttempts: Int): PrerenderWorker =
+        TestListenableWorkerBuilder<PrerenderWorker>(context)
+            .setInputData(workDataOf(PrerenderWorker.BOOK_ID to BOOK_ID))
+            .setRunAttemptCount(runAttempts)
+            .setWorkerFactory(
+                object : WorkerFactory() {
+                    override fun createWorker(
+                        appContext: Context,
+                        workerClassName: String,
+                        workerParameters: WorkerParameters,
+                    ): ListenableWorker = PrerenderWorker(appContext, workerParameters, prerenderer)
+                },
+            ).build()
+
     private val texts = listOf(chapterText(0, 4), chapterText(1, 4))
     private val segments = SegmentPlanner().plan(texts[0])
     private val slow = voice(id = "neural:dora").copy(slowToRender = true)
@@ -107,6 +128,17 @@ class PrerenderTest {
 
         assertThat(runBlocking { prerenderer.prerender(BOOK_ID) }).isEqualTo(PrerenderOutcome.Failed)
         assertThat(engine.spoken).hasSize(1)
+    }
+
+    @Test
+    fun `a job started three times without ending is given up, so a crash in it cannot repeat for good`() {
+        val givenUp = runBlocking { worker(runAttempts = PrerenderWorker.MAX_RUN_ATTEMPTS).doWork() }
+
+        assertThat(givenUp).isEqualTo(ListenableWorker.Result.failure())
+        assertThat(engine.spoken).isEmpty()
+        val lastTry = runBlocking { worker(runAttempts = PrerenderWorker.MAX_RUN_ATTEMPTS - 1).doWork() }
+        assertThat(lastTry).isEqualTo(ListenableWorker.Result.success())
+        assertThat(engine.spoken).isNotEmpty()
     }
 
     @Test

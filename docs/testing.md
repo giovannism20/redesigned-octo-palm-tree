@@ -118,8 +118,9 @@ documentation link check.
   Expected: the call is made again after one death and skipped after two
   (cover left out, page without text, or "too complex"; a neural segment
   becomes a pause that the audio cache keeps, a phonemizer or model that
-  died starting makes the voice unavailable), and an import started ten
-  times is given up.
+  died starting makes the voice unavailable), an import started ten times
+  is given up, and so is a pre-render job started three times
+  (`PrerenderTest`).
 - **Hostile network answers** (`CatalogHttpTest`, `CatalogHostsTest`,
   `GutenbergFeedParserTest`, `CatalogDownloaderTest`): addresses and redirects
   off the allowlist or to cleartext, too many redirects, unexpected media

@@ -635,7 +635,10 @@ sequenceDiagram
   segments, speech text and cache files as the `SegmentFeeder`, up to an hour
   of audio (about 170 MB, within the 300 MB cache), so listening later finds
   the audio ready. Each render writes its own temporary file, so the player
-  and the job never write into each other's file.
+  and the job never write into each other's file. WorkManager runs a job again
+  when the process died in it, so a job started three times without ending is
+  given up (`PrerenderWorker.MAX_RUN_ATTEMPTS`); a segment that crashes the
+  native code is skipped after two deaths anyway (see [Neural speech](#neural-speech)).
 - While text recognition runs, the import job asks WorkManager to run it in
   its foreground service with the `dataSync` type and a progress
   notification; if the platform refuses (the job started in the background),
