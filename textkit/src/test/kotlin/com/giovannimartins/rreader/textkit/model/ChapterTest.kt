@@ -15,6 +15,17 @@ class ChapterTest {
     }
 
     @Test
+    fun `finds the paragraphs of any chapter text, skipping empty ones`() {
+        val text = "\n\nUm.\n\n\n\nDois três.\n\n"
+
+        val ranges = Chapter.paragraphRangesOf(text)
+
+        assertThat(ranges.map { text.substring(it.start, it.end) }).containsExactly("Um.", "Dois três.").inOrder()
+        assertThat(Chapter.paragraphRangesOf("")).isEmpty()
+        assertThat(Chapter.paragraphRangesOf("Só um.")).containsExactly(TextRange(0, 6))
+    }
+
+    @Test
     fun `rejects blank chapters and empty books`() {
         assertThrows<IllegalArgumentException> { Chapter(null, "   ") }
         assertThrows<IllegalArgumentException> { NormalizedBook(BookMetadata("Livro"), emptyList()) }

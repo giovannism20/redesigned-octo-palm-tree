@@ -45,22 +45,29 @@ public data class Chapter(
     }
 
     /** Ranges of each paragraph within [text]. */
-    public fun paragraphRanges(): List<TextRange> {
-        val ranges = mutableListOf<TextRange>()
-        var start = 0
-        while (start <= text.length) {
-            val separator = text.indexOf(PARAGRAPH_SEPARATOR, start)
-            val end = if (separator < 0) text.length else separator
-            if (end > start) ranges += TextRange(start, end)
-            if (separator < 0) break
-            start = separator + PARAGRAPH_SEPARATOR.length
-        }
-        return ranges
-    }
+    public fun paragraphRanges(): List<TextRange> = paragraphRangesOf(text)
 
     public companion object {
         /** Separator between paragraphs inside [text]. */
         public const val PARAGRAPH_SEPARATOR: String = "\n\n"
+
+        /**
+         * Ranges of the non-empty paragraphs of [chapterText], a chapter's normalized text: the text between
+         * [PARAGRAPH_SEPARATOR]s, in order. Character offsets are the chapter's own, so a
+         * [ReadingPosition] or a segment maps to its paragraph without copying the text.
+         */
+        public fun paragraphRangesOf(chapterText: String): List<TextRange> {
+            val ranges = mutableListOf<TextRange>()
+            var start = 0
+            while (start <= chapterText.length) {
+                val separator = chapterText.indexOf(PARAGRAPH_SEPARATOR, start)
+                val end = if (separator < 0) chapterText.length else separator
+                if (end > start) ranges += TextRange(start, end)
+                if (separator < 0) break
+                start = separator + PARAGRAPH_SEPARATOR.length
+            }
+            return ranges
+        }
 
         /** Builds a chapter from paragraphs, dropping blank ones. */
         public fun fromParagraphs(

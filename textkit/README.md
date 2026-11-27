@@ -10,7 +10,7 @@ KDoc.
 | Package | Contents | Status |
 |---------|----------|--------|
 | `com.giovannimartins.rreader.textkit` | `BookFormat` detection from file signatures | implemented |
-| `...textkit.model` | `NormalizedBook`, `Chapter`, `BookMetadata`, `CoverImage`, `TextRange`, `ReadingPosition` | implemented |
+| `...textkit.model` | `NormalizedBook`, `Chapter` (with `Chapter.paragraphRangesOf` for any chapter text), `BookMetadata`, `CoverImage`, `TextRange`, `ReadingPosition` | implemented |
 | `...textkit.epub` | `EpubParser`: EPUB 2/3 container, OPF metadata, spine, nav/NCX chapter titles, cover and DRM detection, with safe ZIP and XML handling | implemented |
 | `...textkit.text` | `SentenceSegmenter` splits text into pt-BR aware sentence ranges (abbreviations, initials, dialogue dashes; never across paragraphs); `SegmentPlanner` groups them into rendered segments and finds the segment to resume from; `SpeechNormalizer.toSpeech` rewrites a segment or heading for voices at render time | implemented |
 | `...textkit.layout` | `LayoutBookBuilder`: PDF/OCR layout lines → `NormalizedBook` (running headers, footers and page numbers removed, hyphenation joined keeping Portuguese enclisis, paragraphs rebuilt, chapters from outline, headings or page ranges); `ScannedDocumentDetector`; `DocumentInfoCleaner` | implemented |
