@@ -43,7 +43,8 @@ Every design decision is checked against this person first.
 | Import | System file picker, "Share to" / "Open with" from other apps |
 | Library | Cover, title, author, progress %, estimated time left, "Continue listening", search, edit title/author, archive, remove |
 | Player | Background playback, lock-screen/notification/headset controls, ±15 s, chapters, speed 0.75–2×, resume, small rewind after a long pause |
-| Reading | Follow-along text with the current sentence highlighted, tap a sentence to read from there, adjustable text size |
+| Reading | Follow-along text with the current sentence highlighted, tap a sentence to read from there, adjustable text size, a choice of reading font (Atkinson Hyperlegible or the serif Literata) |
+| Ajustes | Text size for every screen on top of the phone's (four steps), dark or light theme or the phone's choice, the reading font, with a live preview |
 | Sleep timer | Minutes or end of chapter, with a gentle fade-out |
 | Voices | Android system voices (offline preferred); later, downloadable on-device neural voices |
 | Catalogue | Curated and searchable public-domain books in Portuguese from Project Gutenberg, downloaded into the library |
@@ -62,8 +63,10 @@ Every design decision is checked against this person first.
 1. **One obvious action per screen.** The play button is the hero.
 2. **Large and forgiving.** Body text ≥ 18 sp, primary buttons ≥ 56 dp,
    destructive actions confirmed, nothing important hidden in gestures.
-3. **Honour the system.** Respect font scale, dark theme by default with
-   high contrast, TalkBack labels everywhere.
+3. **Honour the system, then the listener.** Respect the phone's font scale
+   and let the listener make all text larger on top of it; dark theme by
+   default with high contrast, and a light theme (or the phone's choice) when
+   the listener prefers it; TalkBack labels everywhere.
 4. **Never lose the place.** Progress is saved continuously; resuming is
    always one tap.
 5. **Plain language.** Short Portuguese copy, no jargon, errors that say what

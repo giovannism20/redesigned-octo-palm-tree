@@ -87,7 +87,7 @@ Base package: `com.giovannimartins.rreader`.
 | `work` | Helpers shared by WorkManager jobs (`reportingProgress`: conflated progress publishing) | implemented |
 | `net` | `HttpsClient`, the only way to the network: HTTPS GETs through an `HttpTransport` (`UrlConnectionTransport` on `HttpsURLConnection`), every address and redirect checked by the client's `HostAllowlist`, media type, size and redirect limits, and resuming an interrupted download from where it stopped (`Range`, HTTP 206) | implemented |
 | `catalog` | Free public-domain catalogue (Project Gutenberg, [ADR 0017](decisions/0017-free-catalogue-from-project-gutenberg.md)): `CatalogHttp`, the `HttpsClient` for `CatalogHosts` with the `CatalogUserAgent`; `CuratedCatalog` (curated classics from an asset), `CatalogRepository` (OPDS search through `GutenbergEndpoints`, pages kept in memory by `SearchCache`), `CatalogDownloads` (`WorkManagerCatalogDownloads`: one unique `DownloadBookWorker` job per book, needing a connection) running `CatalogDownloader` (EPUB → temporary file → `BookIntake.importFile`), `NetworkStatus` (offline or not, from the system's default network) | implemented |
-| `ui` | Compose screens, ViewModels, navigation, theme, design system; `ui/player`: `PlaybackConnection` (`MediaController` while the app is visible), mini player, full player with speed, chapters, time left and the sleep timer; `ui/library`: progress and time left (`LibraryTimeLeft`); `ui/reader`: follow-along reader (`ReaderViewModel`, `ReaderChapter`); `ui/components`: `BookCover`, time-left text (`timeLeft`); `ui/explore`: Explore tab (`ExploreViewModel`: curated classics, search, downloads, offline state); `ui/voices`: Voices tab (`VoicesViewModel`: the nine neural voices with their emblems (`VoiceEmblem`, `VoiceLooks`), bundled samples (`VoiceSamplePlayer`), downloads, deletion, the phone's voice and its other voices named apart by `PhoneVoiceLabels`), `SystemSettings`; `ui/about`: About and licences (`AboutViewModel`, `AboutContent`, licence texts in `assets/licenses/`); `ui/player` also has the voice chooser (`VoiceChooserViewModel`, `VoiceChoices`, `VoiceChooserSheet`) | in progress (shell, library, explore, add book, voices, player) |
+| `ui` | Compose screens, ViewModels, navigation (`TopDestination`: Biblioteca, Explorar, Vozes, Ajustes; `ShellNavigationBar`), theme and design system (`ui/theme`: both colour schemes, `RReaderTheme` with the text size, the reading fonts; `ui/components`: `ScreenSurface`, `FitOrScrollColumn`, and `AppAlertDialog`, `AppModalBottomSheet` and `AppDropdownMenu`, which keep the text size in their windows); `ui/settings`: Ajustes tab (`SettingsViewModel`, read by the app's root too, `SettingsScreen`); `ui/player`: `PlaybackConnection` (`MediaController` while the app is visible), mini player, full player with speed, chapters, time left and the sleep timer; `ui/library`: progress and time left (`LibraryTimeLeft`), "Add a book" opening `ui/importer`'s `ImportScreen` as a page of the tab; `ui/reader`: follow-along reader (`ReaderViewModel`, `ReaderChapter`); `ui/components`: `BookCover`, time-left text (`timeLeft`); `ui/explore`: Explore tab (`ExploreViewModel`: curated classics, search, downloads, offline state); `ui/voices`: Voices tab (`VoicesViewModel`: the nine neural voices with their emblems (`VoiceEmblem`, `VoiceLooks`), bundled samples (`VoiceSamplePlayer`), downloads, deletion, the phone's voice and its other voices named apart by `PhoneVoiceLabels`), `SystemSettings`; `ui/about`: About and licences (`AboutViewModel`, `AboutContent`, licence texts in `assets/licenses/`); `ui/player` also has the voice chooser (`VoiceChooserViewModel`, `VoiceChoices`, `VoiceChooserSheet`) | in progress (shell, library, explore, add book, voices, player, settings) |
 | `di` | Hilt modules (dispatchers, application scope, database, WorkManager) | implemented |
 
 ## Layering rules
@@ -311,12 +311,57 @@ sequenceDiagram
   reading from a chapter left behind, the reader stays on it until the voice
   gets there.
 - **Text size**: A− and A+ step through 0.85×–2× (`ReaderTextScale`), saved
-  as `readerTextScale` in the settings; sizes are in sp, so the system font
-  scale applies on top.
+  as `readerTextScale` in the settings; sizes are in sp, so the app's text
+  size and the system font scale apply on top (see [Appearance](#appearance)).
 - **Reading font**: the text is in the listener's reading font
   (`ReadingFont`, from the settings with the text size: Atkinson Hyperlegible
   Next or Literata, `readingTextStyle`); everything else on the screen stays
   in the app's typeface.
+
+### Appearance
+
+The listener chooses how every screen looks in the Ajustes tab: the text
+size, the theme and the reading font.
+
+```mermaid
+flowchart LR
+    S[(DataStore settings)] --> R[SettingsRepository.appearance]
+    R --> VM[SettingsViewModel<br/>StateFlow, activity scope]
+    VM --> M[MainActivity: launch screen,<br/>system bar icons]
+    VM --> T[RReaderTheme<br/>colour scheme, font scale]
+    T --> UI[Every screen]
+    T -->|App dialogs, sheets, menus| W[Their own windows]
+    A[Ajustes tab] -->|setTextSize, setTheme, setReadingFont| VM
+```
+
+- **One source.** `SettingsRepository.appearance` reads the three choices
+  from DataStore (keys `text_size`, `theme`, `reading_font`, saved as stable
+  words rather than code names); a missing, unknown or damaged value gives its
+  default (`NORMAL`, `DARK`, `ATKINSON`), as does any value of another type.
+  `SettingsViewModel` holds it as a `StateFlow` in the activity's scope; the
+  Ajustes tab gets the same instance and saves changes through it, so a
+  change reaches every screen at once, without a restart.
+- **Root.** `MainActivity` keeps the launch screen until the appearance is
+  read (null until then), so the first screen already has the listener's
+  theme and text size, then draws `RReaderApp` inside
+  `RReaderTheme(darkTheme, textSize)`. `ThemeChoice.isDark()` turns "the
+  phone's choice" into the phone's dark theme setting. The status and
+  navigation bar icons follow the theme (`SystemBarStyle.auto` with the
+  theme's darkness); the launch screen stays night blue.
+- **Text size.** `RReaderTheme` provides `LocalDensity` with the phone's font
+  scale times the step (1, 1.15, 1.3 or 1.5), so every size in sp grows, with
+  Compose's non-linear scaling of large text. Dialogs, sheets and menus open
+  in windows of their own whose content gets the phone's density back, so
+  screens use `AppAlertDialog`, `AppModalBottomSheet` and `AppDropdownMenu`
+  (`ui/components/AppWindows.kt`), which read the density where they open and
+  apply it again inside; the dialog's text also scrolls. Screens scroll when
+  they get taller than the screen; the player keeps `FitOrScrollColumn`, and
+  its cover gives way when no room is left. The tab labels take the largest
+  size, up to the listener's, at which the longest fits its tab on one line,
+  never less than at the phone's normal size (`ShellNavigationBar`).
+- **Theme.** `colorSchemeFor(darkTheme)` picks `RReaderDarkColorScheme` or
+  `RReaderLightColorScheme` (docs/design/brand.md); screens use theme roles
+  only, so both apply everywhere.
 
 ### Resume rewind
 

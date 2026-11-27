@@ -14,9 +14,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -44,6 +44,7 @@ import com.giovannimartins.rreader.data.db.BookStatus
 import com.giovannimartins.rreader.data.db.ImportFailure
 import com.giovannimartins.rreader.data.library.LibraryBook
 import com.giovannimartins.rreader.importer.ImportProgress
+import com.giovannimartins.rreader.ui.components.AppAlertDialog
 import com.giovannimartins.rreader.ui.components.BookCover
 import com.giovannimartins.rreader.ui.components.timeLeft
 import com.giovannimartins.rreader.ui.importer.messageRes
@@ -78,8 +79,8 @@ fun LibraryRoute(
 }
 
 /**
- * The library: "Continue listening" first, then every book with its progress. Tap a ready book to listen. When the
- * library cannot be read, it says so and offers to try again ([onRetry]).
+ * The library: a large "Add a book" action, "Continue listening", then every book with its progress. Tap a ready book
+ * to listen. When the library cannot be read, it says so and offers to try again ([onRetry]).
  */
 @Composable
 fun LibraryScreen(
@@ -115,8 +116,9 @@ fun LibraryScreen(
                         modifier = Modifier.semantics { heading() },
                     )
                 }
+                item { AddBookButton(onClick = onAddBook) }
                 if (state.books.isEmpty()) {
-                    item { LibraryEmptyState(onAddBook = onAddBook) }
+                    item { LibraryEmptyState() }
                 }
                 state.continueListening?.let { book ->
                     item {
@@ -149,13 +151,23 @@ fun LibraryScreen(
     }
 }
 
+/** The large action at the top of the library: it opens the page that adds a book from a file. */
 @Composable
-private fun LibraryEmptyState(
-    onAddBook: () -> Unit,
+private fun AddBookButton(
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    FilledTonalButton(onClick = onClick, modifier = modifier.fillMaxWidth().heightIn(min = 64.dp)) {
+        Icon(painterResource(R.drawable.ic_add_book), contentDescription = null)
+        Spacer(Modifier.width(12.dp))
+        Text(text = stringResource(R.string.library_add_book), style = MaterialTheme.typography.labelLarge)
+    }
+}
+
+@Composable
+private fun LibraryEmptyState(modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier.fillMaxWidth().padding(top = 48.dp),
+        modifier = modifier.fillMaxWidth().padding(top = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -175,9 +187,6 @@ private fun LibraryEmptyState(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
-        Button(onClick = onAddBook, modifier = Modifier.heightIn(min = 56.dp)) {
-            Text(text = stringResource(R.string.import_title), style = MaterialTheme.typography.labelLarge)
-        }
     }
 }
 
@@ -335,7 +344,7 @@ private fun RemoveBookDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.library_remove_title)) },
         text = { Text(stringResource(R.string.library_remove_body)) },

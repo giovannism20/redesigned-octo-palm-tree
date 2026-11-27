@@ -54,7 +54,7 @@ Libraries used by the app are declared in `gradle/libs.versions.toml`.
 | Kotlin standard library, kotlinx.coroutines and kotlinx.serialization (OCR pages saved as JSON) | Apache License 2.0 |
 | Dagger / Hilt | Apache License 2.0 |
 | Coil | Apache License 2.0 |
-| Material Icons (vector paths in `app/src/main/res/drawable/ic_*.xml`: library, add book, voices, play, pause, speed, chapters, minimize, notification headset, sleep timer, text, back, explore, search, download, check, expand more, expand less, stop) | Apache License 2.0 |
+| Material Icons (vector paths in `app/src/main/res/drawable/ic_*.xml`: library, add book, voices, play, pause, speed, chapters, minimize, notification headset, sleep timer, text, back, explore, search, download, check, expand more, expand less, stop, settings) | Apache License 2.0 |
 | AndroidX Media3 "skip back/forward 15" icons (vector paths in `ic_replay_15.xml` and `ic_forward_15.xml`, Copyright 2024 The Android Open Source Project) | Apache License 2.0 |
 | jsoup (EPUB XML/XHTML parsing in `:textkit`) | MIT License (full text below) |
 | PdfBox-Android (PDF text extraction) | Apache License 2.0 (NOTICE below) |

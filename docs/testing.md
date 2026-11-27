@@ -38,6 +38,29 @@ cached segments again. Player screens also run under
 Robolectric with `createComposeRule` (on a phone-sized screen) to check
 spoken labels, touch targets of at least 56 dp and the actions they send.
 
+Every screen is checked in both colour schemes and at the largest text size:
+
+- `ThemeTest` runs every palette check against the dark and the light scheme:
+  every Material role on the brand palette, AA for every text/surface pair,
+  and the content colour Material picks for each surface (surfaceVariant kept
+  apart from the container tones). `RReaderThemeTest` checks which scheme each
+  theme choice shows (the phone's choice under Robolectric's `night` and
+  `notnight` qualifiers) and that the text size multiplies the phone's font
+  scale at the root.
+- `assertAllTextReadableOn` (in `ui/ReadableText.kt`) takes the background of
+  the scheme a screen is drawn in; `assertAllTextReadableIn(scheme)` adds the
+  filled buttons and generated covers. Library, Player (with the voice notice),
+  Reader, Voices, Ajustes and the add-book page are checked in both themes.
+- Layout tests that depend on how wide text is (`PlayerLayoutTest`: the
+  playback controls on the screen and everything else reachable at 1.3 × the
+  largest size, the cover never over the title; `ShellNavigationBarTest`:
+  four tabs whose labels fit on one line at 384 dp) run with Robolectric's
+  native graphics (`@GraphicsMode(NATIVE)`), which measures text with the real
+  typeface; the default graphics mode fakes text widths.
+- `TextSizeInWindowsTest` opens each dialog, sheet and menu at the largest size
+  and checks its text was laid out with the listener's size, since those
+  windows bring the phone's density back.
+
 Text recognition of scanned PDFs is tested on the JVM with a fake
 `PageTextRecognizer` that returns what a recognizer would read on each page
 (built through textkit's `OcrPageLayout` from pixel boxes at 300 dpi), so
@@ -221,3 +244,19 @@ new version:
 25. "Sobre e licenças" opens from the bottom of Vozes, shows the version, the
     source address, the GPL note and every licence text; "Abrir no
     navegador" opens the repository.
+26. The bar shows Biblioteca, Explorar, Vozes and Ajustes; "Adicionar livro"
+    at the top of the library opens the page that picks a file, back returns
+    to the books, and a book shared from a messaging app still arrives.
+27. In Ajustes, choose "Muito grande": every screen, the player and the
+    reader, dialogs ("Remover"), the chapter list and the speed and timer
+    menus get larger at once; the tab labels stay whole on one line; the
+    player's controls stay on the screen and the rest scrolls. Do it again
+    with the phone's own font size at the maximum.
+28. Choose "Claro": every screen turns to paper with dark text, the status
+    and navigation bar icons turn dark, and nothing is hard to read; "Igual
+    ao celular" follows the phone's dark theme switch. Force-close the app
+    and reopen it: the launch screen gives way to the chosen theme and size
+    directly, without a flash of the other.
+29. Choose "Literata": the text in "Texto" changes to the serif face, with
+    the sentence being read still highlighted; titles and buttons stay in the
+    app's typeface. "Sobre e licenças" lists Literata's licence.

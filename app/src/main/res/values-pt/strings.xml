@@ -2,11 +2,11 @@
 <resources>
     <!-- Navigation -->
     <string name="tab_library">Biblioteca</string>
-    <string name="tab_add_book">Adicionar</string>
     <string name="tab_explore">Explorar</string>
 
     <!-- Library -->
     <string name="library_title">Biblioteca</string>
+    <string name="library_add_book">Adicionar livro</string>
     <string name="library_empty_title">Sua biblioteca está vazia</string>
     <string name="library_empty_body">Adicione um PDF ou EPUB para começar a ouvir.</string>
     <string name="library_continue">Continuar ouvindo</string>
@@ -29,6 +29,7 @@
 
     <!-- Import -->
     <string name="import_title">Adicionar livro</string>
+    <string name="import_back">Voltar à biblioteca</string>
     <string name="import_body">Escolha um arquivo PDF ou EPUB salvo no seu celular.</string>
     <string name="import_choose">Escolher arquivo</string>
     <string name="import_tip_share">Dica: no aplicativo de mensagens, abra o arquivo do livro, toque em Compartilhar e escolha R Reader.</string>
@@ -221,6 +222,31 @@
 
     <!-- Durations, shown inside the time-left sentences -->
     <string name="duration_under_a_minute">menos de 1 min</string>
+
+    <!-- Settings -->
+    <string name="tab_settings">Ajustes</string>
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_text_size">Tamanho do texto</string>
+    <string name="settings_text_size_intro">Vale para todas as telas, além do tamanho de letra do celular.</string>
+    <string name="settings_preview">Exemplo</string>
+    <string name="settings_preview_text">Este é o tamanho das letras no aplicativo.</string>
+    <string name="text_size_normal">Normal</string>
+    <string name="text_size_large">Grande</string>
+    <string name="text_size_larger">Maior</string>
+    <string name="text_size_largest">Muito grande</string>
+    <string name="settings_theme">Tema</string>
+    <string name="settings_theme_intro">As cores do aplicativo.</string>
+    <string name="theme_dark">Escuro</string>
+    <string name="theme_dark_description">Fundo azul-noite com letras claras.</string>
+    <string name="theme_light">Claro</string>
+    <string name="theme_light_description">Fundo cor de papel com letras escuras.</string>
+    <string name="theme_phone">Igual ao celular</string>
+    <string name="theme_phone_description">Escuro ou claro, como estiver no celular.</string>
+    <string name="settings_reading_font">Letra da leitura</string>
+    <string name="settings_reading_font_intro">Para o texto que acompanha a voz, aberto em Texto no player.</string>
+    <string name="reading_font_atkinson_description">Letras fáceis de distinguir.</string>
+    <string name="reading_font_literata_description">Letra de livro, com serifas.</string>
+    <string name="reading_font_sample">Ia entrar na sala de visitas, quando ouvi proferir o meu nome.</string>
 
     <!-- Common -->
     <string name="action_cancel">Cancelar</string>

@@ -6,13 +6,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -21,7 +17,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -37,12 +32,13 @@ import com.giovannimartins.rreader.ui.player.NowPlaying
 import com.giovannimartins.rreader.ui.player.PlayerRoute
 import com.giovannimartins.rreader.ui.player.PlayerViewModel
 import com.giovannimartins.rreader.ui.reader.ReaderRoute
+import com.giovannimartins.rreader.ui.settings.SettingsRoute
 import com.giovannimartins.rreader.ui.voices.VoicesRoute
 
 /**
  * App shell: bottom navigation with the mini player above it, the full player over everything when it is
- * open, the follow-along reader over the player, and snackbar feedback for imports. [openPlayerRequests] grows
- * each time the notification asks to open the player.
+ * open, the follow-along reader over the player, and snackbar feedback for imports. "Add a book" opens a page of
+ * the library tab. [openPlayerRequests] grows each time the notification asks to open the player.
  */
 @Composable
 fun RReaderApp(
@@ -52,6 +48,7 @@ fun RReaderApp(
     playerViewModel: PlayerViewModel = hiltViewModel(),
 ) {
     var destination by rememberSaveable { mutableStateOf(TopDestination.LIBRARY) }
+    var addingBook by rememberSaveable { mutableStateOf(false) }
     var playerOpen by rememberSaveable { mutableStateOf(false) }
     var readerOpen by rememberSaveable { mutableStateOf(false) }
     var aboutOpen by rememberSaveable { mutableStateOf(false) }
@@ -59,6 +56,12 @@ fun RReaderApp(
     val importState by importViewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val messageText = importState.message?.let { stringResource(it.messageRes()) }
+
+    /** Shows [tab], closing the add-book page of the library. */
+    fun showTab(tab: TopDestination) {
+        addingBook = false
+        destination = tab
+    }
 
     LaunchedEffect(openPlayerRequests) {
         if (openPlayerRequests > 0) playerOpen = true
@@ -72,7 +75,7 @@ fun RReaderApp(
         if (messageText == null) return@LaunchedEffect
         // After a file arrives, show the library so the new book is visible.
         playerOpen = false
-        destination = TopDestination.LIBRARY
+        showTab(TopDestination.LIBRARY)
         snackbarHostState.showSnackbar(messageText)
         importViewModel.messageShown()
     }
@@ -88,7 +91,7 @@ fun RReaderApp(
                 onMinimize = { playerOpen = false },
                 onOpenVoices = {
                     playerOpen = false
-                    destination = TopDestination.VOICES
+                    showTab(TopDestination.VOICES)
                 },
             )
         } else {
@@ -97,7 +100,9 @@ fun RReaderApp(
                 destination = destination,
                 snackbarHostState = snackbarHostState,
                 receivingBook = importState.receiving,
-                onNavigate = { destination = it },
+                addingBook = addingBook,
+                onAddingBookChange = { addingBook = it },
+                onNavigate = ::showTab,
                 onOpenPlayer = { playerOpen = true },
                 onOpenAbout = { aboutOpen = true },
                 onFileSelect = importViewModel::import,
@@ -115,6 +120,8 @@ private fun ShellTabs(
     destination: TopDestination,
     snackbarHostState: SnackbarHostState,
     receivingBook: Boolean,
+    addingBook: Boolean,
+    onAddingBookChange: (Boolean) -> Unit,
     onNavigate: (TopDestination) -> Unit,
     onOpenPlayer: () -> Unit,
     onOpenAbout: () -> Unit,
@@ -140,6 +147,8 @@ private fun ShellTabs(
         ShellDestination(
             destination = destination,
             receivingBook = receivingBook,
+            addingBook = addingBook,
+            onAddingBookChange = onAddingBookChange,
             onFileSelect = onFileSelect,
             onNavigate = onNavigate,
             onOpenPlayer = onOpenPlayer,
@@ -186,16 +195,7 @@ private fun ShellBottomBar(
                 onSeekBack = onSeekBack,
             )
         }
-        NavigationBar {
-            TopDestination.entries.forEach { item ->
-                NavigationBarItem(
-                    selected = destination == item,
-                    onClick = { onDestinationSelect(item) },
-                    icon = { Icon(painterResource(item.iconRes), contentDescription = null) },
-                    label = { Text(stringResource(item.labelRes)) },
-                )
-            }
-        }
+        ShellNavigationBar(destination = destination, onDestinationSelect = onDestinationSelect)
     }
 }
 
@@ -203,6 +203,8 @@ private fun ShellBottomBar(
 private fun ShellDestination(
     destination: TopDestination,
     receivingBook: Boolean,
+    addingBook: Boolean,
+    onAddingBookChange: (Boolean) -> Unit,
     onFileSelect: (Uri) -> Unit,
     onNavigate: (TopDestination) -> Unit,
     onOpenPlayer: () -> Unit,
@@ -212,19 +214,28 @@ private fun ShellDestination(
     Box(modifier = modifier) {
         when (destination) {
             TopDestination.LIBRARY -> {
-                LibraryRoute(onAddBook = { onNavigate(TopDestination.ADD_BOOK) }, onOpenPlayer = onOpenPlayer)
+                if (addingBook) {
+                    BackHandler { onAddingBookChange(false) }
+                    ImportScreen(
+                        receiving = receivingBook,
+                        onFileSelect = onFileSelect,
+                        onClose = { onAddingBookChange(false) },
+                    )
+                } else {
+                    LibraryRoute(onAddBook = { onAddingBookChange(true) }, onOpenPlayer = onOpenPlayer)
+                }
             }
 
             TopDestination.EXPLORE -> {
                 ExploreRoute(onOpenLibrary = { onNavigate(TopDestination.LIBRARY) })
             }
 
-            TopDestination.ADD_BOOK -> {
-                ImportScreen(receiving = receivingBook, onFileSelect = onFileSelect)
-            }
-
             TopDestination.VOICES -> {
                 VoicesRoute(onOpenAbout = onOpenAbout)
+            }
+
+            TopDestination.SETTINGS -> {
+                SettingsRoute()
             }
         }
     }

@@ -8,6 +8,13 @@ All notable user-visible changes are documented here. The format follows
 
 ### Added
 
+- Ajustes, a new tab, to make the app comfortable to read: the text size of
+  every screen in four steps on top of the phone's own font size (Normal,
+  Grande, Maior, Muito grande), with a preview; the colours: Escuro (as
+  before), Claro (paper-coloured background with dark letters) or Igual ao
+  celular; and the letters of the follow-along text: Atkinson Hyperlegible or
+  Literata, a book typeface with serifs. A choice applies at once to every
+  screen, dialogs and menus included, and is remembered.
 - Natural voices: nine offline neural voices in Vozes (Dora, Alex, Cadu,
   Santa, Faber, Dii, Jeff, Miro and Edresson), most recommended first. Each
   has its own emblem, a short description and "Ouvir", which plays a sample
@@ -102,6 +109,10 @@ All notable user-visible changes are documented here. The format follows
 
 ### Changed
 
+- "Adicionar" left the bottom bar: "Adicionar livro" is a large button at the
+  top of the library that opens the same page to choose a file, now with a
+  way back. The bar has four tabs, Biblioteca, Explorar, Vozes and Ajustes,
+  whose names stay whole on one line even with very large text.
 - One look on every screen: a typeface designed for readers with low vision
   (Atkinson Hyperlegible Next) throughout the app, and the app's own colours
   on cards, tabs, progress bars, the chapter list and messages instead of
@@ -122,6 +133,8 @@ All notable user-visible changes are documented here. The format follows
 
 - With very large text the player's cover no longer covers the book's title:
   it gives way to the controls when no room is left.
+- The icons of the status and navigation bars follow the app's colours
+  instead of the phone's theme, so they stay visible.
 - The Dora, Alex and Santa voices no longer have a thin, high metallic
   whistle in the background, which was easy to hear on headphones.
 - A sentence that makes a natural voice close the app no longer stops the
