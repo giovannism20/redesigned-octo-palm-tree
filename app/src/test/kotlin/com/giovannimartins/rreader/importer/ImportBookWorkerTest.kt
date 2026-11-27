@@ -15,6 +15,7 @@ import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
 import com.giovannimartins.rreader.data.db.BookEntity
 import com.giovannimartins.rreader.data.db.BookStatus
+import com.giovannimartins.rreader.data.db.ImportFailure
 import com.giovannimartins.rreader.data.db.RReaderDatabase
 import com.giovannimartins.rreader.data.files.BookFileStore
 import com.giovannimartins.rreader.textkit.BookFormat
@@ -117,6 +118,38 @@ class ImportBookWorkerTest {
     }
 
     @Test
+    fun `gives up an import started too many times, marking the book too complex`() {
+        var parses = 0
+        val worker =
+            TestListenableWorkerBuilder<ImportBookWorker>(context)
+                .setInputData(ImportBookWorker.inputFor(BOOK_ID))
+                .setRunAttemptCount(ImportBookWorker.MAX_RUN_ATTEMPTS)
+                .setWorkerFactory(factory(onParse = { parses++ }))
+                .build()
+
+        assertThat(runBlocking { worker.doWork() }).isEqualTo(ListenableWorker.Result.failure())
+        val book = runBlocking { database.bookDao().findById(BOOK_ID)!! }
+        assertThat(book.status).isEqualTo(BookStatus.FAILED)
+        assertThat(book.failureReason).isEqualTo(ImportFailure.TOO_COMPLEX)
+        assertThat(parses).isEqualTo(0)
+    }
+
+    @Test
+    fun `still imports on the last run allowed`() {
+        val worker =
+            TestListenableWorkerBuilder<ImportBookWorker>(context)
+                .setInputData(ImportBookWorker.inputFor(BOOK_ID))
+                .setRunAttemptCount(ImportBookWorker.MAX_RUN_ATTEMPTS - 1)
+                .setWorkerFactory(factory())
+                .setProgressUpdater { _, _, _ -> Futures.immediateVoidFuture() }
+                .setForegroundUpdater { _, _, _ -> Futures.immediateVoidFuture() }
+                .build()
+
+        assertThat(runBlocking { worker.doWork() }).isEqualTo(ListenableWorker.Result.success())
+        assertThat(runBlocking { database.bookDao().findById(BOOK_ID)!!.status }).isEqualTo(BookStatus.READY)
+    }
+
+    @Test
     fun `fails a job without a book`() {
         val worker =
             TestListenableWorkerBuilder<ImportBookWorker>(context)
@@ -141,17 +174,17 @@ class ImportBookWorkerTest {
         return runBlocking { worker.doWork() }
     }
 
-    private fun factory() =
+    private fun factory(onParse: () -> Unit = {}) =
         object : WorkerFactory() {
             override fun createWorker(
                 appContext: Context,
                 workerClassName: String,
                 workerParameters: WorkerParameters,
-            ) = ImportBookWorker(appContext, workerParameters, processor(), ImportNotifications(appContext))
+            ) = ImportBookWorker(appContext, workerParameters, processor(onParse), ImportNotifications(appContext))
         }
 
     /** Imports with a parser that reports recognizing two pages, then returns a book. */
-    private fun processor() =
+    private fun processor(onParse: () -> Unit) =
         BookImportProcessor(
             bookDao = database.bookDao(),
             files = BookFileStore(folder.root),
@@ -159,6 +192,7 @@ class ImportBookWorkerTest {
                 mapOf(
                     BookFormat.PDF to
                         BookParser { request ->
+                            onParse()
                             request.progress.onProgress(ImportProgress.RecognizingText(1, 2))
                             request.progress.onProgress(ImportProgress.RecognizingText(2, 2))
                             ParseOutcome.Parsed(

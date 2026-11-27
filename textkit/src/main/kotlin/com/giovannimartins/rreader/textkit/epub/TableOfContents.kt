@@ -23,7 +23,7 @@ internal object TableOfContents {
     fun fromNavigationDocument(
         archive: EpubArchive,
         path: String,
-        budget: ParseBudget = ParseBudget.UNLIMITED,
+        budget: ParseBudget = ParseBudget.unlimited(),
     ): List<TocEntry> {
         val toc =
             archive
@@ -44,7 +44,7 @@ internal object TableOfContents {
     fun fromNcx(
         archive: EpubArchive,
         path: String,
-        budget: ParseBudget = ParseBudget.UNLIMITED,
+        budget: ParseBudget = ParseBudget.unlimited(),
     ): List<TocEntry> {
         val navMap =
             archive

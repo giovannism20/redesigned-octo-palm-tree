@@ -58,11 +58,11 @@ internal class HeadingBlock(
 internal object ContentExtractor {
     /**
      * Extracts the paragraphs of the tree under [root] and where its headings, anchors and chapter divisions are,
-     * checking [budget] at every element.
+     * checking [budget] at every element and counting the text against it.
      */
     fun extract(
         root: Node,
-        budget: ParseBudget = ParseBudget.UNLIMITED,
+        budget: ParseBudget = ParseBudget.unlimited(),
     ): ContentDocument = ParagraphCollector(budget).apply { traverse(root) }.finish()
 
     /** The readable text of [element] on a single line, as used for titles and labels. */
@@ -218,7 +218,10 @@ private class ParagraphCollector(
         val text = TextCleaner.clean(pending)
         pending.setLength(0)
         pendingVisible = false
-        if (text.isNotEmpty()) paragraphs += text
+        if (text.isNotEmpty()) {
+            budget.countText(text.length)
+            paragraphs += text
+        }
     }
 }
 

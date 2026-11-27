@@ -1,9 +1,13 @@
 package com.giovannimartins.rreader.importer
 
 import android.content.Context
+import android.database.sqlite.SQLiteFullException
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.giovannimartins.rreader.data.db.BookDao
+import com.giovannimartins.rreader.data.db.BookEntity
 import com.giovannimartins.rreader.data.db.BookStatus
+import com.giovannimartins.rreader.data.db.ChapterEntity
 import com.giovannimartins.rreader.data.db.ImportFailure
 import com.giovannimartins.rreader.data.db.RReaderDatabase
 import com.giovannimartins.rreader.data.files.BookFileStore
@@ -140,6 +144,35 @@ class ImportPipelineTest {
         }
 
     @Test
+    fun `an error that escapes a parser marks the book failed instead of leaving it importing`() =
+        runTest {
+            assertThat(failureWhenParserThrows(IllegalStateException("parser bug"))).isEqualTo(ImportFailure.CORRUPTED)
+            assertThat(failureWhenParserThrows(StackOverflowError())).isEqualTo(ImportFailure.TOO_COMPLEX)
+            assertThat(failureWhenParserThrows(OutOfMemoryError())).isEqualTo(ImportFailure.TOO_COMPLEX)
+        }
+
+    @Test
+    fun `a database error while storing a parsed book marks it failed as a storage error`() =
+        runTest {
+            val bookId = (intake().importStream(ByteArrayInputStream(EPUB_HEADER), "x") as IntakeResult.Queued).bookId
+            val storage = database.bookDao()
+            val brokenStorage =
+                object : BookDao by storage {
+                    override suspend fun completeImport(
+                        book: BookEntity,
+                        chapters: List<ChapterEntity>,
+                    ): Unit = throw SQLiteFullException("database or disk is full")
+                }
+            val parsed = NormalizedBook(BookMetadata("Iracema"), listOf(Chapter(null, "Verdes mares bravios.")))
+
+            processor(BookParser { ParseOutcome.Parsed(parsed) }, dao = brokenStorage).process(bookId)
+
+            val stored = database.bookDao().findById(bookId)!!
+            assertThat(stored.status).isEqualTo(BookStatus.FAILED)
+            assertThat(stored.failureReason).isEqualTo(ImportFailure.STORAGE_ERROR)
+        }
+
+    @Test
     fun `imports a real EPUB end to end`() =
         runTest {
             val bookId =
@@ -234,6 +267,18 @@ class ImportPipelineTest {
             assertThat(files.ocrPageFile(bookId, 0).parentFile!!.exists()).isFalse()
         }
 
+    /** Imports a new file with a parser that throws [error]; returns why the book failed, after checking it did. */
+    private suspend fun kotlinx.coroutines.test.TestScope.failureWhenParserThrows(error: Throwable): ImportFailure? {
+        val content = EPUB_HEADER + error.javaClass.name.toByteArray()
+        val bookId = (intake().importStream(ByteArrayInputStream(content), "x") as IntakeResult.Queued).bookId
+
+        processor(BookParser { throw error }).process(bookId)
+
+        val stored = database.bookDao().findById(bookId)!!
+        assertThat(stored.status).isEqualTo(BookStatus.FAILED)
+        return stored.failureReason
+    }
+
     private fun pdfParser(recognizer: PageTextRecognizer = ScriptedRecognizer()) =
         PdfBookParser(PdfLayoutExtractor(context), pdfOcr(recognizer, folder.root), { null }, LayoutBookBuilder())
 
@@ -250,8 +295,9 @@ class ImportPipelineTest {
     private fun kotlinx.coroutines.test.TestScope.processor(
         parser: BookParser,
         format: BookFormat = BookFormat.EPUB,
+        dao: BookDao = database.bookDao(),
     ) = BookImportProcessor(
-        bookDao = database.bookDao(),
+        bookDao = dao,
         files = files,
         parsers = mapOf(format to parser),
         io = StandardTestDispatcher(testScheduler),

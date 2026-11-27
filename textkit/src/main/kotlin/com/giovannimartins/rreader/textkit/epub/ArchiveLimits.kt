@@ -19,6 +19,12 @@ public data class ArchiveLimits(
     /** Maximum decompressed bytes read from all entries during one parse. */
     val maxTotalBytes: Long = DEFAULT_MAX_TOTAL_BYTES,
     /**
+     * Maximum characters of text extracted from the spine documents, counted as paragraphs are cut (about 400 hours of
+     * listening by default, far beyond any real book): the text is held in memory several times while chapters are
+     * assembled.
+     */
+    val maxTextChars: Long = DEFAULT_MAX_TEXT_CHARS,
+    /**
      * How long one parse may run. It is checked before every spine document, for every element of a content document
      * or table of contents and in the loops that assemble chapters; a parse past it fails with
      * [EpubError.TooComplex].
@@ -29,13 +35,15 @@ public data class ArchiveLimits(
         require(maxEntries > 0) { "maxEntries must be positive" }
         require(maxEntryBytes > 0) { "maxEntryBytes must be positive" }
         require(maxTotalBytes > 0) { "maxTotalBytes must be positive" }
+        require(maxTextChars > 0) { "maxTextChars must be positive" }
         require(maxParseTime.isPositive()) { "maxParseTime must be positive" }
     }
 
     private companion object {
         const val DEFAULT_MAX_ENTRIES = 10_000
-        const val DEFAULT_MAX_ENTRY_BYTES = 32L * 1024 * 1024
+        const val DEFAULT_MAX_ENTRY_BYTES = 16L * 1024 * 1024
         const val DEFAULT_MAX_TOTAL_BYTES = 256L * 1024 * 1024
+        const val DEFAULT_MAX_TEXT_CHARS = 20_000_000L
         val DEFAULT_MAX_PARSE_TIME = 2.minutes
     }
 }
@@ -50,4 +58,7 @@ public enum class ArchiveLimit {
 
     /** [ArchiveLimits.maxTotalBytes]. */
     MAX_TOTAL_BYTES,
+
+    /** [ArchiveLimits.maxTextChars]. */
+    MAX_TEXT_CHARS,
 }

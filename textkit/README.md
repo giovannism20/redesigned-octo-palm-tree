@@ -32,9 +32,10 @@ when (val result = EpubParser().parse(file, fallbackTitle = file.nameWithoutExte
   `TooComplex`. It throws `InterruptedException` when its thread is
   interrupted, which is how a caller cancels it.
 - `ArchiveLimits` caps the entry count and the decompressed bytes per entry
-  and per parse (defaults: 10,000 entries, 32 MiB, 256 MiB), counting bytes
-  actually inflated rather than declared sizes, and the time a parse may
-  take (two minutes, then `TooComplex`). Entries are read in memory by exact
+  and per parse (defaults: 10,000 entries, 16 MiB, 256 MiB), counting bytes
+  actually inflated rather than declared sizes, the text extracted from the
+  spine (20 million characters, then `LimitExceeded(MAX_TEXT_CHARS)`) and
+  the time a parse may take (two minutes, then `TooComplex`). Entries are read in memory by exact
   name, never written to disk, and XML goes through jsoup's parser, which
   loads no DTDs or external entities (SR-1 to SR-3 in
   [docs/security.md](../docs/security.md)).

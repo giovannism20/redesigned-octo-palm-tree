@@ -21,7 +21,7 @@ internal object TocStarts {
     fun resolve(
         entries: List<TocEntry>,
         text: SpineText,
-        budget: ParseBudget = ParseBudget.UNLIMITED,
+        budget: ParseBudget = ParseBudget.unlimited(),
     ): List<ChapterStart> {
         val targets = entries.mapNotNull { target(it, text) }
         val depth = TocDepth.choose(targets, text, budget)
@@ -72,7 +72,7 @@ internal object TocDepth {
     fun choose(
         targets: List<TocTarget>,
         text: SpineText,
-        budget: ParseBudget = ParseBudget.UNLIMITED,
+        budget: ParseBudget = ParseBudget.unlimited(),
     ): Int {
         val levels = Levels(targets, text)
         val depths =

@@ -118,6 +118,26 @@ class EpubSecurityTest {
     }
 
     @Test
+    fun `SR-2 reading stops once the text extracted from the spine exceeds the text limit`() {
+        val file = threeChapters()
+
+        assertThat(parseError(file, EpubParser(ArchiveLimits(maxTextChars = 1_000))))
+            .isEqualTo(EpubError.LimitExceeded(ArchiveLimit.MAX_TEXT_CHARS))
+        assertThat(parseBook(file, EpubParser(ArchiveLimits(maxTextChars = 10_000))).chapters).hasSize(3)
+    }
+
+    @Test
+    fun `SR-2 by default an entry may inflate to 16 MiB and a book may hold 20 million characters`() {
+        val defaults = ArchiveLimits()
+        val fixture = EpubFixture().apply { document("c1.xhtml", "<p>Texto.</p>" + " ".repeat(17 * 1024 * 1024)) }
+
+        assertThat(defaults.maxEntryBytes).isEqualTo(16L * 1024 * 1024)
+        assertThat(defaults.maxTextChars).isEqualTo(20_000_000L)
+        assertThat(parseError(fixture.writeTo(File(directory, "livro.epub"))))
+            .isEqualTo(EpubError.LimitExceeded(ArchiveLimit.MAX_ENTRY_BYTES))
+    }
+
+    @Test
     fun `SR-2 a parse that runs longer than its time limit fails as too complex`() {
         val file = threeChapters()
         val slowClock = EpubParser(ArchiveLimits(), SteppingTimeSource(step = 1.minutes))

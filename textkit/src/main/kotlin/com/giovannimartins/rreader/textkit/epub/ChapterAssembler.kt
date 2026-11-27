@@ -39,7 +39,7 @@ internal object ChapterAssembler {
     fun assemble(
         documents: List<SpineDocument>,
         tablesOfContents: Sequence<List<TocEntry>>,
-        budget: ParseBudget = ParseBudget.UNLIMITED,
+        budget: ParseBudget = ParseBudget.unlimited(),
     ): List<Chapter> {
         val text = SpineText(documents)
         val paths = documents.mapTo(HashSet()) { it.path }

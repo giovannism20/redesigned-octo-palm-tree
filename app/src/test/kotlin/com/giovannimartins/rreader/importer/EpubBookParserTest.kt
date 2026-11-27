@@ -4,10 +4,15 @@ import com.giovannimartins.rreader.data.db.ImportFailure
 import com.giovannimartins.rreader.textkit.epub.ArchiveLimit
 import com.giovannimartins.rreader.textkit.epub.EpubError
 import com.google.common.truth.Truth.assertThat
+import org.junit.Assert.assertThrows
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+/** Under Robolectric for the Android log. */
+@RunWith(RobolectricTestRunner::class)
 class EpubBookParserTest {
     @get:Rule
     val folder = TemporaryFolder()
@@ -39,6 +44,21 @@ class EpubBookParserTest {
             EpubError.MissingPackageDocument,
             EpubError.MalformedDocument("OEBPS/c0.xhtml"),
         ).forEach { assertThat(it.toImportFailure()).isEqualTo(ImportFailure.CORRUPTED) }
+    }
+
+    @Test
+    fun `turns running out of memory or stack, and unexpected errors, into failures`() {
+        val file = folder.newFile("book.epub")
+
+        fun outcomeWhenParsing(error: Throwable) =
+            EpubBookParser { _, _ -> throw error }.parse(ParseRequest(BOOK_ID, file, fallbackTitle = "x"))
+
+        assertThat(outcomeWhenParsing(OutOfMemoryError())).isEqualTo(ParseOutcome.Failed(ImportFailure.TOO_LARGE))
+        assertThat(outcomeWhenParsing(StackOverflowError())).isEqualTo(ParseOutcome.Failed(ImportFailure.TOO_COMPLEX))
+        assertThat(
+            outcomeWhenParsing(IllegalStateException("jsoup")),
+        ).isEqualTo(ParseOutcome.Failed(ImportFailure.CORRUPTED))
+        assertThrows(InterruptedException::class.java) { outcomeWhenParsing(InterruptedException()) }
     }
 
     @Test

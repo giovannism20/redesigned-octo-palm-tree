@@ -51,7 +51,7 @@ public class EpubParser internal constructor(
     ): EpubResult {
         val result =
             try {
-                val budget = ParseBudget(limits.maxParseTime, timeSource)
+                val budget = ParseBudget(limits.maxParseTime, limits.maxTextChars, timeSource)
                 EpubArchive.open(file, limits).use { archive ->
                     EpubResult.Success(EpubBookReader(archive, budget).read(fallbackTitle))
                 }

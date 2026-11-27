@@ -89,6 +89,12 @@ All notable user-visible changes are documented here. The format follows
   split at their "CAPÍTULO I" headings. Books already in the library keep
   their chapters until they are removed and added again.
 
+### Fixed
+
+- A book whose preparation failed in an unexpected way, or kept stopping, no
+  longer stays "Preparing the book…" forever: it says why it could not be
+  prepared, and adding the same file again tries again.
+
 ### Security
 
 - A book with an enormous title, list of authors or description, or shared

@@ -404,7 +404,13 @@ sequenceDiagram
   time is drawn and recognized in the whole app (`OcrGate`).
 - Parsing a book blocks, so `BookImportProcessor` runs it with
   `runInterruptible`: a cancelled import interrupts the thread, and the PDF
-  extractor, which checks between pages and glyphs, stops.
+  extractor, which checks between pages and glyphs, and the EPUB parser,
+  which checks at every element, stop. Anything else a parser or the storage
+  throws ends the import as failed (out of memory or stack: "too complex";
+  database or file errors: "could not be saved"; the rest: "damaged"), so a
+  book never stays "being prepared" because of it. An import started ten
+  times without ending, because the system kept stopping it or its process
+  kept dying in it, is given up as too complex (`ImportBookWorker`).
 - The playback service runs in the main process as a foreground service of
   type `mediaPlayback`. The facade and the internal ExoPlayer live on the
   main looper; chapter text is read on `IO`, planned on `Default`, and

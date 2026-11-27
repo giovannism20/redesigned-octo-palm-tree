@@ -18,7 +18,7 @@ internal object HeadingStarts {
     fun inLongSections(
         starts: List<ChapterStart>,
         text: SpineText,
-        budget: ParseBudget = ParseBudget.UNLIMITED,
+        budget: ParseBudget = ParseBudget.unlimited(),
     ): List<ChapterStart> {
         val bounds = (listOf(0) + starts.map { it.paragraph } + text.size).distinct().sorted()
         return bounds

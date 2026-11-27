@@ -45,7 +45,8 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | Threat | Component | Risk | Scenario | Mitigation |
 |--------|-----------|------|----------|------------|
 | Tampering / EoP | EPUB parser (B1) | High | ZIP entry `../../databases/x` overwrites app files (zip slip) | Never write files using archive entry names; read entries in memory by exact name |
-| DoS | EPUB parser (B1) | Medium | Zip bomb or millions of entries exhaust memory/storage | Caps on entry count, per-entry and total uncompressed size; streaming reads |
+| DoS | EPUB parser (B1) | Medium | Zip bomb or millions of entries exhaust memory/storage | Caps on entry count, per-entry (16 MiB) and total uncompressed size and on the text extracted (20 million characters); streaming reads |
+| DoS | Import job (B1) | Medium | A file makes a parser run out of memory or stack, or throw an exception nobody expected, or makes the process die; the book stays "being prepared" forever and WorkManager runs its job again and again | The EPUB adapter turns running out of memory into "too large", of stack into "too complex" and other runtime exceptions into "damaged"; `BookImportProcessor` turns anything else a parser or the storage throws into a failure on the book; an import started ten times without ending is given up as too complex (SR-2, SR-4) |
 | DoS | EPUB parser (B1) | Medium | A book built to be slow to read (huge or deeply nested tables of contents, pathological markup) keeps the import busy for hours | A two-minute time limit per parse, checked before every spine document, at every element walked and in the loops that assemble chapters, ending in a typed "too complex" failure; only the first eight levels of a nested table of contents are examined; a cancelled import interrupts the parse (SR-2) |
 | DoS | Project Gutenberg markers (B1) | Medium | A paragraph of millions of asterisks makes the regular expressions that find Gutenberg's `*** START OF …` and `*** END OF …` lines retry every position of the run, in quadratic time, so the import never ends | The opening asterisks are matched only from the first asterisk of a run and never given back (`(?<!\*)\*{2,}+\s*+`), so each run is scanned once; 8 million asterisks take well under a second (`GutenbergBoilerplateTest`) |
 | Info disclosure / DoS | XML parsing (B1) | Medium | External entities or DTD expansion (XXE, billion laughs) | DTD and external entities disabled on every XML parser |
@@ -77,8 +78,12 @@ Each requirement is testable; reference its ID in tests and reviews.
 - **SR-1** Archive entry names are never used to build file-system paths
   (verified by `EpubSecurityTest`).
 - **SR-2** EPUB reading enforces limits: entry count, per-entry and total
-  uncompressed size, and time; violations yield a typed `ImportError`
-  (verified by `EpubSecurityTest`). (`ArchiveLimits.maxParseTime`, two
+  uncompressed size, the text extracted, and time; violations yield a typed
+  `ImportError` (verified by `EpubSecurityTest`). (Defaults: 10,000 entries,
+  16 MiB per entry and 256 MiB in all, inflated bytes counted as they are
+  read; at most 20 million characters of text from the spine, counted as
+  paragraphs are cut, else `LimitExceeded(MAX_TEXT_CHARS)`, shown as "too
+  large". `ArchiveLimits.maxParseTime`, two
   minutes, is checked before every spine document, at every element of a
   content document or table of contents and in the loops that assemble
   chapters, and a parse past it fails with `EpubError.TooComplex`, shown as
@@ -87,7 +92,15 @@ Each requirement is testable; reference its ID in tests and reviews.
   linear time. Interrupting the parsing thread, as a cancelled import does,
   stops the parse with `InterruptedException`, also when jsoup had already
   read the rest of a document as missing. Verified by `EpubSecurityTest`,
-  `EpubChapterTest` and `GutenbergBoilerplateTest`.)
+  `EpubChapterTest` and `GutenbergBoilerplateTest`. Whatever else a hostile
+  file provokes ends in a failure on the book, never in an import left
+  running: `EpubBookParser` maps running out of memory to "too large", of
+  stack to "too complex" and other runtime exceptions to "damaged";
+  `BookImportProcessor` turns anything else a parser or the storage throws
+  into a failure; `ImportBookWorker` gives up an import started ten times
+  without ending as "too complex", which also ends a loop of crashes in
+  native code. Verified by `EpubBookParserTest`, `ImportPipelineTest` and
+  `ImportBookWorkerTest`.)
 - **SR-3** Every XML parser disables DTDs and external entities (verified by
   `EpubSecurityTest`, and for catalogue feeds by `GutenbergFeedParserTest`).
 - **SR-4** PDF extraction and OCR run with page, time and memory limits.
