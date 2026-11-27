@@ -14,7 +14,7 @@ KDoc.
 | `...textkit.epub` | `EpubParser`: EPUB 2/3 container, OPF metadata, spine, nav/NCX chapter titles, cover and DRM detection, with safe ZIP and XML handling | implemented |
 | `...textkit.text` | `SentenceSegmenter` splits text into pt-BR aware sentence ranges (abbreviations, initials, dialogue dashes; never across paragraphs); `SegmentPlanner` groups them into rendered segments and finds the segment to resume from; `SpeechNormalizer.toSpeech` rewrites a segment or heading for voices at render time | implemented |
 | `...textkit.layout` | Cleanup of PDF/OCR layout lines, chapter detection | planned (Phase 2) |
-| `...textkit.estimate` | Progress and time-left estimates | planned (Phase 1) |
+| `...textkit.estimate` | `SpeakingRate` learns a voice's characters per second; `ReadingEstimates` derives progress, time left and character shifts (±15 s) across chapters from a `ReadingPosition` | implemented |
 
 ## EPUB parsing
 

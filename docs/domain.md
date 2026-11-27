@@ -20,7 +20,7 @@ Names used in code and docs. Add a term here when you introduce it.
 | **Speech normalization** | Small, conservative rewrites applied only when audio is rendered (never to the stored chapter text): Roman numerals to numbers in headings and after section words (`século XIX` → `século 19`), ALL-CAPS heading words to sentence case, symbols that voices read badly removed, repeated `!`/`?` collapsed, `...` to `…`. |
 | **Reading position** | `(chapterIndex, charOffset)` into normalized chapter text. The single source of truth for "where am I". |
 | **Progress** | Fraction of the book's characters before the reading position. Shown as a percentage. |
-| **Speaking rate** | Characters per second for a voice at 1.0×, measured from rendered segments and used for time estimates. |
+| **Speaking rate** | Characters per second for a voice at 1.0×, learned from rendered segments with an exponential moving average (14.5 until measured) and used for time estimates. |
 | **Time left** | Estimate: remaining characters ÷ speaking rate ÷ playback speed. |
 | **Playback speed** | User-chosen multiplier (0.75–2.0×), applied by the player with pitch preserved. |
 | **Voice** | A selectable speaker, identified by engine + voice id + locale. |
