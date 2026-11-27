@@ -16,6 +16,7 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -49,6 +50,17 @@ class ImportJobsTest {
         )
         workManager = WorkManager.getInstance(context)
         jobs = WorkManagerImportJobs(workManager)
+    }
+
+    @After
+    fun stopWork() {
+        // Stop every job (some test workers wait forever) and wait, so nothing from this test
+        // runs on after the next test has replaced WorkManager and its database.
+        WorkManager
+            .getInstance(context)
+            .cancelAllWork()
+            .result
+            .get()
     }
 
     @Test

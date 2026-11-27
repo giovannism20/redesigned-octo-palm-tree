@@ -3,10 +3,6 @@ package com.giovannimartins.rreader.importer
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import androidx.work.Configuration
-import androidx.work.WorkManager
-import androidx.work.testing.SynchronousExecutor
-import androidx.work.testing.WorkManagerTestInitHelper
 import com.giovannimartins.rreader.data.db.BookStatus
 import com.giovannimartins.rreader.data.db.ImportFailure
 import com.giovannimartins.rreader.data.db.RReaderDatabase
@@ -43,23 +39,13 @@ class ImportPipelineTest {
     private val folder = TemporaryFolder().apply { create() }
     private lateinit var database: RReaderDatabase
     private lateinit var files: BookFileStore
-    private lateinit var workManager: WorkManager
+    private lateinit var jobs: RecordingImportJobs
 
     @Before
     fun setUp() {
         database = Room.inMemoryDatabaseBuilder(context, RReaderDatabase::class.java).allowMainThreadQueries().build()
         files = BookFileStore(folder.root)
-        // Run WorkManager's own bookkeeping synchronously too, so no background task from
-        // one test touches a WorkManager database that the next test has already replaced.
-        WorkManagerTestInitHelper.initializeTestWorkManager(
-            context,
-            Configuration
-                .Builder()
-                .setExecutor(SynchronousExecutor())
-                .setTaskExecutor(SynchronousExecutor())
-                .build(),
-        )
-        workManager = WorkManager.getInstance(context)
+        jobs = RecordingImportJobs()
     }
 
     @After
@@ -82,7 +68,7 @@ class ImportPipelineTest {
             assertThat(stored.status).isEqualTo(BookStatus.IMPORTING)
             assertThat(stored.title).isEqualTo("meu_livro")
             assertThat(files.sourceFile(bookId, BookFormat.EPUB).readBytes()).isEqualTo(EPUB_HEADER)
-            assertThat(workManager.getWorkInfosForUniqueWork(ImportBookWorker.uniqueName(bookId)).get()).hasSize(1)
+            assertThat(jobs.enqueued).containsExactly(bookId)
         }
 
     @Test
@@ -245,7 +231,7 @@ class ImportPipelineTest {
             contentResolver = context.contentResolver,
             bookDao = database.bookDao(),
             files = files,
-            jobs = WorkManagerImportJobs(workManager),
+            jobs = jobs,
             clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC),
             io = StandardTestDispatcher(testScheduler),
         )
