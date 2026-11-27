@@ -16,4 +16,12 @@ internal object Diagnostics {
     ) {
         Log.w(TAG, "$where: ${error.javaClass.simpleName}")
     }
+
+    /** A request that was refused with a result [code], such as a session command the service rejected. */
+    fun recordRefused(
+        what: String,
+        code: Int,
+    ) {
+        Log.w(TAG, "$what refused: $code")
+    }
 }

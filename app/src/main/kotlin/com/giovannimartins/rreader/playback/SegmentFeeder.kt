@@ -33,8 +33,8 @@ internal class SegmentFeeder(
 ) {
     /** Called on the player's thread. */
     interface Events {
-        /** The start position was resolved to the start of its segment, or to the end of the book (null). */
-        fun onStartResolved(start: ReadingPosition?)
+        /** The start position was resolved to the segment that holds it, or to the end of the book (null). */
+        fun onStartResolved(start: SegmentCursor?)
 
         /** A segment was queued, or every remaining segment of the book has been queued. */
         fun onQueueChanged()
@@ -136,7 +136,7 @@ internal class SegmentFeeder(
         val start = pendingStart
         return if (start != null) {
             pendingStart = null
-            plans.locate(start).also { events.onStartResolved(it?.position) }
+            plans.locate(start).also(events::onStartResolved)
         } else {
             last?.let { plans.after(it) }
         }

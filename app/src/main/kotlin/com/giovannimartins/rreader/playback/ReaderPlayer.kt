@@ -17,6 +17,7 @@ import com.giovannimartins.rreader.data.settings.AppSettings
 import com.giovannimartins.rreader.di.ApplicationScope
 import com.giovannimartins.rreader.di.DefaultDispatcher
 import com.giovannimartins.rreader.textkit.model.ReadingPosition
+import com.giovannimartins.rreader.textkit.model.TextRange
 import com.giovannimartins.rreader.textkit.text.SegmentPlanner
 import com.giovannimartins.rreader.textkit.text.SpeechNormalizer
 import com.giovannimartins.rreader.tts.SegmentRenderer
@@ -44,6 +45,8 @@ data class ReaderPlayerDependencies
         val planner: SegmentPlanner,
         val speech: SpeechNormalizer,
         val rates: SpeakingRateTracker,
+        /** Where the segment being spoken is published for the UI. */
+        val status: ListeningStatus,
         /** Outlives the player, so the last position and speed are saved even after a release. */
         @ApplicationScope val saveScope: CoroutineScope,
         @DefaultDispatcher val cpu: CoroutineDispatcher,
@@ -60,7 +63,8 @@ data class ReaderPlayerDependencies
  *
  * Controllers open a book with `setMediaItem(MediaItem.Builder().setMediaId(bookId).build())`, then `prepare()`
  * and `play()`; it resumes at the start of the segment that holds the saved position. The position is saved
- * on every segment change, pause, stop and seek (throttled).
+ * on every segment change, pause, stop and seek (throttled). The segment being spoken is published in
+ * [ListeningStatus], and [handle] runs the app's custom commands ([ReaderCommands]).
  */
 @OptIn(UnstableApi::class)
 class ReaderPlayer internal constructor(
@@ -198,6 +202,7 @@ class ReaderPlayer internal constructor(
 
     override fun handleRelease(): ListenableFuture<*> {
         savePosition(force = true)
+        deps.status.publishSegment(null)
         saver.close()
         loader.cancel()
         scope.cancel()
@@ -251,6 +256,29 @@ class ReaderPlayer internal constructor(
         return Futures.immediateVoidFuture()
     }
 
+    /**
+     * Runs a custom [command] from the app; false when it does not apply now.
+     *
+     * [ReaderCommand.ReadFrom] plays the open book from the start of the segment that holds its position (the
+     * reader's "read from here"), preparing the player again when it was stopped or failed; it does not apply
+     * when no book is open or the position is not in it. An offset past the end of its chapter means the end
+     * of that chapter.
+     */
+    fun handle(command: ReaderCommand): Boolean =
+        when (command) {
+            is ReaderCommand.ReadFrom -> {
+                val target = command.position
+                val length = book?.chapterLengths?.getOrNull(target.chapterIndex)
+                if (length != null) {
+                    seekTo(ReadingPosition(target.chapterIndex, target.charOffset.coerceAtMost(length)))
+                    invalidateState()
+                    if (playbackState == Player.STATE_IDLE) prepare()
+                    play()
+                }
+                length != null
+            }
+        }
+
     private fun playbackState(): Int =
         when {
             error != null || !prepared -> Player.STATE_IDLE
@@ -279,6 +307,7 @@ class ReaderPlayer internal constructor(
         error = null
         ended = false
         position.anchor = ReadingPosition.START
+        deps.status.publishSegment(null)
         loader.cancel()
     }
 
@@ -381,6 +410,7 @@ class ReaderPlayer internal constructor(
                     book.voice?.let { refreshClock(book, it) }
                 }
                 position.anchor = ReadingPosition(segment.chapterIndex, segment.range.start)
+                deps.status.publish(book, segment.chapterIndex, segment.range)
                 saver.save(book.id, position.anchor, force = true)
                 feeder.onAdvanced()
                 invalidateState()
@@ -418,9 +448,12 @@ class ReaderPlayer internal constructor(
     }
 
     private inner class FeederEvents : SegmentFeeder.Events {
-        override fun onStartResolved(start: ReadingPosition?) {
-            if (start != null) {
-                position.anchor = start
+        override fun onStartResolved(start: SegmentCursor?) {
+            if (start == null) {
+                deps.status.publishSegment(null)
+            } else {
+                position.anchor = start.position
+                deps.status.publish(book, start.plan.index, start.range)
                 invalidateState()
             }
         }
@@ -463,4 +496,13 @@ class ReaderPlayer internal constructor(
                     Player.COMMAND_GET_AUDIO_ATTRIBUTES,
                 ).build()
     }
+}
+
+/** Publishes [range] of chapter [chapterIndex] of [book] as the segment being spoken, when a book is open. */
+private fun ListeningStatus.publish(
+    book: PlaybackBook?,
+    chapterIndex: Int,
+    range: TextRange,
+) {
+    book?.let { publishSegment(SpokenSegment(it.id, chapterIndex, range)) }
 }

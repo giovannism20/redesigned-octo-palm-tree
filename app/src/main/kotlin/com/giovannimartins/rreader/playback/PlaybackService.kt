@@ -2,8 +2,10 @@ package com.giovannimartins.rreader.playback
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.Process
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -12,6 +14,9 @@ import androidx.media3.session.CommandButton
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionError
+import androidx.media3.session.SessionResult
 import com.giovannimartins.rreader.MainActivity
 import com.giovannimartins.rreader.R
 import com.google.common.util.concurrent.Futures
@@ -46,7 +51,7 @@ class PlaybackService : MediaSessionService() {
             MediaSession
                 .Builder(this, player)
                 .setSessionActivity(openPlayerIntent())
-                .setCallback(ReaderSessionCallback)
+                .setCallback(ReaderSessionCallback(player, Process.myUid()))
                 .setMediaButtonPreferences(mediaButtons())
                 .build()
         setMediaNotificationProvider(
@@ -118,19 +123,40 @@ class PlaybackService : MediaSessionService() {
 /**
  * Lets only trusted controllers in: this app, the system (notification, lock screen, Bluetooth) and apps the
  * listener allowed to control media. Others cannot even read what is playing (SR-7). Requests to play must
- * be book ids; the [ReaderPlayer] resolves them.
+ * be book ids; the [ReaderPlayer] resolves them. The custom [ReaderCommands] are granted only to controllers
+ * running as this app ([appUid], which the system reports and nobody can claim), and their arguments are
+ * validated before they reach the player.
  */
 @OptIn(UnstableApi::class)
-internal object ReaderSessionCallback : MediaSession.Callback {
+internal class ReaderSessionCallback(
+    private val player: ReaderPlayer,
+    private val appUid: Int,
+) : MediaSession.Callback {
     override fun onConnectAsync(
         session: MediaSession,
         controller: MediaSession.ControllerInfo,
     ): ListenableFuture<MediaSession.ConnectionResult> =
         Futures.immediateFuture(
-            if (controller.isTrusted) {
-                MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller).build()
-            } else {
-                MediaSession.ConnectionResult.reject()
+            when {
+                !controller.isTrusted -> {
+                    MediaSession.ConnectionResult.reject()
+                }
+
+                controller.uid == appUid -> {
+                    val commands =
+                        MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS
+                            .buildUpon()
+                            .addSessionCommands(ReaderCommands.all.commands)
+                            .build()
+                    MediaSession.ConnectionResult
+                        .AcceptedResultBuilder(session, controller)
+                        .setAvailableSessionCommands(commands)
+                        .build()
+                }
+
+                else -> {
+                    MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller).build()
+                }
             },
         )
 
@@ -144,4 +170,20 @@ internal object ReaderSessionCallback : MediaSession.Callback {
         } else {
             Futures.immediateFailedFuture(UnsupportedOperationException("Only book ids can be played"))
         }
+
+    override fun onCustomCommand(
+        session: MediaSession,
+        controller: MediaSession.ControllerInfo,
+        customCommand: SessionCommand,
+        args: Bundle,
+    ): ListenableFuture<SessionResult> {
+        val command = ReaderCommands.decode(customCommand.customAction, args)
+        val result =
+            when {
+                command == null -> SessionError.ERROR_BAD_VALUE
+                player.handle(command) -> SessionResult.RESULT_SUCCESS
+                else -> SessionError.ERROR_INVALID_STATE
+            }
+        return Futures.immediateFuture(SessionResult(result))
+    }
 }

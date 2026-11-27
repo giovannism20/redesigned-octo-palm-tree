@@ -59,31 +59,13 @@ class ReaderPlayerTest {
     private val step = ReadingEstimates.charactersFor(15.seconds, SpeakingRate.DEFAULT, 1f)
     private val engine = FakeSpeechEngine()
     private val content = FakePlaybackContent(book(texts), texts)
-    private lateinit var internal: ExoPlayer
-    private lateinit var player: ReaderPlayer
+    private lateinit var fixture: ReaderPlayerFixture
+    private val internal get() = fixture.internal
+    private val player get() = fixture.player
 
     @Before
     fun setUp() {
-        val io = UnconfinedTestDispatcher()
-        val speech = AudioAttributes.Builder().setContentType(C.AUDIO_CONTENT_TYPE_SPEECH).build()
-        internal =
-            ExoPlayer
-                .Builder(context)
-                .setClock(FakeClock(true))
-                .setAudioAttributes(speech, true)
-                .build()
-        val rates = SpeakingRateTracker()
-        val renderer = SegmentRenderer(engine, AudioCache(folder.root), rates, Clock.systemUTC(), io)
-        val dependencies =
-            ReaderPlayerDependencies(content, renderer, planner, SpeechNormalizer(), rates, CoroutineScope(io), io)
-        player =
-            ReaderPlayer(
-                Looper.getMainLooper(),
-                internal,
-                dependencies,
-                { index -> "Chapter ${index + 1}" },
-                SystemClock::elapsedRealtime,
-            )
+        fixture = ReaderPlayerFixture(folder.root, content, engine)
     }
 
     @After
@@ -321,6 +303,71 @@ class ReaderPlayerTest {
     }
 
     @Test
+    fun `publishes the segment being spoken as listening moves on`() {
+        val segments = planner.plan(texts[0])
+        open()
+        player.play()
+        advance(player).untilState(Player.STATE_READY)
+        assertThat(spoken()).isEqualTo(SpokenSegment(BOOK_ID, 0, segments[0]))
+
+        runMainLooperUntil { spoken()?.range == segments[1] }
+
+        assertThat(content.savedPositions.last()).isEqualTo(ReadingPosition(0, segments[1].start))
+    }
+
+    @Test
+    fun `reading from a position plays from the start of the segment that holds it`() {
+        val segments = planner.plan(texts[1])
+        open()
+        advance(player).untilState(Player.STATE_READY)
+
+        assertThat(player.handle(ReaderCommand.ReadFrom(ReadingPosition(1, segments[3].start + 5)))).isTrue()
+        advance(player).untilState(Player.STATE_READY)
+
+        assertThat(player.playWhenReady).isTrue()
+        assertThat(player.currentMediaItemIndex).isEqualTo(1)
+        assertThat(player.currentPosition).isAtLeast(clock.millisFor(segments[3].start))
+        assertThat(player.currentPosition).isLessThan(clock.millisFor(segments[4].start))
+        assertThat(spoken()).isEqualTo(SpokenSegment(BOOK_ID, 1, segments[3]))
+    }
+
+    @Test
+    fun `reading from a position prepares a stopped player again`() {
+        val segments = planner.plan(texts[0])
+        open()
+        advance(player).untilState(Player.STATE_READY)
+        player.stop()
+
+        assertThat(player.handle(ReaderCommand.ReadFrom(ReadingPosition(0, segments[2].start)))).isTrue()
+        advance(player).untilState(Player.STATE_READY)
+
+        assertThat(player.playWhenReady).isTrue()
+        assertThat(spoken()?.range).isEqualTo(segments[2])
+    }
+
+    @Test
+    fun `reading from a position outside the open book is refused`() {
+        assertThat(player.handle(ReaderCommand.ReadFrom(ReadingPosition.START))).isFalse()
+
+        open()
+        advance(player).untilState(Player.STATE_READY)
+
+        assertThat(player.handle(ReaderCommand.ReadFrom(ReadingPosition(texts.size, 0)))).isFalse()
+        assertThat(player.playWhenReady).isFalse()
+    }
+
+    @Test
+    fun `opening another book clears the spoken segment`() {
+        open()
+        advance(player).untilState(Player.STATE_READY)
+        assertThat(spoken()).isNotNull()
+
+        player.setMediaItem(MediaItem.Builder().setMediaId("00000000-0000-0000-0000-00000000000f").build())
+
+        assertThat(spoken()).isNull()
+    }
+
+    @Test
     fun `an unknown book is reported as unavailable`() {
         player.setMediaItem(MediaItem.Builder().setMediaId("00000000-0000-0000-0000-00000000000f").build())
         player.prepare()
@@ -328,10 +375,9 @@ class ReaderPlayerTest {
         assertThat(advance(player).untilPlayerError().errorCode).isEqualTo(PlaybackErrors.BOOK_UNAVAILABLE)
     }
 
-    private fun open() {
-        player.setMediaItem(MediaItem.Builder().setMediaId(BOOK_ID).build())
-        player.prepare()
-    }
+    private fun open() = fixture.open()
+
+    private fun spoken(): SpokenSegment? = fixture.status.spokenSegment.value
 
     /** Delivers an audio focus change the way the platform does, on the internal player's thread. */
     private fun changeAudioFocus(focusChange: Int) {

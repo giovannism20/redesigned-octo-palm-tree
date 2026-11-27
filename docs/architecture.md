@@ -70,7 +70,7 @@ Base package: `com.giovannimartins.rreader`.
 | `importer` | `BookIntake` (picker/share/view URIs → signature check, size-limited copy, SHA-256 dedupe, book row), `ImportBookWorker` + `BookImportProcessor` (parse and persist), `BookParser` per format (`EpubBookParser`, `PdfBookParser`) | implemented |
 | `pdf` | PdfBox text extraction (`PdfLayoutExtractor`: positioned lines, outline and document info within `PdfLimits`), `PdfRenderer` page rendering (`FirstPageCoverRenderer`: first page → JPEG cover), ML Kit OCR → layout lines | in progress (text-layer PDFs; OCR in Phase 4) |
 | `tts` | `SpeechEngine` interface and `SystemTtsEngine` (multi-engine Android TTS → WAV), `AudioCache`, `WavInfo`, `SegmentRenderer` (segment → cached WAV, 300 MB LRU trim), `SpeakingRateTracker` (per-voice rate learned from rendered audio); later `SherpaOnnxEngine` | implemented (neural voices in Phase 5) |
-| `playback` | `PlaybackService` (`MediaSessionService`, trusted controllers only), `ReaderPlayer` facade (chapter playlist over an internal ExoPlayer), `SegmentFeeder` (render-ahead window), `ChapterPlans`, `SeekTargets`, `PositionSaver`, `PlaybackRepository`; later the sleep timer | implemented (sleep timer in Phase 3) |
+| `playback` | `PlaybackService` (`MediaSessionService`, trusted controllers only), `ReaderPlayer` facade (chapter playlist over an internal ExoPlayer), `SegmentFeeder` (render-ahead window), `ChapterPlans`, `SeekTargets`, `PositionSaver`, `PlaybackRepository`, `ListeningStatus` (spoken segment for the UI), `ReaderCommands` (custom session commands); later the sleep timer | implemented (sleep timer in Phase 3) |
 | `catalog` | Public-domain catalogue client and downloads | planned |
 | `ui` | Compose screens, ViewModels, navigation, theme, design system; `ui/player`: `PlaybackConnection` (`MediaController` while the app is visible), mini player, full player with speed and chapters | in progress (shell, library, add book, voices, player) |
 | `di` | Hilt modules (dispatchers, application scope, database, WorkManager) | implemented |
@@ -96,7 +96,10 @@ flowchart TB
   `MediaController`).
 - Repositories own data access and map errors to sealed types.
 - The playback service is the only owner of the player; the UI talks to it
-  through a `MediaController`.
+  through a `MediaController`. Commands Media3 has no name for ("read from
+  here") are custom session commands (`ReaderCommands`), and state it does
+  not model (the segment being spoken) reaches the UI through
+  `ListeningStatus` (see [Spoken segment and app commands](#spoken-segment-and-app-commands)).
 
 ## Key flows
 
@@ -168,6 +171,36 @@ sequenceDiagram
 6. The internal player handles audio focus (phone calls, other apps),
    "becoming noisy" (headphones unplugged) and a local wake lock; the facade
    mirrors the resulting pauses and suppressions.
+
+### Spoken segment and app commands
+
+```mermaid
+flowchart LR
+    P[ReaderPlayer] -->|publishSegment| LS[(ListeningStatus<br/>in-process singleton)]
+    LS -->|StateFlow| VM[ViewModels]
+    VM --> C[PlaybackConnection]
+    C -->|custom session command| CB[ReaderSessionCallback]
+    CB -->|validated ReaderCommand| P
+```
+
+- **State to the UI.** The facade publishes the segment being spoken
+  (`SpokenSegment`: book, chapter, character range) in `ListeningStatus`, a
+  Hilt singleton that the player and the ViewModels share. It changes when the
+  internal player moves to another segment and as soon as a seek or the start
+  position is resolved (before its audio is rendered), and clears when a book
+  closes or the player is released. This works because the playback service
+  runs in the app's own process (see Threading); moving it to another process
+  would require publishing the same values as session extras instead. The UI
+  only reads it: every change to playback still goes through the
+  `MediaController`.
+- **Commands from the UI.** `ReaderCommands` encodes commands Media3 has no
+  name for as custom session commands: `READ_FROM` carries a reading
+  position (chapter, offset) and plays from the start of the segment that
+  holds it. `ReaderSessionCallback` grants them only to controllers that run
+  as this app (same uid, which the system reports), validates the arguments
+  and passes a typed `ReaderCommand` to `ReaderPlayer.handle`; invalid
+  requests get `ERROR_BAD_VALUE`, requests that do not apply (no book open)
+  get `ERROR_INVALID_STATE`.
 
 ## Persistence
 

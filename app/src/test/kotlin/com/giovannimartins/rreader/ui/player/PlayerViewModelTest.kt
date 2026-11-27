@@ -1,8 +1,6 @@
 package com.giovannimartins.rreader.ui.player
 
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import org.junit.Test
 
 class PlayerViewModelTest {
@@ -33,43 +31,5 @@ class PlayerViewModelTest {
         assertThat(controls.calls)
             .containsExactly("seekBack", "seekForward", "seekTo 1000", "playChapter 2", "speed 1.75", "resume")
             .inOrder()
-    }
-
-    private class RecordingControls : PlaybackControls {
-        val state = MutableStateFlow<NowPlaying?>(null)
-        val calls = mutableListOf<String>()
-        override val nowPlaying: StateFlow<NowPlaying?> = state
-
-        override fun play(bookId: String) {
-            calls += "play $bookId"
-        }
-
-        override fun resume() {
-            calls += "resume"
-        }
-
-        override fun pause() {
-            calls += "pause"
-        }
-
-        override fun seekBack() {
-            calls += "seekBack"
-        }
-
-        override fun seekForward() {
-            calls += "seekForward"
-        }
-
-        override fun seekTo(positionMs: Long) {
-            calls += "seekTo $positionMs"
-        }
-
-        override fun playChapter(index: Int) {
-            calls += "playChapter $index"
-        }
-
-        override fun setSpeed(speed: Float) {
-            calls += "speed $speed"
-        }
     }
 }

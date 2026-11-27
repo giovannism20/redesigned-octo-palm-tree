@@ -10,10 +10,16 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import androidx.media3.session.SessionResult
 import androidx.media3.session.SessionToken
 import com.giovannimartins.rreader.Diagnostics
 import com.giovannimartins.rreader.playback.BookMediaItems
 import com.giovannimartins.rreader.playback.PlaybackService
+import com.giovannimartins.rreader.playback.ReaderCommand
+import com.giovannimartins.rreader.playback.ReaderCommands
+import com.giovannimartins.rreader.textkit.model.ReadingPosition
+import com.google.common.util.concurrent.FutureCallback
+import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -116,6 +122,19 @@ class PlaybackConnection
 
         override fun setSpeed(speed: Float) = withController { it.setPlaybackSpeed(speed) }
 
+        override fun readFrom(position: ReadingPosition) = send(ReaderCommand.ReadFrom(position))
+
+        /** Sends a custom [command]; the service may refuse it, for example when no book is open anymore. */
+        private fun send(command: ReaderCommand) =
+            withController { player ->
+                val (sessionCommand, args) = ReaderCommands.encode(command)
+                Futures.addCallback(
+                    player.sendCustomCommand(sessionCommand, args),
+                    CommandOutcome(sessionCommand.customAction),
+                    ContextCompat.getMainExecutor(context),
+                )
+            }
+
         private fun connect() {
             if (connecting != null) return
             val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
@@ -187,6 +206,18 @@ class PlaybackConnection
                 Player.STATE_ENDED -> player.seekToDefaultPosition(0)
                 else -> Unit
             }
+        }
+
+        /** Records custom commands the service refused or could not receive. */
+        private class CommandOutcome(
+            private val action: String,
+        ) : FutureCallback<SessionResult> {
+            override fun onSuccess(result: SessionResult) {
+                val code = result.resultCode
+                if (code != SessionResult.RESULT_SUCCESS) Diagnostics.recordRefused(action, code)
+            }
+
+            override fun onFailure(error: Throwable) = Diagnostics.recordHandled(action, error)
         }
 
         private companion object {

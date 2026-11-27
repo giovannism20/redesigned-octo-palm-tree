@@ -86,6 +86,9 @@ Each requirement is testable; reference its ID in tests and reviews.
   300 MB limit. `PlaybackService` must be exported for the system to bind
   it; `ReaderSessionCallback` accepts only trusted controllers — this app,
   the system and apps the user allowed to control media — and only book ids.
+  The app's custom session commands (`ReaderCommands`) are granted only to
+  controllers running as this app's uid, and their arguments are validated
+  before they reach the player.
   Media3 also merges its `BluetoothValidationActivity`, exported but guarded
   by the `BLUETOOTH_PRIVILEGED` permission that only the system Bluetooth app
   holds.)

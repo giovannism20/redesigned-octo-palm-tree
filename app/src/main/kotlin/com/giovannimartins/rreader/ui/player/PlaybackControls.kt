@@ -1,5 +1,6 @@
 package com.giovannimartins.rreader.ui.player
 
+import com.giovannimartins.rreader.textkit.model.ReadingPosition
 import kotlinx.coroutines.flow.StateFlow
 
 /** The UI's handle on playback, implemented by [PlaybackConnection]. Called on the main thread. */
@@ -26,4 +27,7 @@ interface PlaybackControls {
     fun playChapter(index: Int)
 
     fun setSpeed(speed: Float)
+
+    /** Starts listening from the start of the segment that holds [position] in the open book. */
+    fun readFrom(position: ReadingPosition)
 }
