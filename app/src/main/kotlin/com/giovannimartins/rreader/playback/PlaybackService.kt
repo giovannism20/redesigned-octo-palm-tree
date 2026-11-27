@@ -22,6 +22,7 @@ import com.giovannimartins.rreader.R
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
+import java.util.UUID
 import javax.inject.Inject
 
 /**
@@ -33,6 +34,11 @@ import javax.inject.Inject
  * promotes this service to the foreground; it stays there through pauses and interruptions (Media3 keeps it
  * for ten minutes after a pause) and the service stops when the book ends or the app is swiped away while
  * paused. No media button receiver is declared, so a headset cannot start playback from the background.
+ *
+ * The service is exported, so any app can send it start intents. Media3 handles media buttons and notification
+ * actions from such intents: it finds the session by the URI the intent carries, derived from the session id,
+ * and otherwise asks [onGetSession] with an untrusted caller. The session therefore gets a random id, known only
+ * to the notification's own pending intents, and [onGetSession] answers only trusted controllers (SR-7).
  */
 @AndroidEntryPoint
 @OptIn(UnstableApi::class)
@@ -50,6 +56,7 @@ class PlaybackService : MediaSessionService() {
         session =
             MediaSession
                 .Builder(this, player)
+                .setId(UUID.randomUUID().toString())
                 .setSessionActivity(openPlayerIntent())
                 .setCallback(ReaderSessionCallback(player, Process.myUid()))
                 .setMediaButtonPreferences(mediaButtons())
@@ -61,7 +68,8 @@ class PlaybackService : MediaSessionService() {
         )
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
+        session?.takeIf { ReaderSessionCallback.admits(controllerInfo) }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         val player = session?.player
@@ -123,9 +131,8 @@ class PlaybackService : MediaSessionService() {
 /**
  * Lets only trusted controllers in: this app, the system (notification, lock screen, Bluetooth) and apps the
  * listener allowed to control media. Others cannot even read what is playing (SR-7). Requests to play must
- * be book ids; the [ReaderPlayer] resolves them. The custom [ReaderCommands] are granted only to controllers
- * running as this app ([appUid], which the system reports and nobody can claim), and their arguments are
- * validated before they reach the player.
+ * be book ids; the [ReaderPlayer] resolves them. The custom [ReaderCommands] are granted only to the app's own
+ * controllers ([mayCommand]), and their arguments are validated before they reach the player.
  */
 @OptIn(UnstableApi::class)
 internal class ReaderSessionCallback(
@@ -138,11 +145,11 @@ internal class ReaderSessionCallback(
     ): ListenableFuture<MediaSession.ConnectionResult> =
         Futures.immediateFuture(
             when {
-                !controller.isTrusted -> {
+                !admits(controller) -> {
                     MediaSession.ConnectionResult.reject()
                 }
 
-                controller.uid == appUid -> {
+                mayCommand(session, controller) -> {
                     val commands =
                         MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS
                             .buildUpon()
@@ -180,10 +187,30 @@ internal class ReaderSessionCallback(
         val command = ReaderCommands.decode(customCommand.customAction, args)
         val result =
             when {
+                !mayCommand(session, controller) -> SessionError.ERROR_PERMISSION_DENIED
                 command == null -> SessionError.ERROR_BAD_VALUE
                 player.handle(command) -> SessionResult.RESULT_SUCCESS
                 else -> SessionError.ERROR_INVALID_STATE
             }
         return Futures.immediateFuture(SessionResult(result))
+    }
+
+    /**
+     * Whether [controller] may send [ReaderCommands]: a controller running as this app ([appUid], which the system
+     * reports and nobody can claim), except Media3's media notification controller. That one relays the custom
+     * notification actions that start intents ask for, and any app can send those to the exported service.
+     */
+    private fun mayCommand(
+        session: MediaSession,
+        controller: MediaSession.ControllerInfo,
+    ): Boolean = controller.uid == appUid && !session.isMediaNotificationController(controller)
+
+    companion object {
+        /**
+         * Whether [controller] may reach the session at all: only trusted controllers. Media3 asks about an untrusted
+         * caller (unknown package and uid) for media buttons and notification actions that arrive as start intents,
+         * which any app can send.
+         */
+        fun admits(controller: MediaSession.ControllerInfo): Boolean = controller.isTrusted
     }
 }

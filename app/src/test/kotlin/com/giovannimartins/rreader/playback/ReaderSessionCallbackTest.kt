@@ -4,8 +4,10 @@ import android.content.Context
 import android.os.Bundle
 import android.os.Process
 import androidx.annotation.OptIn
+import androidx.media3.common.MediaLibraryInfo
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.session.MediaController
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
@@ -60,6 +62,55 @@ class ReaderSessionCallbackTest {
     }
 
     @Test
+    fun `SR-7 the media notification controller gets the player commands but not the reader commands`() {
+        val ui = callback.onConnectAsync(session, appController()).get()
+        val notification = callback.onConnectAsync(session, appController(notification = true)).get()
+
+        assertThat(session.isMediaNotificationController(appController(notification = true))).isTrue()
+        assertThat(ui.availableSessionCommands.commands).containsAtLeastElementsIn(ReaderCommands.all.commands)
+        assertThat(notification.isAccepted).isTrue()
+        assertThat(notification.availableSessionCommands.commands).containsNoneIn(ReaderCommands.all.commands)
+        // The notification's -15 s and +15 s buttons are player commands.
+        assertThat(notification.availablePlayerCommands.contains(Player.COMMAND_SEEK_BACK)).isTrue()
+        assertThat(notification.availablePlayerCommands.contains(Player.COMMAND_SEEK_FORWARD)).isTrue()
+    }
+
+    @Test
+    fun `SR-7 reader commands relayed by the media notification are refused before reaching the player`() {
+        fixture.open()
+        advance(fixture.player).untilState(Player.STATE_READY)
+        val (command, args) = ReaderCommands.encode(ReaderCommand.ReadFrom(ReadingPosition(0, 50)))
+
+        val relayed = callback.onCustomCommand(session, appController(notification = true), command, args).get()
+
+        assertThat(relayed.resultCode).isEqualTo(SessionError.ERROR_PERMISSION_DENIED)
+        assertThat(fixture.player.playWhenReady).isFalse()
+        assertThat(callback.onCustomCommand(session, appController(), command, args).get().resultCode)
+            .isEqualTo(SessionResult.RESULT_SUCCESS)
+    }
+
+    @Test
+    fun `SR-7 the service gives its session to trusted controllers only, not to start intents from other apps`() {
+        // What Media3 asks about for a media button or notification action sent to the service as a start intent.
+        val startIntentCaller =
+            MediaSession.ControllerInfo.createTestOnlyControllerInfo(
+                "androidx.media3.session.MediaSessionService",
+                UNKNOWN,
+                UNKNOWN,
+                MediaLibraryInfo.VERSION_INT,
+                MediaLibraryInfo.INTERFACE_VERSION,
+                false,
+                Bundle.EMPTY,
+                true,
+            )
+
+        assertThat(ReaderSessionCallback.admits(appController())).isTrue()
+        assertThat(ReaderSessionCallback.admits(controller(SYSTEM_UID))).isTrue()
+        assertThat(ReaderSessionCallback.admits(startIntentCaller)).isFalse()
+        assertThat(ReaderSessionCallback.admits(controller(OTHER_UID, trusted = false))).isFalse()
+    }
+
+    @Test
     fun `read from plays the open book there and invalid requests are refused`() {
         val app = controller(Process.myUid())
         val (command, args) = ReaderCommands.encode(ReaderCommand.ReadFrom(ReadingPosition(0, 50)))
@@ -76,6 +127,19 @@ class ReaderSessionCallbackTest {
             .isEqualTo(SessionError.ERROR_BAD_VALUE)
     }
 
+    /** A Media3 controller of this app: the UI's, or with [notification] the media notification's. */
+    private fun appController(notification: Boolean = false) =
+        MediaSession.ControllerInfo.createTestOnlyControllerInfo(
+            context.packageName,
+            Process.myPid(),
+            Process.myUid(),
+            MediaLibraryInfo.VERSION_INT,
+            MediaLibraryInfo.INTERFACE_VERSION,
+            true,
+            Bundle().apply { putBoolean(MediaController.KEY_MEDIA_NOTIFICATION_CONTROLLER_FLAG, notification) },
+            true,
+        )
+
     private fun controller(
         uid: Int,
         trusted: Boolean = true,
@@ -91,6 +155,8 @@ class ReaderSessionCallbackTest {
     )
 
     private companion object {
+        /** The pid and uid Media3 gives the caller of a start intent: unknown. */
+        const val UNKNOWN = -1
         const val SYSTEM_UID = 1000
         const val OTHER_UID = 10_999
     }

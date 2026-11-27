@@ -204,10 +204,15 @@ flowchart LR
   position (chapter, offset) and plays from the start of the segment that
   holds it; `SET_SLEEP_TIMER` carries a duration (up to 12 hours) or "end of
   chapter", and `CANCEL_SLEEP_TIMER` turns the timer off. `ReaderSessionCallback` grants them only to controllers that run
-  as this app (same uid, which the system reports), validates the arguments
-  and passes a typed `ReaderCommand` to `ReaderPlayer.handle`; invalid
-  requests get `ERROR_BAD_VALUE`, requests that do not apply (no book open)
-  get `ERROR_INVALID_STATE`.
+  as this app (same uid, which the system reports), except Media3's media
+  notification controller, which relays notification actions that any app
+  can send to the exported service; it validates the arguments and passes a
+  typed `ReaderCommand` to `ReaderPlayer.handle`. Requests from any other
+  controller get `ERROR_PERMISSION_DENIED`, invalid requests get
+  `ERROR_BAD_VALUE`, requests that do not apply (no book open) get
+  `ERROR_INVALID_STATE`. The session has a random id and the service hands it
+  to trusted controllers only, so media buttons and notification actions that
+  other apps send as start intents are ignored (SR-7).
 
 ### Follow-along reader
 

@@ -81,6 +81,10 @@ All notable user-visible changes are documented here. The format follows
   under an enormous file name, can no longer make the app close every time it
   opens: such values are cut to a sensible length when the book is added, and
   if the library ever cannot be read, it says so and offers "Try again".
+- Other apps can no longer control listening (play, pause, skip, the sleep
+  timer or "read from here") by sending commands to the app's playback
+  service; the app itself, the notification, the lock screen and headsets
+  still can.
 
 ### Changed
 

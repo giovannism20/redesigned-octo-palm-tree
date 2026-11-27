@@ -34,7 +34,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | # | Boundary | From → To | Controls |
 |---|----------|-----------|----------|
 | B1 | File intake | Any file chosen/shared by the user → importer | Signature-based type detection, size limits, parsing limits, typed failures |
-| B2 | Inter-app intents and media controllers | Other apps → exported activity / media session service | Minimal exported components, accept only `content://` URIs with read grants, validate MIME and content; the media session accepts only trusted controllers and book-id requests |
+| B2 | Inter-app intents and media controllers | Other apps → exported activity / media session service | Minimal exported components, accept only `content://` URIs with read grants, validate MIME and content; the media session accepts only trusted controllers and book-id requests, ignores media buttons and notification actions that other apps send as start intents, and grants the app's own commands to the app's own controllers only |
 | B3 | Network | Internet → catalogue client (search feeds, book downloads); later the model downloader | `CatalogHttp` is the only client: HTTPS only, host allowlist (`CatalogHosts`: `gutenberg.org` and subdomains) checked for every address and redirect, at most 5 redirects, expected media type, size limits, timeouts; the network security config disables cleartext and trusts no CA for other hosts; downloaded books then cross B1 like any file; SHA-256 pinning for models |
 | B4 | TTS engine | App → third-party TTS engine process | Prefer offline voices; flag voices that need the network (their text leaves the device) |
 | B5 | Build supply chain | Dependencies, Gradle wrapper, Actions → build | Version catalog, Dependabot, wrapper validation, Actions pinned by SHA, CodeQL |
@@ -59,6 +59,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | Info disclosure | Searches and downloads (B3) | Low | Search words and book choices leak to logs or to third parties | Sent only to Gutenberg over HTTPS after the listener acts; never logged (SR-8); no cookies, identifiers or device data; search pages kept only in memory |
 | Info disclosure | TTS engine (B4) | Low/Medium | Network-backed voices send book text to a vendor | Default to offline voices; label network voices in the UI |
 | Info disclosure / Tampering | Media session (B2) | Low | Another app connects to the exported playback service to see what is being listened to, or to control playback | Untrusted controllers are rejected; media ids must be book UUIDs (optionally with a chapter); the notification's content intent is explicit and immutable; no media button receiver, so playback never starts from the background |
+| Tampering | Media session start intents (B2) | Medium | Another app sends the exported service a media button (`ACTION_MEDIA_BUTTON`) or a custom notification action as a start intent: Media3 finds the session by the URI of Media3's default session id, or asks for a session on behalf of an unknown caller, and the media notification's controller, which runs as the app, relays the action, so the app's reader commands (read from a position, sleep timer) and media keys could be triggered from outside | The session has a random id, so its URI is known only to the notification's own pending intents; the service gives its session to trusted controllers only, so the unknown caller of a start intent gets none; the media notification's controller does not get the reader commands (its −15 s and +15 s buttons are player commands); `ReaderSessionCallback` refuses reader commands from any other controller (SR-7) |
 | Info disclosure | ML Kit (B5) | Medium | The OCR library logs its usage to Google, or downloads models, and could send data off the phone | Bundled model only, no download path; the `datatransport` upload backend is removed from the merged manifest, so its logs are dropped (ADR 0015, verified by `MergedManifestTest`); the app has `INTERNET` for the catalogue only, and TLS to Google's hosts fails (network security config, ADR 0017) |
 | Info disclosure | Libraries with the network (B5) | Medium | A library uses the `INTERNET` permission the catalogue needs to reach its own servers | The network security config trusts no CA for hosts other than `gutenberg.org`, so their TLS connections fail; cleartext is disabled for all |
 | Info disclosure | Logs | Low | Book text or file names in logs | No content/file names in release logs |
@@ -119,10 +120,19 @@ Each requirement is testable; reference its ID in tests and reviews.
   the media session service; intake accepts only `content://` URIs. (`BookIntake`; content is re-detected by signature and copied with a
   300 MB limit. `PlaybackService` must be exported for the system to bind
   it; `ReaderSessionCallback` accepts only trusted controllers — this app,
-  the system and apps the user allowed to control media — and only book ids.
-  The app's custom session commands (`ReaderCommands`) are granted only to
-  controllers running as this app's uid, and their arguments are validated
-  before they reach the player.
+  the system and apps the user allowed to control media — and only book ids,
+  and the service hands its session (`onGetSession`) to trusted controllers
+  only. Media buttons and custom notification actions that other apps send to
+  the service as start intents are ignored: the session has a random id, so the
+  session URI Media3 looks such intents up by is known only to the
+  notification's own pending intents, and the unknown caller Media3 asks about
+  otherwise is not trusted. The app's custom session commands
+  (`ReaderCommands`) are granted only to controllers running as this app's uid
+  other than Media3's media notification controller, which relays notification
+  actions; they are refused from any other controller, and their arguments are
+  validated before they reach the player. Verified by
+  `ReaderSessionCallbackTest`, `MergedManifestTest` (the exact set of exported
+  components) and, on a device, `PlaybackServiceTest`.
   Media3 also merges its `BluetoothValidationActivity`, exported but guarded
   by the `BLUETOOTH_PRIVILEGED` permission that only the system Bluetooth app
   holds.)
