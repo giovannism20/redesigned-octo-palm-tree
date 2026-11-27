@@ -49,9 +49,67 @@ slightly lighter sealing wax so it reaches AA on every background.
 | `Outline` | `#8792AE` | borders, dividers | 5.0 on Surface |
 | `Danger` (error) | `#FFB4A9` | errors | 9.1 on Surface |
 
+Supporting tokens, so every Material role has a brand colour:
+
+| Token (Compose) | Hex | Use | Contrast |
+|-----------------|-----|-----|----------|
+| `SealDeep` | `#B4442B` | actions on the paper-coloured inverse surface (snackbars) | 4.6 on OnInk |
+| `DangerContainer` | `#5C2020` | error containers | OnInk 10.5 on it |
+| `OutlineVariant` | `#3A4766` | decorative dividers, disabled borders (never text) | — |
+| `CoverColors` / `OnCover` | five muted tones / white | generated covers of books without an image | ≥ 4.5 |
+
+### Material colour roles
+
+`ui/theme/Theme.kt` maps **every** Material 3 colour role to these tokens, so
+no component (cards, navigation bar, progress bars, sliders, sheets,
+snackbars) falls back to Material's default purples and greys. `ThemeTest`
+fails if a role is off-palette or a text/surface pair drops below 4.5 : 1.
+
+| Roles | Token |
+|-------|-------|
+| primary, secondary, tertiary (and their *Fixed* variants) | `Seal`, with `OnSeal` on it |
+| primary/secondary/tertiary containers (selection, active tab, tracks) | `SealContainer`, with `OnInk` on it |
+| background, surfaceDim, surfaceContainerLowest | `Ink` |
+| surface, surfaceContainerLow, surfaceContainer (navigation bar, sheets, menus) | `Surface` |
+| surfaceVariant, surfaceContainerHigh/Highest, surfaceBright (cards, dialogs) | `SurfaceHigh` |
+| onBackground, onSurface / onSurfaceVariant | `OnInk` / `OnInkMuted` |
+| inverseSurface, inverseOnSurface, inversePrimary | `OnInk`, `Ink`, `SealDeep` |
+| error, onError, errorContainer, onErrorContainer | `Danger`, `Ink`, `DangerContainer`, `OnInk` |
+| outline, outlineVariant, surfaceTint, scrim | `Outline`, `OutlineVariant`, `Outline`, black |
+
+## Typeface
+
+**Atkinson Hyperlegible Next** (Braille Institute; SIL Open Font License
+1.1), bundled as one variable font file
+(`app/src/main/res/font/atkinson_hyperlegible_next.ttf`, weights 200–800; the
+app uses 400, 500, 600 and 700). It was designed for readers with low vision:
+similar letters stay easy to tell apart (I, l and 1; O and 0). It covers
+Portuguese (ã, õ, ç, ê…) and typographic punctuation (— “ ” …). It is the
+app's only typeface.
+
+## Type scale
+
+Every Material type role is defined in `ui/theme/Type.kt`, in the app's
+typeface, so components never fall back to Material's small defaults.
+Sizes are in sp and scale with the system font setting.
+
+| Roles | Size / line height | Weight |
+|-------|--------------------|--------|
+| displayLarge, displayMedium, displaySmall | 48/56, 44/52, 40/48 | Bold |
+| headlineLarge | 34/42 | Bold |
+| headlineMedium, headlineSmall | 30/38, 28/36 | SemiBold |
+| titleLarge, titleMedium, titleSmall | 26/32, 22/28, 20/26 | SemiBold |
+| bodyLarge, bodyMedium, bodySmall | 20/30, 18/26, 18/24 | Regular |
+| labelLarge | 18/24 | SemiBold |
+| labelMedium, labelSmall | 18/24, 16/22 | Medium |
+
 Rules:
 
+- Screens use theme roles only (`MaterialTheme.colorScheme`,
+  `MaterialTheme.typography`); a new colour becomes a token in
+  `ui/theme/Color.kt` first.
+- Every full screen draws on `ScreenSurface` (`ui/components/`), directly or
+  through the app shell, so text and icons take the theme's content colour.
 - State is never shown by colour alone (selected voice: border + "In use").
 - Keep text on `Ink`/`Surface`; do not put body text on `Seal`.
-- Type scale: body ≥ 18 sp, honours the system font scale
-  (`ui/theme/Type.kt`).
+- Type: body ≥ 18 sp, nothing below 16 sp, honours the system font scale.

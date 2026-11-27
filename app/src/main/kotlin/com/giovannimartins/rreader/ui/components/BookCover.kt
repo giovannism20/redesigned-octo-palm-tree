@@ -12,7 +12,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -20,13 +19,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.giovannimartins.rreader.R
+import com.giovannimartins.rreader.ui.theme.CoverColors
+import com.giovannimartins.rreader.ui.theme.OnCover
 import java.io.File
 
 private const val COVER_ASPECT_RATIO = 2f / 3f
-
-/** Palette for generated covers; chosen from the title so a book keeps its colour. */
-private val GENERATED_COVER_COLORS =
-    listOf(Color(0xFF3B4A6B), Color(0xFF5B3B4A), Color(0xFF2F5A4E), Color(0xFF6B4E2F), Color(0xFF4A3B6B))
 
 /** A book cover: the extracted image when there is one, otherwise a generated card showing the title. */
 @Composable
@@ -45,7 +42,7 @@ fun BookCover(
                 modifier = Modifier.fillMaxSize(),
             )
         } else {
-            val color = GENERATED_COVER_COLORS[Math.floorMod(title.hashCode(), GENERATED_COVER_COLORS.size)]
+            val color = CoverColors[Math.floorMod(title.hashCode(), CoverColors.size)]
             Box(
                 modifier = Modifier.fillMaxSize().background(color).padding(8.dp),
                 contentAlignment = Alignment.Center,
@@ -53,7 +50,7 @@ fun BookCover(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.labelLarge,
-                    color = Color.White,
+                    color = OnCover,
                     textAlign = TextAlign.Center,
                     maxLines = 4,
                     overflow = TextOverflow.Ellipsis,

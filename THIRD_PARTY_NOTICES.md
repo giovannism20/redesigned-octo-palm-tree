@@ -151,6 +151,18 @@ license texts are shipped by Google with the libraries, in the
 `third_party_licenses.txt` file of each ML Kit and Google Play services
 package.
 
+### Atkinson Hyperlegible Next
+
+The app's typeface, [Atkinson Hyperlegible Next](https://github.com/googlefonts/atkinson-hyperlegible-next)
+(Braille Institute, Applied Design Works, Elliott Scott, Megan Eiswerth,
+Letters From Sweden), is bundled unmodified as
+`app/src/main/res/font/atkinson_hyperlegible_next.ttf` (from the Google Fonts
+repository, SHA-256 `5a455d1c…5e31745`). Copyright 2020-2024 The Atkinson
+Hyperlegible Next Project Authors. It is licensed under the
+[SIL Open Font License 1.1](https://openfontlicense.org); the full licence text
+ships with the app in
+`app/src/main/assets/licenses/OFL-1.1-atkinson-hyperlegible-next.txt`.
+
 ### Project Gutenberg
 
 The Explore tab searches and downloads public-domain books from

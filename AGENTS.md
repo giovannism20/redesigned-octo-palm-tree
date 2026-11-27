@@ -121,6 +121,13 @@ emulators in parallel on the same machine.
 - **Accessibility:** touch targets ≥ 56 dp for primary controls (≥ 48 dp
   minimum), body text ≥ 18 sp, honour the system font scale, content
   descriptions on every icon-only control, contrast ≥ 4.5:1.
+- **Design system:** colours and text styles come only from the theme
+  (`MaterialTheme.colorScheme` and `MaterialTheme.typography`, tokens in
+  `ui/theme/`); never raw colours, font families or font sizes in screens. A new
+  colour is added as a token in `ui/theme/Color.kt`. Full screens draw on
+  `ui/components/ScreenSurface` (the shell does it for the tabs). See
+  [docs/design/brand.md](docs/design/brand.md); `ThemeTest` guards the palette,
+  contrast and type scale.
 - **Logging:** no book content, file names or personal data in release logs.
 - **Style:** Kotlin official style, enforced by Spotless + ktlint and detekt.
   Small classes and functions, intention-revealing names, no duplication,

@@ -77,6 +77,10 @@ All notable user-visible changes are documented here. The format follows
 
 ### Changed
 
+- One look on every screen: a typeface designed for readers with low vision
+  (Atkinson Hyperlegible Next) throughout the app, and the app's own colours
+  on cards, tabs, progress bars, the chapter list and messages instead of
+  default greys and purples.
 - The message for a book that is too complex to prepare no longer says
   "PDF", since EPUB books can get it too.
 - EPUB books that keep many chapters in a few large files, as most Project
