@@ -1,5 +1,6 @@
 package com.giovannimartins.rreader.ui.explore
 
+import androidx.lifecycle.viewModelScope
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.giovannimartins.rreader.catalog.CURATED_JSON
@@ -28,6 +29,7 @@ import com.giovannimartins.rreader.importer.FakeImportJobs
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -53,6 +55,7 @@ class ExploreViewModelTest {
     private val downloads = FakeCatalogDownloads()
     private val network = FakeNetworkStatus()
     private lateinit var database: RReaderDatabase
+    private val viewModels = mutableListOf<ExploreViewModel>()
 
     @Before
     fun setUp() {
@@ -66,6 +69,9 @@ class ExploreViewModelTest {
 
     @After
     fun tearDown() {
+        // Stop the view models' collectors (WhileSubscribed keeps them alive for a while) before
+        // closing the database and restoring Dispatchers.Main, so nothing resumes on Main meanwhile.
+        viewModels.forEach { it.viewModelScope.cancel() }
         database.close()
         Dispatchers.resetMain()
     }
@@ -212,7 +218,9 @@ class ExploreViewModelTest {
                 .isEqualTo(added)
         }
 
-    private fun viewModel() =
+    private fun viewModel() = newViewModel().also { viewModels += it }
+
+    private fun newViewModel() =
         ExploreViewModel(
             catalog =
                 CatalogRepository(
