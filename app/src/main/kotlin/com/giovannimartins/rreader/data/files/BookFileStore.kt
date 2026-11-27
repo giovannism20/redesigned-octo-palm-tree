@@ -1,0 +1,126 @@
+package com.giovannimartins.rreader.data.files
+
+import android.content.Context
+import com.giovannimartins.rreader.textkit.BookFormat
+import com.giovannimartins.rreader.textkit.model.Chapter
+import com.giovannimartins.rreader.textkit.model.CoverImage
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import java.io.IOException
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * Owns the on-disk layout of imported books inside private app storage:
+ *
+ * ```
+ * files/books/{bookId}/source.{epub,pdf}
+ * files/books/{bookId}/chapters/{index}.txt
+ * files/books/{bookId}/cover
+ * files/imports/            (temporary files while copying)
+ * ```
+ *
+ * Book ids are generated UUIDs; anything else is rejected so no caller can
+ * build a path outside this layout.
+ */
+@Singleton
+class BookFileStore internal constructor(
+    filesDir: File,
+) {
+    @Inject
+    constructor(
+        @ApplicationContext context: Context,
+    ) : this(context.filesDir)
+
+    private val booksRoot = File(filesDir, "books")
+    private val importsRoot = File(filesDir, "imports")
+
+    /** A fresh temporary file for an incoming import. */
+    fun newImportTempFile(): File {
+        importsRoot.mkdirs()
+        return File(importsRoot, "${UUID.randomUUID()}.part")
+    }
+
+    fun sourceFile(
+        bookId: String,
+        format: BookFormat,
+    ): File = File(bookDir(bookId), "source.${format.name.lowercase()}")
+
+    fun coverFile(bookId: String): File = File(bookDir(bookId), "cover")
+
+    fun chapterFile(
+        bookId: String,
+        index: Int,
+    ): File {
+        require(index >= 0) { "Chapter index must not be negative" }
+        return File(File(bookDir(bookId), "chapters"), "$index.txt")
+    }
+
+    /** Moves a completed temporary import into place as the book's source file. */
+    @Throws(IOException::class)
+    fun adoptSource(
+        temp: File,
+        bookId: String,
+        format: BookFormat,
+    ): File {
+        val target = sourceFile(bookId, format)
+        target.parentFile?.mkdirs()
+        if (!temp.renameTo(target)) throw IOException("Could not move the imported file into place")
+        return target
+    }
+
+    /** Writes every chapter text, replacing previous ones. */
+    @Throws(IOException::class)
+    fun writeChapters(
+        bookId: String,
+        chapters: List<Chapter>,
+    ) {
+        File(bookDir(bookId), "chapters").deleteRecursively()
+        chapters.forEachIndexed {
+            index,
+            chapter,
+            ->
+            writeAtomically(chapterFile(bookId, index), chapter.text.toByteArray())
+        }
+    }
+
+    @Throws(IOException::class)
+    fun readChapterText(
+        bookId: String,
+        index: Int,
+    ): String = chapterFile(bookId, index).readText()
+
+    @Throws(IOException::class)
+    fun writeCover(
+        bookId: String,
+        cover: CoverImage,
+    ) = writeAtomically(coverFile(bookId), cover.bytes)
+
+    /** Removes everything stored for a book. */
+    fun delete(bookId: String) {
+        bookDir(bookId).deleteRecursively()
+    }
+
+    private fun bookDir(bookId: String): File {
+        require(UUID_PATTERN.matches(bookId)) { "Invalid book id" }
+        return File(booksRoot, bookId)
+    }
+
+    private fun writeAtomically(
+        target: File,
+        bytes: ByteArray,
+    ) {
+        target.parentFile?.mkdirs()
+        val temp = File(target.parentFile, "${target.name}.tmp")
+        temp.writeBytes(bytes)
+        if (!temp.renameTo(target)) {
+            temp.delete()
+            throw IOException("Could not write ${target.name}")
+        }
+    }
+
+    private companion object {
+        val UUID_PATTERN = Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+    }
+}

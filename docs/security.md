@@ -68,8 +68,10 @@ Each requirement is testable; reference its ID in tests and reviews.
 - **SR-6** Downloaded voice models are verified against SHA-256 values pinned
   in code before use.
 - **SR-7** Exported components are limited to the launcher/intake activity and
-  the media session service; intake accepts only `content://` URIs.
-- **SR-8** Release builds log no book content, file names or personal data.
+  the media session service; intake accepts only `content://` URIs. (`BookIntake`; content is re-detected by signature and copied with a
+  300 MB limit.)
+- **SR-8** Release builds log no book content, file names or personal data. (`Diagnostics` logs only
+  exception types.)
 - **SR-9** Cloud backup is disabled; device-to-device transfer is allowed.
 - **SR-10** No secrets in the repository (see the layers below).
 - **SR-11** Dependencies are pinned in the version catalog and monitored by

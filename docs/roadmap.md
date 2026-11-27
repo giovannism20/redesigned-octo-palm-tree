@@ -30,9 +30,12 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 
 - [ ] `textkit`: book model, EPUB 2/3 parser (container, OPF, spine, nav/NCX, cover, DRM detection), safe ZIP/XML handling
 - [ ] `textkit`: sentence segmentation (pt-BR abbreviations), speech normalization, estimates
-- [ ] Import: picker + share/view intents, signature detection, copy + SHA-256 dedupe, WorkManager job, error messages
-- [ ] Data: Room schema, chapter files, settings
-- [ ] Library screen with "Continue listening", progress and time left
+- [x] Import: picker + share/view intents, signature detection, copy + SHA-256 dedupe, WorkManager job, error messages
+- [x] Data: Room schema, chapter files, library repository
+- [ ] Data: settings (DataStore: default voice, speed, text size)
+- [x] Library screen with "Continue listening", progress, failures and removal
+- [ ] Library: time left (needs `textkit.estimate`) and tap to open the player
+- [ ] Wire the EPUB parser into `ImporterModule`
 - [ ] `SystemTtsEngine` + `SegmentRenderer` + audio cache
 - [ ] `PlaybackService` with facade player: background, lock screen, headset, ±15 s, speed, chapters, resume
 - [ ] Mini-player and full player screens

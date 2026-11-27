@@ -1,7 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">R Reader</string>
+
+    <!-- Navigation -->
+    <string name="tab_library">Library</string>
+    <string name="tab_add_book">Add book</string>
+
+    <!-- Library -->
     <string name="library_title">Library</string>
     <string name="library_empty_title">Your library is empty</string>
-    <string name="library_empty_body">Import a PDF or EPUB to start listening.</string>
+    <string name="library_empty_body">Add a PDF or EPUB to start listening.</string>
+    <string name="library_continue">Continue listening</string>
+    <string name="library_untitled">Untitled</string>
+    <string name="library_preparing">Preparing the book…</string>
+    <string name="library_not_started">Not started</string>
+    <string name="library_progress">%1$d%% listened</string>
+    <string name="library_remove">Remove</string>
+    <string name="library_remove_title">Remove this book?</string>
+    <string name="library_remove_body">The book and your progress will be deleted from this phone.</string>
+    <string name="cover_description">Cover of %1$s</string>
+
+    <!-- Import -->
+    <string name="import_title">Add a book</string>
+    <string name="import_body">Choose a PDF or EPUB file saved on your phone.</string>
+    <string name="import_choose">Choose a file</string>
+    <string name="import_tip_share">Tip: in a messaging app, open the book file, tap Share and choose R Reader.</string>
+    <string name="import_queued">Book received. Getting it ready to listen…</string>
+    <string name="import_duplicate">This book is already in your library.</string>
+    <string name="import_failure_unsupported">This file is not a PDF or EPUB book.</string>
+    <string name="import_failure_not_yet_supported">This kind of book cannot be read in this version yet.</string>
+    <string name="import_failure_drm">This book is copy-protected (DRM) and cannot be opened.</string>
+    <string name="import_failure_corrupted">The file seems to be damaged. Try getting it again.</string>
+    <string name="import_failure_too_large">The file is too large (limit: 300 MB).</string>
+    <string name="import_failure_no_text">No readable text was found in this book.</string>
+    <string name="import_failure_storage">The book could not be saved. Check the free space and try again.</string>
+
+    <!-- Common -->
+    <string name="action_cancel">Cancel</string>
 </resources>

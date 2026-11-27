@@ -46,5 +46,12 @@ SOFTWARE.
 
 ## Application dependencies
 
-Libraries used by the app are declared in `gradle/libs.versions.toml`;
-their licenses are listed here as they are added.
+Libraries used by the app are declared in `gradle/libs.versions.toml`.
+
+| Component | License |
+|-----------|---------|
+| AndroidX (Compose, Activity, Lifecycle, Room, WorkManager, Hilt integrations) | Apache License 2.0 |
+| Kotlin standard library and kotlinx.coroutines | Apache License 2.0 |
+| Dagger / Hilt | Apache License 2.0 |
+| Coil | Apache License 2.0 |
+| Material Icons (vector paths in `app/src/main/res/drawable/ic_*.xml`) | Apache License 2.0 |

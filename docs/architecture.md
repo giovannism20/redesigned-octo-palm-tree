@@ -65,14 +65,14 @@ Base package: `com.giovannimartins.rreader`.
 
 | Package | Responsibility | Status |
 |---------|----------------|--------|
-| `data` | Room database, DAOs, DataStore settings, book file storage, repositories | planned |
-| `importer` | Intake from the picker and share/view intents, copy into app storage, duplicate detection, import jobs (WorkManager) | planned |
+| `data` | Room database (`db`), book file storage (`files`), library repository (`library`); DataStore settings planned | in progress |
+| `importer` | `BookIntake` (picker/share/view URIs → signature check, size-limited copy, SHA-256 dedupe, book row), `ImportBookWorker` + `BookImportProcessor` (parse and persist), `BookParser` per format | implemented (parsers wired as they land) |
 | `pdf` | PdfBox text extraction, `PdfRenderer` page rendering, ML Kit OCR → layout lines | planned |
 | `tts` | `SpeechEngine` interface, `SystemTtsEngine`, later `SherpaOnnxEngine`; `SegmentRenderer` and audio cache | planned |
 | `playback` | `PlaybackService` (`MediaSessionService`), facade player, progress saving, sleep timer | planned |
 | `catalog` | Public-domain catalogue client and downloads | planned |
-| `ui` | Compose screens, ViewModels, navigation, theme, design system | in progress (theme, empty library) |
-| `di` | Hilt modules | planned |
+| `ui` | Compose screens, ViewModels, navigation, theme, design system | in progress (shell, library, add book) |
+| `di` | Hilt modules (dispatchers, application scope, database, WorkManager) | implemented |
 
 ## Layering rules
 
@@ -132,11 +132,11 @@ sequenceDiagram
 
 | What | Where | Notes |
 |------|-------|-------|
-| Books, chapters metadata, reading positions, per-book voice | Room | Schema versioned with migrations and exported schemas |
+| Books, chapters metadata, reading positions, per-book voice | Room (`rreader.db`) | Schema versioned; exported to `app/schemas/` for migration tests |
 | Settings (default voice, speed, text size) | DataStore | |
 | Original file | `filesDir/books/{bookId}/source.{pdf,epub}` | Private app storage |
-| Normalized chapters | `filesDir/books/{bookId}/chapters/{index}.json` | Immutable after import |
-| Covers | `filesDir/books/{bookId}/cover.jpg` | Extracted or rendered |
+| Normalized chapters | `filesDir/books/{bookId}/chapters/{index}.txt` | UTF-8 text, immutable after import |
+| Covers | `filesDir/books/{bookId}/cover` | Raw image bytes as extracted or rendered |
 | Rendered audio | `cacheDir/tts/...` | Size-capped LRU; safe to delete |
 
 ## Invariants

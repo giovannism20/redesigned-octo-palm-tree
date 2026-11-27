@@ -8,5 +8,8 @@ All notable user-visible changes are documented here. The format follows
 
 ### Added
 
+- Library with "Continue listening", progress, import failures and removal.
+- Add books from the file picker or by sharing/opening them from other apps;
+  duplicates are detected and files are verified by their content.
 - Repository foundation: secret guard (pre-commit hook and CI scan),
   security policy, AI-first documentation and architecture decisions.

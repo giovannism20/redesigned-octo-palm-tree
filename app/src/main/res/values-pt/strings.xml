@@ -1,6 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Navigation -->
+    <string name="tab_library">Biblioteca</string>
+    <string name="tab_add_book">Adicionar</string>
+
+    <!-- Library -->
     <string name="library_title">Biblioteca</string>
     <string name="library_empty_title">Sua biblioteca está vazia</string>
-    <string name="library_empty_body">Importe um PDF ou EPUB para começar a ouvir.</string>
+    <string name="library_empty_body">Adicione um PDF ou EPUB para começar a ouvir.</string>
+    <string name="library_continue">Continuar ouvindo</string>
+    <string name="library_untitled">Sem título</string>
+    <string name="library_preparing">Preparando o livro…</string>
+    <string name="library_not_started">Não iniciado</string>
+    <string name="library_progress">%1$d%% ouvido</string>
+    <string name="library_remove">Remover</string>
+    <string name="library_remove_title">Remover este livro?</string>
+    <string name="library_remove_body">O livro e o seu progresso serão apagados deste celular.</string>
+    <string name="cover_description">Capa de %1$s</string>
+
+    <!-- Import -->
+    <string name="import_title">Adicionar livro</string>
+    <string name="import_body">Escolha um arquivo PDF ou EPUB salvo no seu celular.</string>
+    <string name="import_choose">Escolher arquivo</string>
+    <string name="import_tip_share">Dica: no aplicativo de mensagens, abra o arquivo do livro, toque em Compartilhar e escolha R Reader.</string>
+    <string name="import_queued">Livro recebido. Preparando para ouvir…</string>
+    <string name="import_duplicate">Este livro já está na sua biblioteca.</string>
+    <string name="import_failure_unsupported">Este arquivo não é um livro PDF ou EPUB.</string>
+    <string name="import_failure_not_yet_supported">Este tipo de livro ainda não pode ser lido nesta versão.</string>
+    <string name="import_failure_drm">Este livro tem proteção contra cópia (DRM) e não pode ser aberto.</string>
+    <string name="import_failure_corrupted">O arquivo parece estar danificado. Tente obtê-lo novamente.</string>
+    <string name="import_failure_too_large">O arquivo é grande demais (limite: 300 MB).</string>
+    <string name="import_failure_no_text">Não encontramos texto para ler neste livro.</string>
+    <string name="import_failure_storage">Não foi possível salvar o livro. Verifique o espaço livre e tente de novo.</string>
+
+    <!-- Common -->
+    <string name="action_cancel">Cancelar</string>
 </resources>
