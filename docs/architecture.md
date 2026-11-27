@@ -79,9 +79,9 @@ Base package: `com.giovannimartins.rreader`.
 | `data` | Room database (`db`), book file storage (`files`), library repository (`library`), DataStore settings and learned speaking rates (`settings`) | implemented |
 | `importer` | `BookIntake` (picker/share/view URIs → signature check, size-limited copy, SHA-256 dedupe, book row), `ImportBookWorker` + `BookImportProcessor` (parse and persist; recognized pages deleted when the import ends), `BookParser` per format (`EpubBookParser`, `PdfBookParser`: text layer, then `PdfOcr` for scanned pages) taking a `ParseRequest` with an `ImportProgressListener`, `ImportJobs` (one unique WorkManager job per book: enqueue, cancel when the book is removed, observe progress), `ImportNotifications` (progress notification of the `dataSync` foreground service) | implemented |
 | `pdf` | PdfBox text extraction (`PdfLayoutExtractor`: positioned lines, outline and document info within `PdfLimits`), `PdfRenderer` page rendering (`FirstPageCoverRenderer`: first page → JPEG cover; `PdfPageRasterizer`: pages → bitmaps for OCR within `OcrLimits`), text recognition behind `PageTextRecognizer` (`MlKitPageTextRecognizer`: bundled ML Kit Latin model → layout lines through textkit's `OcrPageLayout`), `PdfOcr` (recognizes the pictured pages without a usable text layer within `OcrLimits`, one page at a time app-wide through `OcrGate`, resumable through `OcrPageStore`), `NativeCallMarkers` (notes each call into native code while it runs, so a cover or page that crashes the process twice is skipped) | in progress (text-layer PDFs; OCR in Phase 4) |
-| `tts` | `SpeechEngine` interface and `SystemTtsEngine` (multi-engine Android TTS → WAV), `AudioCache`, `WavInfo`, `SegmentRenderer` (segment → cached WAV, 300 MB LRU trim), `SpeakingRateTracker` (per-voice rate learned from rendered audio, kept across restarts through `SpeakingRateStore`); later `SherpaOnnxEngine` | implemented (neural voices in Phase 5) |
+| `tts` | `SpeechEngine` interface; `RoutingSpeechEngine`, the engine the app renders with (neural voices to `SherpaOnnxEngine`, the others to `SystemTtsEngine`, multi-engine Android TTS → WAV); `VoiceIds` (system, neural and "phone" voice ids), `AudioCache`, `WavInfo`, `PcmWav`, `SegmentRenderer` (segment → cached WAV, 300 MB LRU trim), `SpeakingRateTracker` (per-voice rate learned from rendered audio, kept across restarts through `SpeakingRateStore`) | implemented |
 | `playback` | `PlaybackService` (`MediaSessionService`, trusted controllers only), `ReaderPlayer` facade (chapter playlist over an internal ExoPlayer), `SegmentFeeder` (render-ahead window), `ChapterPlans`, `SeekTargets`, `PositionSaver`, `PlaybackRepository`, `ListeningStatus` (spoken segment and sleep timer for the UI), `ReaderCommands` (custom session commands), `SleepTimer` | implemented |
-| `tts/neural` | Offline neural voices ([ADR 0018](decisions/0018-offline-neural-voices.md)): `NeuralVoices` (the nine voices, most recommended first, and their seven `VoicePackage`s pinned by size and SHA-256), `VoiceModelHttp` (the `HttpsClient` for `VoiceModelHosts`), `VoicePackageStore` (`filesDir/voices/{package}`, installed state), `VoicePackageDownloader` (space check, resumable download, SHA-256, `VoicePackageArchive` unpacking), `VoiceDownloads` (`WorkManagerVoiceDownloads`: one `VoiceDownloadWorker` job per package, Wi-Fi unless mobile data was accepted) | in progress |
+| `tts/neural` | Offline neural voices ([ADR 0018](decisions/0018-offline-neural-voices.md)): `NeuralVoices` (the nine voices, most recommended first, and their seven `VoicePackage`s pinned by size and SHA-256), `VoiceModelHttp` (the `HttpsClient` for `VoiceModelHosts`), `VoicePackageStore` (`filesDir/voices/{package}`, installed state), `VoicePackageDownloader` (space check, resumable download, SHA-256, `VoicePackageArchive` unpacking), `VoiceDownloads` (`WorkManagerVoiceDownloads`: one `VoiceDownloadWorker` job per package, Wi-Fi unless mobile data was accepted); `SherpaOnnxEngine` (the neural `SpeechEngine`) over `NeuralRuntime` (`SherpaOnnxRuntime`: piper-phonemize with the shipped Portuguese espeak-ng data, `EspeakData`, and sherpa-onnx models), with `NeuralText`, `KokoroPhonemes` and `NeuralAudio` preparing text, phonemes and audio | implemented |
 | `work` | Helpers shared by WorkManager jobs (`reportingProgress`: conflated progress publishing) | implemented |
 | `net` | `HttpsClient`, the only way to the network: HTTPS GETs through an `HttpTransport` (`UrlConnectionTransport` on `HttpsURLConnection`), every address and redirect checked by the client's `HostAllowlist`, media type, size and redirect limits, and resuming an interrupted download from where it stopped (`Range`, HTTP 206) | implemented |
 | `catalog` | Free public-domain catalogue (Project Gutenberg, [ADR 0017](decisions/0017-free-catalogue-from-project-gutenberg.md)): `CatalogHttp`, the `HttpsClient` for `CatalogHosts` with the `CatalogUserAgent`; `CuratedCatalog` (curated classics from an asset), `CatalogRepository` (OPDS search through `GutenbergEndpoints`, pages kept in memory by `SearchCache`), `CatalogDownloads` (`WorkManagerCatalogDownloads`: one unique `DownloadBookWorker` job per book, needing a connection) running `CatalogDownloader` (EPUB → temporary file → `BookIntake.importFile`), `NetworkStatus` (offline or not, from the system's default network) | implemented |
@@ -354,6 +354,35 @@ sequenceDiagram
   the expected entries under the catalogue's names, and the staging folder is
   moved into place. A package is installed when every kept file is there with
   its exact size.
+
+### Neural speech
+
+`SherpaOnnxEngine` renders a segment for a neural voice into the same WAV
+cache as the phone's voices, so playback does not change (ADR 0003):
+
+1. **Text.** `NeuralText` trims the segment and turns a leading dialogue dash
+   into a 300 ms pause (read as a symbol it can become a spurious vowel).
+2. **Phonemes.** sherpa-onnx 2.x no longer phonemizes text, so
+   `SherpaOnnxRuntime` asks piper-phonemize (espeak-ng, voice `pt-br`, for
+   every voice: Kokoro's default is English) for one array of IPA code points
+   per sentence. espeak-ng reads the Portuguese data shipped in
+   `assets/espeak-pt`, copied once to `noBackupFilesDir/espeak-ng-data/`
+   (`EspeakData`). For Kokoro, `KokoroPhonemes` merges `tʃ dʒ aɪ eɪ` into
+   Kokoro's single symbols `ʧ ʤ I A`, as its reference front end does.
+3. **Model.** The voice's model speaks the phonemes as its speaker (Kokoro:
+   Dora 42, Alex 43, Santa 44; Piper: 0) on up to four CPU threads, with the
+   model's own pauses (silence scale 1). The model of the last package used
+   stays loaded; another package's voice replaces it. A render cancelled
+   while the model speaks stops after the current sentence.
+4. **Audio.** `NeuralAudio` removes the DC offset with a 20 Hz high-pass,
+   trims silence at both ends to 40 ms, applies the voice's gain (measured in
+   the evaluation so every voice is about as loud, never past 0.98 of full
+   scale) and adds a 250 ms pause after the speech; `PcmWav` writes 16-bit
+   mono PCM at the model's rate (24 kHz Kokoro, 22.05 or 16 kHz Piper).
+
+Failures are typed: a missing package is `VOICE_UNAVAILABLE`, a library or
+model that does not load `ENGINE_UNAVAILABLE`, anything else the native code
+throws `RENDER_ERROR`; text without phonemes becomes a short pause.
 
 ### Catalogue
 

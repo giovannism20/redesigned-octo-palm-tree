@@ -20,4 +20,6 @@ data class Voice(
     val requiresNetwork: Boolean,
     /** Engine-reported quality, higher is better (android.speech.tts.Voice constants). */
     val quality: Int,
+    /** True when the voice may render slower than real time, so chapters are rendered ahead while charging. */
+    val slowToRender: Boolean = false,
 )

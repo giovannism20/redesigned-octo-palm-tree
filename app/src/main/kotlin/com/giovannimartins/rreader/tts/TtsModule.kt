@@ -9,9 +9,9 @@ import dagger.hilt.components.SingletonComponent
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class TtsModule {
-    /** The Android system voices; on-device neural voices join later (ADR 0002). */
+    /** The phone's voices and the offline neural voices (ADR 0002, ADR 0018). */
     @Binds
-    abstract fun speechEngine(engine: SystemTtsEngine): SpeechEngine
+    abstract fun speechEngine(engine: RoutingSpeechEngine): SpeechEngine
 
     /** Learned speaking rates are kept in their own preferences file. */
     @Binds

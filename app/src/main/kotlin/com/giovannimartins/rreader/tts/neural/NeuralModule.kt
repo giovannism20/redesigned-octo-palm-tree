@@ -10,4 +10,7 @@ import dagger.hilt.components.SingletonComponent
 abstract class NeuralModule {
     @Binds
     abstract fun voiceDownloads(downloads: WorkManagerVoiceDownloads): VoiceDownloads
+
+    @Binds
+    abstract fun runtime(runtime: SherpaOnnxRuntime): NeuralRuntime
 }
