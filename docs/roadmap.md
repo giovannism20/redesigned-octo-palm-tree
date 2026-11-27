@@ -73,7 +73,9 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 ## Phase 5 — Offline neural voices
 
 - [x] Voice comparison samples (Kokoro, Piper) for the user to choose ([evaluation](design/voices-evaluation.md))
-- [ ] Owner decisions: chosen voices and acceptance of the GPL-3.0 phonemizer (then an ADR)
+- [x] Owner decisions: all nine voices, GPL-3.0 for the APK only ([ADR 0018](decisions/0018-offline-neural-voices.md))
+- [ ] Voice emblems (abstract marks) and short bundled samples playable before download
+- [ ] "About and licences" screen: licence texts (GPL-3.0, Apache-2.0, MIT, voice models) and a link to the source
 - [ ] `SherpaOnnxEngine`, model download over Wi-Fi with size shown and SHA-256 verification
 - [ ] Pre-rendering while charging when a voice is slower than real time
 
@@ -86,5 +88,6 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 
 ## Release (every phase)
 
-- [ ] Release signing set up outside the repo, keystore backed up
+- [x] Release signing set up outside the repo (keystore created 2026-11-27)
+- [ ] Owner backs up the keystore and its passwords
 - [ ] Release APK installed via ADB on the primary user's phone

@@ -52,9 +52,10 @@ measured on the device.
   non-commercial or research-based, acceptable for this personal,
   non-commercial project but recorded per voice in the app's notices.
 
-## Pending decisions (owner)
+## Decisions (owner, 2026-11-27)
 
-1. Which voices to offer (suggested finalists: Kokoro pf_dora, Kokoro pm_alex,
-   Piper cadu).
-2. Whether to accept the GPL-3.0 phonemizer (otherwise keep only the system
-   voices).
+- Offer all nine voices in the Voices tab, each with its own small emblem and
+  an on-screen sample; licence terms go to the in-app licences screen, not the
+  voice cards.
+- Accept GPL-3.0 for the APK only (repository code stays MIT). See
+  [ADR 0018](../decisions/0018-offline-neural-voices.md).

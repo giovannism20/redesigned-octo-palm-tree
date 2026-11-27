@@ -24,3 +24,4 @@ record supersedes an old one, and the old one is marked
 | [0015](0015-on-device-ocr-with-bundled-ml-kit.md) | On-device OCR with bundled ML Kit, resumable per page, in a dataSync foreground job | Accepted |
 | [0016](0016-in-process-listening-state.md) | Share the spoken segment in-process; reader commands through the session | Accepted |
 | [0017](0017-free-catalogue-from-project-gutenberg.md) | Free catalogue from Project Gutenberg through an allowlisted HTTPS client | Accepted |
+| [0018](0018-offline-neural-voices.md) | Offline neural voices with sherpa-onnx; GPL-3.0 applies to the APK | Accepted |

@@ -46,5 +46,7 @@ More commands and the project conventions are in [AGENTS.md](AGENTS.md).
 
 ## License
 
-[MIT](LICENSE). Third-party notices are in
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+The source code in this repository is [MIT](LICENSE). The app built with the
+offline neural voices links a GPL-3.0 pronunciation library, so that APK is
+distributed under GPL-3.0 terms ([ADR 0018](docs/decisions/0018-offline-neural-voices.md)).
+Third-party notices are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
