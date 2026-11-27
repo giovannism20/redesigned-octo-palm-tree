@@ -115,6 +115,25 @@ class SegmentRendererTest {
         }
 
     @Test
+    fun `audio a voice rendered before it changed its rendering is rendered again`() =
+        runTest {
+            val renderer = renderer()
+            val before = voice.copy(renderVersion = "data-1")
+
+            val old = renderer.render(request().copy(voice = before)) as SegmentAudio.Ready
+            val new =
+                renderer.render(
+                    request().copy(voice = before.copy(renderVersion = "data-2")),
+                ) as SegmentAudio.Ready
+            renderer.render(request().copy(voice = before.copy(renderVersion = "data-2")))
+
+            assertThat(engine.calls).isEqualTo(2)
+            assertThat(new.file).isNotEqualTo(old.file)
+            assertThat(before.audioKey).isEqualTo("system:engine:pt@data-1")
+            assertThat(voice.audioKey).isEqualTo(voice.id)
+        }
+
+    @Test
     fun `a background render waits until the player has filled its window`() =
         runTest {
             val renderer = renderer()

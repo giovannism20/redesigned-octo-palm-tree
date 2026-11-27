@@ -8,7 +8,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Where rendered segment audio lives: `cache/tts/{bookId}/{voiceHash}/{chapter}-{start}-{end}.wav`.
+ * Where rendered segment audio lives: `cache/tts/{bookId}/{voiceHash}/{chapter}-{start}-{end}.wav`, where
+ * `voiceHash` hashes the voice's id and render version.
  * Everything here can be regenerated, so the system may clear it at any time.
  */
 @Singleton
@@ -22,16 +23,19 @@ class AudioCache internal constructor(
 
     private val root = File(cacheDir, "tts")
 
-    /** File for one rendered segment of a chapter with a given voice. */
+    /**
+     * File for one rendered segment of a chapter with a given voice, filed under [voiceKey] (a voice's `audioKey`: its
+     * id and render version).
+     */
     fun segmentFile(
         bookId: String,
-        voiceId: String,
+        voiceKey: String,
         chapterIndex: Int,
         start: Int,
         end: Int,
     ): File {
         require(BOOK_ID_PATTERN.matches(bookId)) { "Invalid book id" }
-        return File(File(File(root, bookId), hash(voiceId)), "$chapterIndex-$start-$end.wav")
+        return File(File(File(root, bookId), hash(voiceKey)), "$chapterIndex-$start-$end.wav")
     }
 
     /** Scratch file for one-off renders such as voice samples. */

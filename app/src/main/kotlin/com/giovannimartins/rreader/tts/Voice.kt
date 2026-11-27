@@ -22,4 +22,12 @@ data class Voice(
     val quality: Int,
     /** True when the voice may render slower than real time, so chapters are rendered ahead while charging. */
     val slowToRender: Boolean = false,
-)
+    /**
+     * Changes whenever the voice speaks the same text differently (new pronunciation data, new processing), so audio
+     * cached before is rendered again; empty when the app cannot tell, as for the phone's engines.
+     */
+    val renderVersion: String = "",
+) {
+    /** What the audio cache files this voice's segments under: its id, and its [renderVersion] when it has one. */
+    val audioKey: String get() = if (renderVersion.isEmpty()) id else "$id@$renderVersion"
+}

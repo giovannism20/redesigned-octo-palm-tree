@@ -99,7 +99,7 @@ class PrerenderTest {
                 }.drop(2)
         assertThat(engine.spoken).hasSize(expected.size)
         expected.forEach { (chapter, range) ->
-            assertThat(cache.segmentFile(BOOK_ID, slow.id, chapter, range.start, range.end).isFile).isTrue()
+            assertThat(cache.segmentFile(BOOK_ID, slow.audioKey, chapter, range.start, range.end).isFile).isTrue()
         }
         assertThat((outcome as PrerenderOutcome.Ready).millis).isGreaterThan(0)
         // Rendered again, everything comes from the cache.

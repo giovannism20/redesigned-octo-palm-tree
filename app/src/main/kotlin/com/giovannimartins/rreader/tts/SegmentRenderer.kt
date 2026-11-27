@@ -39,7 +39,8 @@ sealed interface SegmentAudio {
 
 /**
  * Renders segments with the [SpeechEngine] into the [AudioCache] (ADR 0003). A segment already in the cache
- * with a readable WAV duration is reused, and every rendered or reused segment teaches the
+ * with a readable WAV duration is reused, unless the voice now renders differently (its [Voice.audioKey] holds its
+ * render version, so such audio is filed apart), and every rendered or reused segment teaches the
  * [SpeakingRateTracker] how fast the voice speaks. Audio is written to a temporary file and moved into place
  * only when complete, so an interrupted render never looks like a cache hit. Every [TRIM_INTERVAL] renders the
  * cache is trimmed to [MAX_CACHE_BYTES], keeping the most recently rendered segments.
@@ -86,7 +87,7 @@ class SegmentRenderer
             val target =
                 cache.segmentFile(
                     request.bookId,
-                    request.voice.id,
+                    request.voice.audioKey,
                     request.chapterIndex,
                     request.range.start,
                     request.range.end,

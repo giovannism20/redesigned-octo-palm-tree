@@ -169,8 +169,8 @@ internal class GenerationCallback(
 internal object EspeakData {
     private const val ASSETS = "espeak-pt"
 
-    // A new value copies the data again on phones that have an older copy.
-    private const val VERSION = "piper-phonemize-1.6.1-pt-en-de-fr-pl"
+    // A new value copies the data again on phones that have an older copy, and renders cached audio again.
+    const val VERSION = "piper-phonemize-1.6.1-pt-en-de-fr-pl"
     private const val COMPLETE = ".complete"
 
     /**

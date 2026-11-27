@@ -622,7 +622,7 @@ sequenceDiagram
 | Catalogue download in progress | `filesDir/imports/{uuid}.part` | The EPUB being received; deleted once the intake copied it into the book's folder, or when the download fails |
 | Catalogue search pages | Memory only (`SearchCache`) | At most 20 pages, each for 15 minutes; search words are never written to disk |
 | Voice packages | `filesDir/voices/{package}/` (`model.onnx`, `tokens.txt` and, for Kokoro, `voices.bin`) | Only the files the catalogue names, at their pinned sizes; a download in progress is `voices/.downloads/{package}.part` (kept to resume), an installation being unpacked `voices/.staging/{package}/`; deleted from the Voices tab |
-| Rendered audio | `cacheDir/tts/{bookId}/{voiceHash}/{chapter}-{start}-{end}.wav` | Trimmed to 300 MB, least recently used first, keeping the render-ahead window; safe to delete |
+| Rendered audio | `cacheDir/tts/{bookId}/{voiceHash}/{chapter}-{start}-{end}.wav` | `voiceHash` hashes the voice's id and its render version (`Voice.audioKey`; for the neural voices the espeak-ng data version and a speech revision, `NEURAL_RENDER_VERSION`), so audio rendered before the voice changed how it speaks is not reused; trimmed to 300 MB, least recently used first, keeping the render-ahead window; safe to delete |
 
 ## Invariants
 

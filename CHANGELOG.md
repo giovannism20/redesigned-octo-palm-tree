@@ -134,6 +134,9 @@ All notable user-visible changes are documented here. The format follows
 - Natural voices pause at a dash that opens a new line of dialogue in the
   middle of a passage ("Não sei. — Pois eu sei."), as they already did at
   the start of one, instead of reading the dash as a stray sound.
+- Sentences a natural voice prepared before an update that changes how it
+  speaks are prepared again, so the improvement (such as Dora, Alex and Santa
+  without the whistle) is heard in books already started.
 - Dora, Alex and Santa prepare the next chapters while the phone charges
   only when nobody is listening: the preparation stops as soon as you press
   play, so listening starts as fast as without it, and goes on when you

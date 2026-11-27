@@ -52,6 +52,9 @@ class SherpaOnnxEngineTest {
         assertThat(voices.map { it.locale.toLanguageTag() }.toSet()).containsExactly("pt-BR")
         assertThat(voices.none { it.requiresNetwork }).isTrue()
         assertThat(voices.filter { it.slowToRender }.map { it.name }).containsExactly("Dora", "Alex", "Santa")
+        // Audio cached under an older espeak-ng data version is not reused.
+        assertThat(voices.map { it.renderVersion }.toSet()).containsExactly(NEURAL_RENDER_VERSION)
+        assertThat(NEURAL_RENDER_VERSION).contains(EspeakData.VERSION)
     }
 
     @Test

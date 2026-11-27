@@ -259,6 +259,14 @@ class SherpaOnnxEngine
 /** The engine of the neural voices in [Voice.engine]. */
 const val NEURAL_ENGINE: String = "sherpa-onnx"
 
+/**
+ * [Voice.renderVersion] of the neural voices: the espeak-ng data's version, and a revision raised whenever text,
+ * phonemes or audio are prepared differently. Revision 3: Kokoro's narrow tones are notched out
+ * ([ModelFamily.artifactTones]) and a dialogue dash inside a segment is a pause; audio cached before there were
+ * revisions is filed under the voice id alone, so none of it is reused.
+ */
+const val NEURAL_RENDER_VERSION: String = "${EspeakData.VERSION}+speech-3"
+
 /** android.speech.tts.Voice.QUALITY_VERY_HIGH: neural voices are the best the app has. */
 private const val NEURAL_QUALITY = 500
 
@@ -277,4 +285,5 @@ fun NeuralVoice.toVoice(): Voice =
         requiresNetwork = false,
         quality = NEURAL_QUALITY,
         slowToRender = slowToRender,
+        renderVersion = NEURAL_RENDER_VERSION,
     )
