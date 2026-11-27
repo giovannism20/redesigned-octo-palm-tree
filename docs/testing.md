@@ -27,6 +27,15 @@ logic is also tested on its own (`SleepTimerTest`). Player screens also run unde
 Robolectric with `createComposeRule` (on a phone-sized screen) to check
 spoken labels, touch targets of at least 56 dp and the actions they send.
 
+Text recognition of scanned PDFs is tested on the JVM with a fake
+`PageTextRecognizer` that returns what a recognizer would read on each page
+(built through textkit's `OcrPageLayout` from pixel boxes at 300 dpi), so
+scanned and mixed books, stored pages and resuming, limits, progress,
+cancellation and removal run in milliseconds; test PDFs draw a small raster
+image on their scanned pages. The real renderer and ML Kit are tested on a
+device with scans drawn by the test itself (`PdfPageRasterizerTest`,
+`MlKitPageTextRecognizerTest`).
+
 `./gradlew check` is the local gate and runs unit tests, lint, detekt and
 formatting checks. CI runs the same plus the secret scan, CodeQL and the
 documentation link check.
@@ -52,6 +61,12 @@ documentation link check.
   documents over the page, time, glyph and buffer limits, a looping outline
   and a page that cannot be decoded. Expected: a typed failure or bounded
   processing time and memory.
+- **Scans over the text recognition limits** (`PdfOcrTest`,
+  `OcrLimitsTest`, `OcrPageStoreTest`): too many pages to recognize, the
+  time budget across interrupted runs, huge page sizes, a failing or
+  crashing recognizer, and stored pages that are damaged, too large or of
+  another format. Expected: a typed failure, a capped bitmap, or the page
+  recognized again.
 
 ## Stress tests
 

@@ -64,7 +64,9 @@ primary user's phone (Android 17) raises questions ADR 0005 left open:
 5. **Limits (SR-4).** At most 1,500 pages to recognize per book; 60 minutes
    of recognition per book, counting the stored pages of earlier runs; one
    minute for ML Kit per page; a page whose bitmap cannot be allocated ends
-   the import. Each limit ends in a typed failure with its own message.
+   the import. Each limit ends in a typed failure with a clear message: too
+   many pages to recognize has its own, time and memory share the "too
+   complex" one, and a failing recognizer has its own.
 6. **Foreground job of type `dataSync`.** The import stays a unique
    WorkManager job per book; when recognition starts, the worker calls
    `setForeground` with a silent, low-importance progress notification and
