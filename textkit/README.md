@@ -14,7 +14,7 @@ KDoc.
 | `...textkit.epub` | `EpubParser`: EPUB 2/3 container, OPF metadata, spine, nav/NCX chapter titles, cover and DRM detection, with safe ZIP and XML handling | implemented |
 | `...textkit.text` | `SentenceSegmenter` splits text into pt-BR aware sentence ranges (abbreviations, initials, dialogue dashes; never across paragraphs); `SegmentPlanner` groups them into rendered segments and finds the segment to resume from; `SpeechNormalizer.toSpeech` rewrites a segment or heading for voices at render time | implemented |
 | `...textkit.layout` | `LayoutBookBuilder`: PDF/OCR layout lines → `NormalizedBook` (running headers, footers and page numbers removed, hyphenation joined keeping Portuguese enclisis, paragraphs rebuilt, chapters from outline, headings or page ranges); `OcrPageLayout`: OCR boxes in pixels → layout lines in page units with estimated font sizes; `ScannedDocumentDetector`: pages without a usable text layer, scanned documents; `DocumentInfoCleaner` | implemented |
-| `...textkit.gutenberg` | Project Gutenberg books: `GutenbergBoilerplate` removes the English header, production credits and license Gutenberg adds around a book (applied by `EpubParser`) | implemented |
+| `...textkit.gutenberg` | Project Gutenberg: `GutenbergBoilerplate` removes the English header, production credits and license Gutenberg adds around a book (applied by `EpubParser`); `GutenbergFeedParser` reads its OPDS catalogue feeds (search results) into `FeedPage`s of `FeedBook`s | implemented |
 | `...textkit.estimate` | `SpeakingRate` learns a voice's characters per second; `ReadingEstimates` derives progress, time left and character shifts (±15 s) across chapters from a `ReadingPosition` | implemented |
 
 ## EPUB parsing
@@ -67,6 +67,25 @@ kept. Paragraphs are only removed, never rewritten. Chapters left empty are
 dropped, a chapter title naming Project Gutenberg is cleared, and a book
 without markers, or one that would be left without text, is returned
 unchanged.
+
+## Project Gutenberg catalogue feeds
+
+```kotlin
+val page: FeedPage? = GutenbergFeedParser.parse(xml) // null when the text is not an Atom feed
+page?.books // FeedBook(id = 55752, title = "Dom Casmurro", author = "Machado de Assis"), ...
+page?.next  // "/ebooks/search.opds/?query=...&start_index=26", or null on the last page
+```
+
+- Reads Gutenberg's OPDS 1 (Atom) feeds, such as search results. An entry is
+  a book when its `subsection` link or its `id` points to
+  `/ebooks/{number}.opds`; the author comes from `author/name`, else from a
+  plain-text `content`, as search results give it. Other entries (authors,
+  subjects, sort orders), repeated books, entries without a title and those
+  after the first 100 are left out; text is cleaned like book text.
+- The feed is untrusted network input: it goes through the same jsoup XML
+  parser as EPUB content (no DTDs, external entities or entity expansion,
+  SR-3), and `parse` never throws. The caller decodes the bytes and limits
+  their size.
 
 ## PDF and OCR layout
 

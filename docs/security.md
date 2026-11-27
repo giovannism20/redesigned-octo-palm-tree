@@ -68,7 +68,7 @@ Each requirement is testable; reference its ID in tests and reviews.
   uncompressed size; violations yield a typed `ImportError` (verified by
   `EpubSecurityTest`).
 - **SR-3** Every XML parser disables DTDs and external entities (verified by
-  `EpubSecurityTest`).
+  `EpubSecurityTest`, and for catalogue feeds by `GutenbergFeedParserTest`).
 - **SR-4** PDF extraction and OCR run with page, time and memory limits.
   (`PdfLayoutExtractor` with `PdfLimits`: documents over 3,000 pages are
   refused, before any text is read when they declare it and while reading
