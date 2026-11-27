@@ -37,7 +37,7 @@ class VoicePackageStore internal constructor(
     constructor(
         @ApplicationContext context: Context,
         @IoDispatcher io: CoroutineDispatcher,
-    ) : this(File(context.filesDir, "voices"), io)
+    ) : this(File(context.filesDir, FOLDER), io)
 
     private val downloadsFolder = File(root, DOWNLOADS)
     private val stagingFolder = File(root, STAGING)
@@ -182,6 +182,12 @@ class VoicePackageStore internal constructor(
     }
 
     companion object {
+        /**
+         * The folder of the voice packages in the app's files, `filesDir/voices`. Device transfer leaves it out
+         * (`data_extraction_rules.xml`): packages are downloaded again, and checked against their pins, on a new phone.
+         */
+        const val FOLDER = "voices"
+
         /** Hex digits of the pinned SHA-256 in the name of a partial archive. */
         const val PIN_DIGITS = 16
 

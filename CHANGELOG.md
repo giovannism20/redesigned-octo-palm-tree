@@ -18,7 +18,8 @@ All notable user-visible changes are documented here. The format follows
   pausing background work) goes on as long as it advances. A download that
   failed says why and offers "Tentar de novo"
   and "Remover", which deletes what it had received. A downloaded voice works
-  without internet and can be deleted to free space.
+  without internet and can be deleted to free space. Moving to a new phone
+  does not copy the downloaded voices: they are downloaded again there.
 - The phone's own voice is one card, "Voz do celular", and its other voices
   are folded away under "Outras vozes do celular" with names that tell them
   apart ("Google · Voz 1", "Google · Voz 2").

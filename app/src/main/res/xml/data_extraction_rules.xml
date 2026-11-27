@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     Android 12+. The app is out of cloud backup (allowBackup="false", ADR 0021); the cloud-backup excludes stay as
-    a second guard. Device-to-device transfer carries books, positions and settings where the phone allows it.
+    a second guard. Device-to-device transfer carries books, positions and settings where the phone allows it, but
+    not the voice packages (files/voices, with partial downloads and unpacking folders): about half a gigabyte with
+    every voice installed, and checked against their pinned SHA-256 only when they are downloaded, so copies from
+    another phone would be trusted by their size alone. A new phone downloads them again (VoicePackageStore.FOLDER).
 -->
 <data-extraction-rules>
     <cloud-backup>
@@ -17,6 +20,7 @@
     </cloud-backup>
     <device-transfer>
         <include domain="file" path="." />
+        <exclude domain="file" path="voices" />
         <include domain="database" path="." />
         <include domain="sharedpref" path="." />
     </device-transfer>

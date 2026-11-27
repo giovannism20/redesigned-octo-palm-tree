@@ -11,11 +11,13 @@ import android.content.pm.ProviderInfo
 import android.content.pm.ServiceInfo
 import androidx.test.core.app.ApplicationProvider
 import com.giovannimartins.rreader.playback.PlaybackService
+import com.giovannimartins.rreader.tts.neural.VoicePackageStore
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.w3c.dom.Element
+import org.xmlpull.v1.XmlPullParser
 import java.io.File
 import java.util.Properties
 import javax.xml.parsers.DocumentBuilderFactory
@@ -41,6 +43,21 @@ class MergedManifestTest {
 
         assertThat(info.flags and ApplicationInfo.FLAG_ALLOW_BACKUP).isEqualTo(0)
         assertThat(mergedApplicationAttribute("dataExtractionRules")).isEqualTo("@xml/data_extraction_rules")
+    }
+
+    @Test
+    fun `SR-9 device transfer carries books, positions and settings but not the voice packages`() {
+        val rules = dataExtractionRules()
+
+        assertThat(rules.filter { it.section == DEVICE_TRANSFER })
+            .containsExactly(
+                Rule(DEVICE_TRANSFER, "include", "file", "."),
+                Rule(DEVICE_TRANSFER, "exclude", "file", VoicePackageStore.FOLDER),
+                Rule(DEVICE_TRANSFER, "include", "database", "."),
+                Rule(DEVICE_TRANSFER, "include", "sharedpref", "."),
+            )
+        assertThat(rules.filter { it.section == CLOUD_BACKUP }.map { it.kind }.toSet()).containsExactly("exclude")
+        assertThat(rules.filter { it.section == CLOUD_BACKUP }.map { it.path }.toSet()).containsExactly(".")
     }
 
     @Test
@@ -102,6 +119,41 @@ class MergedManifestTest {
         return application.getAttributeNS(ANDROID_NAMESPACE, name)
     }
 
+    /** One rule of `data_extraction_rules.xml`: its [section], whether it includes or excludes, and what. */
+    private data class Rule(
+        val section: String,
+        val kind: String,
+        val domain: String?,
+        val path: String?,
+    )
+
+    /** The rules of the data extraction rules resource, in order, as the platform reads them. */
+    private fun dataExtractionRules(): List<Rule> {
+        val rules = mutableListOf<Rule>()
+        context.resources.getXml(R.xml.data_extraction_rules).use { parser ->
+            var section = ""
+            while (parser.next() != XmlPullParser.END_DOCUMENT) {
+                if (parser.eventType != XmlPullParser.START_TAG) continue
+                when (parser.name) {
+                    CLOUD_BACKUP, DEVICE_TRANSFER -> {
+                        section = parser.name
+                    }
+
+                    "include", "exclude" -> {
+                        rules +=
+                            Rule(
+                                section,
+                                parser.name,
+                                parser.getAttributeValue(null, "domain"),
+                                parser.getAttributeValue(null, "path"),
+                            )
+                    }
+                }
+            }
+        }
+        return rules
+    }
+
     /** Every exported component of the merged manifest, by class name, with the permission that guards it, if any. */
     private fun exportedComponents(): Map<String, String?> {
         val flags =
@@ -136,6 +188,9 @@ class MergedManifestTest {
                 "androidx.test.core.app.InstrumentationActivityInvoker\$EmptyActivity",
                 "androidx.test.core.app.InstrumentationActivityInvoker\$EmptyFloatingActivity",
             )
+
+        const val CLOUD_BACKUP = "cloud-backup"
+        const val DEVICE_TRANSFER = "device-transfer"
 
         /** Written by the Android Gradle plugin for unit tests; holds the merged manifest's path. */
         const val TEST_CONFIG = "com/android/tools/test_config.properties"

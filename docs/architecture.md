@@ -394,6 +394,11 @@ sequenceDiagram
   running job will finish: the partial archives and unpacking folders of
   downloads that failed or were cancelled, of earlier pins and of earlier
   versions of the app.
+- **Moving to a new phone.** Device transfer leaves `files/voices` out
+  (`data_extraction_rules.xml`): voices are downloaded again there, checked
+  against their pins, instead of copying about half a gigabyte trusted by
+  file sizes alone. A default voice that is not installed falls back to the
+  phone's voice (see [Voice changes](#voice-changes)).
 - **Verification and installation.** The archive must have the pinned size
   and SHA-256; it is then unpacked by `VoicePackageArchive`, which keeps only
   the expected entries under the catalogue's names (regular files of their

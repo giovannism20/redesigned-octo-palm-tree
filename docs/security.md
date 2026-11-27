@@ -74,6 +74,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | Info disclosure | Libraries with the network (B5) | Medium | A library uses the `INTERNET` permission the catalogue needs to reach its own servers | The network security config trusts no CA for hosts other than the catalogue's (`www.gutenberg.org`, `gutenberg.pglaf.org`) and the voice packages' GitHub hosts, so their TLS connections fail; cleartext is disabled for all |
 | Info disclosure | Logs | Low | Book text, file names or the numbers of the books downloaded in logs (WorkManager logs every job's tags and outcome) | No content/file names in release logs; WorkManager logs errors only in release builds, download jobs carry no tag naming their book, and R8 removes verbose, debug and information logging from the release build (SR-8) |
 | Info disclosure | Backups | Low | Cloud backup copies reading history | App out of Android backup (`allowBackup="false"`, ADR 0021); device-transfer rules kept |
+| Tampering / DoS | Device transfer of voice packages | Low | Moving to a new phone copies about half a gigabyte of voice packages and partial downloads, files that were checked against their pinned SHA-256 only when they were downloaded and that the new phone would trust by their size alone | `files/voices` is left out of device transfer (`data_extraction_rules.xml`): the new phone downloads the voices again, checked against their pins (SR-6, SR-9) |
 | Tampering | Supply chain (B5) | Medium | Compromised dependency, wrapper or action | Wrapper validation, pinned Actions, Dependabot, CodeQL, minimal permissions |
 | Info disclosure | Repository (B6) | High | A key or keystore is committed | Pre-commit hook, CI scan, GitHub push protection, `.gitignore`, review |
 | EoP | Update channel | Medium | A malicious APK replaces the app | Release signing key never leaves the maintainer's control; installs only from the maintainer |
@@ -216,8 +217,10 @@ Each requirement is testable; reference its ID in tests and reviews.
   Verified by `CatalogDownloadsTest` and `RReaderApplicationTest`.)
 - **SR-9** The app is out of Android backup (`android:allowBackup="false"`), so nothing goes
   to the cloud and no backup stops playback; device-to-device transfer follows
-  `data_extraction_rules` where the phone applies it (ADR 0021). Checked by
-  `MergedManifestTest`.
+  `data_extraction_rules` where the phone applies it (ADR 0021): books,
+  positions and settings, but not the voice packages (`files/voices`, with
+  partial downloads), which a new phone downloads again and checks against
+  their pinned SHA-256. Checked by `MergedManifestTest`.
 - **SR-10** No secrets in the repository (see the layers below).
 - **SR-11** Dependencies are pinned in the version catalog and monitored by
   Dependabot; CI runs CodeQL and validates the Gradle wrapper. Libraries that
