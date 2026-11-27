@@ -49,9 +49,15 @@ class ImportPipelineTest {
     fun setUp() {
         database = Room.inMemoryDatabaseBuilder(context, RReaderDatabase::class.java).allowMainThreadQueries().build()
         files = BookFileStore(folder.root)
+        // Run WorkManager's own bookkeeping synchronously too, so no background task from
+        // one test touches a WorkManager database that the next test has already replaced.
         WorkManagerTestInitHelper.initializeTestWorkManager(
             context,
-            Configuration.Builder().setExecutor(SynchronousExecutor()).build(),
+            Configuration
+                .Builder()
+                .setExecutor(SynchronousExecutor())
+                .setTaskExecutor(SynchronousExecutor())
+                .build(),
         )
         workManager = WorkManager.getInstance(context)
     }

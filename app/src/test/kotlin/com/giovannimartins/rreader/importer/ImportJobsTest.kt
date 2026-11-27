@@ -43,6 +43,7 @@ class ImportJobsTest {
             Configuration
                 .Builder()
                 .setExecutor(SynchronousExecutor())
+                .setTaskExecutor(SynchronousExecutor())
                 .setWorkerFactory(longImports)
                 .build(),
         )
