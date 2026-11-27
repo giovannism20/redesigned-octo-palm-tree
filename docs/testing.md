@@ -45,6 +45,18 @@ documentation link check.
 - Hammer ±15 s and chapter jumps rapidly; the position must stay consistent.
 - Play for 2 hours with the screen locked; check battery drain and memory.
 
+## Test devices
+
+- **Reference:** Android 17 (API 37) — the primary user's phone and the
+  `rreader-api37` emulator (Pixel profile, Google Play image, so Google's TTS
+  voices are available). See [ADR 0014](decisions/0014-target-android-17.md).
+- **Compatibility spot checks:** Android 16 (`rreader-api36` emulator) and the
+  minimum supported version when touching platform APIs.
+- The emulator needs hardware virtualization (KVM). On AMD machines enable
+  "SVM Mode" in the firmware settings if `/dev/kvm` is missing.
+- During playback tests, enable Android 17's strict background-audio check:
+  `adb shell cmd audio set-enable-hardening throw` (restore with `disable`).
+
 ## Manual device checklist
 
 Run on a real phone (ideally the primary user's model) before installing a

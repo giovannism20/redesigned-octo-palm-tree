@@ -27,8 +27,8 @@ val signingStoreFile = providers.gradleProperty("rreader.signing.storeFile")
 
 android {
     namespace = "com.giovannimartins.rreader"
-    // AndroidX libraries require compiling against API 37.1+; targetSdk stays at
-    // 36 until Android 17 behaviour changes are reviewed.
+    // AndroidX requires compiling against API 37.1+. targetSdk 37: the primary
+    // user's phone runs Android 17 (ADR 0014).
     compileSdk {
         version =
             release(37) {
@@ -39,7 +39,7 @@ android {
     defaultConfig {
         applicationId = "com.giovanni_martins.rreader"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

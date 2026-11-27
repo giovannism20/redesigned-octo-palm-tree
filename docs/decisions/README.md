@@ -20,3 +20,4 @@ record supersedes an old one, and the old one is marked
 | [0011](0011-ai-first-documentation.md) | AI-first documentation | Accepted |
 | [0012](0012-no-accounts-local-only-data.md) | No accounts, local-only data | Accepted |
 | [0013](0013-layered-secret-protection.md) | Layered secret protection | Accepted |
+| [0014](0014-target-android-17.md) | Target Android 17 (API 37) and test on it first | Accepted |

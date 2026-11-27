@@ -51,8 +51,9 @@ that can be pure Kotlin goes to `:textkit` so it is fast to test
 
 - Gradle 9.9 (wrapper with pinned checksum), AGP 9.5 with built-in Kotlin,
   Kotlin 2.4, KSP, Hilt; versions live in `gradle/libs.versions.toml`.
-- `compileSdk` 37.2 (required by current AndroidX), `targetSdk` 36,
-  `minSdk` 26; Java/Kotlin bytecode target 17.
+- `compileSdk` 37.2 (required by current AndroidX), `targetSdk` 37
+  ([ADR 0014](decisions/0014-target-android-17.md)), `minSdk` 26;
+  Java/Kotlin bytecode target 17.
 - The Gradle daemon runs on a provisioned Temurin JDK 21
   (`gradle/gradle-daemon-jvm.properties`).
 - Quality gates in `./gradlew check`: unit tests, Android Lint (warnings
