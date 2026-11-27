@@ -3,8 +3,9 @@ package com.giovannimartins.rreader.textkit.layout
 /**
  * One line of text as a PDF extractor or an OCR engine sees it: its text and where it sits on the page.
  *
- * Coordinates are in the page's own units (points for PDF text, pixels for OCR), with the origin at the top-left
- * corner of the page and y growing downwards, the same units as [PageLayout.width] and [PageLayout.height].
+ * Coordinates are in the page's own units, PDF points, with the origin at the top-left corner of the page and y
+ * growing downwards, the same units as [PageLayout.width] and [PageLayout.height]. OCR boxes are scaled back from the
+ * picture of the page to those units by [OcrPageLayout].
  */
 public data class LayoutLine(
     /** The line's characters in reading order, as extracted (whitespace and invisible characters are cleaned later). */
@@ -14,7 +15,7 @@ public data class LayoutLine(
     val right: Float,
     /** The baseline for extracted PDF text; the bottom edge of the box for OCR. */
     val bottom: Float,
-    /** Typical glyph size on the line, in page units; for OCR, the height of the line. */
+    /** Typical glyph size on the line, in page units; for OCR, estimated from the height of the line. */
     val fontSize: Float,
 ) {
     init {

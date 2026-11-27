@@ -13,7 +13,7 @@ KDoc.
 | `...textkit.model` | `NormalizedBook`, `Chapter` (with `Chapter.paragraphRangesOf` for any chapter text), `BookMetadata`, `CoverImage`, `TextRange`, `ReadingPosition` | implemented |
 | `...textkit.epub` | `EpubParser`: EPUB 2/3 container, OPF metadata, spine, nav/NCX chapter titles, cover and DRM detection, with safe ZIP and XML handling | implemented |
 | `...textkit.text` | `SentenceSegmenter` splits text into pt-BR aware sentence ranges (abbreviations, initials, dialogue dashes; never across paragraphs); `SegmentPlanner` groups them into rendered segments and finds the segment to resume from; `SpeechNormalizer.toSpeech` rewrites a segment or heading for voices at render time | implemented |
-| `...textkit.layout` | `LayoutBookBuilder`: PDF/OCR layout lines → `NormalizedBook` (running headers, footers and page numbers removed, hyphenation joined keeping Portuguese enclisis, paragraphs rebuilt, chapters from outline, headings or page ranges); `ScannedDocumentDetector`; `DocumentInfoCleaner` | implemented |
+| `...textkit.layout` | `LayoutBookBuilder`: PDF/OCR layout lines → `NormalizedBook` (running headers, footers and page numbers removed, hyphenation joined keeping Portuguese enclisis, paragraphs rebuilt, chapters from outline, headings or page ranges); `OcrPageLayout`: OCR boxes in pixels → layout lines in page units with estimated font sizes; `ScannedDocumentDetector`: pages without a usable text layer, scanned documents; `DocumentInfoCleaner` | implemented |
 | `...textkit.estimate` | `SpeakingRate` learns a voice's characters per second; `ReadingEstimates` derives progress, time left and character shifts (±15 s) across chapters from a `ReadingPosition` | implemented |
 
 ## EPUB parsing
@@ -47,15 +47,26 @@ when (val result = EpubParser().parse(file, fallbackTitle = file.nameWithoutExte
 ## PDF and OCR layout
 
 ```kotlin
-val pages: List<PageLayout> = ... // lines with their boxes and font sizes, from PdfBox or OCR
+val pages: List<PageLayout> = ... // lines with their boxes and font sizes, from PdfBox
+val needOcr: List<Int> = ScannedDocumentDetector.pagesWithoutText(pages)
+val ocrPage = OcrPageLayout.build(index, width, height, pixelsPerUnit, blocks) // what OCR read on a page picture
 when (val result = LayoutBookBuilder().build(metadata, pages, outline)) {
     is LayoutResult.Success -> result.book // chapters of cleaned paragraphs
     is LayoutResult.Failure -> result.error // ScannedDocument or NoReadableText
 }
 ```
 
-- Coordinates are in page units with the origin at the top-left corner; a
-  line's `bottom` is its baseline for PDF text. The rules assume one column.
+- Coordinates are in page units (PDF points) with the origin at the top-left
+  corner; a line's `bottom` is its baseline for PDF text and the bottom of
+  its box for OCR. The rules assume one column.
+- **OCR pages.** `OcrPageLayout` divides the boxes a recognizer reports by
+  the scale of the page picture and clips them to the page, dropping lines
+  without text or area, in the recognizer's order. OCR boxes span only the
+  glyphs drawn, so the font size is the box height for a line with
+  lower-case letters (ascenders to descenders) and the height divided by 0.7
+  for a line of capitals or digits; every line takes at least the median
+  size of its block, so a short line without ascenders or descenders stays
+  in its paragraph. OCR pages and text-layer pages can be mixed.
 - **Running lines.** Only lines entirely inside the top or bottom 10% of the
   page are candidates. A bare page number (Arabic or canonical Roman, with
   optional "página"/"p." and dashes, dots or brackets, as in `— 12 —`) is
@@ -65,8 +76,9 @@ when (val result = LayoutBookBuilder().build(metadata, pages, outline)) {
   index shared by at least three pages). Chapter headings printed at the top
   of distant pages are therefore kept.
 - **Scanned documents.** After that removal, a page with fewer than 20
-  letters and digits has no usable text; more than half of such pages make
-  the document scanned.
+  letters and digits has no usable text (`pagesWithoutText` lists them for
+  OCR); more than half of such pages make the document scanned, which after
+  OCR means that no readable text could be recognized.
 - **Paragraphs.** A line starts a paragraph when it starts with a dialogue
   dash after a sentence end, after a gap of more than 1.3 times the usual
   baseline spacing, when the font size changes by more than 20%, when it is

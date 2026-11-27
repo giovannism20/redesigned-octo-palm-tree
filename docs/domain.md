@@ -45,6 +45,7 @@ Names used in code and docs. Add a term here when you introduce it.
 | **Catalogue entry** | A public-domain book offered for download in the Explore tab. |
 | **OCR page** | A PDF page without a usable text layer whose text is recognized on-device. |
 | **Page layout** | One page as PDF extraction or OCR sees it: its size and its layout lines in reading order (`PageLayout`). |
+| **Recognized line** | A line of text an OCR engine found on the picture of a page, with its box in the picture's pixels (`RecognizedLine`); a **recognized block** groups the lines the engine read together, usually a paragraph. `OcrPageLayout` turns them into layout lines in page units. |
 | **Outline entry** | A PDF bookmark: a title, the page it points to and optionally a position on that page (`OutlineEntry`). Marks where a chapter starts. |
 | **Margin band** | The top and bottom 10% of a page's height, where running lines are looked for. |
 | **Running line** | A running header or footer or a page number printed in a margin band; removed by cleanup. |

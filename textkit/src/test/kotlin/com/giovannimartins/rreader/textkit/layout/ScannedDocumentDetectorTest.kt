@@ -47,4 +47,13 @@ class ScannedDocumentDetectorTest {
     fun `does not report an empty document as scanned`() {
         assertThat(ScannedDocumentDetector.isScanned(emptyList())).isFalse()
     }
+
+    @Test
+    fun `lists the pages without usable text in document order, a repeated caption aside`() {
+        val captioned = { index: Int -> page(index) { footer("Digitalizado com um aplicativo de celular") } }
+        val pages = listOf(textPage(0), captioned(1), textPage(2), captioned(3), imagePage(4))
+
+        assertThat(ScannedDocumentDetector.pagesWithoutText(pages.reversed())).containsExactly(1, 3, 4).inOrder()
+        assertThat(ScannedDocumentDetector.pagesWithoutText(listOf(textPage(0)))).isEmpty()
+    }
 }

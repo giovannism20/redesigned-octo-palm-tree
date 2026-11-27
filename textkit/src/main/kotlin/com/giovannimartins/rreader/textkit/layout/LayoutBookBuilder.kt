@@ -8,7 +8,8 @@ import com.giovannimartins.rreader.textkit.model.NormalizedBook
  *
  * 1. Line text is cleaned like any chapter text (whitespace, invisible characters, accents) and empty lines dropped.
  * 2. Running headers, running footers and page numbers are removed (rules on [RunningLines]).
- * 3. A document where most pages have no text left is reported as scanned ([ScannedDocumentDetector]).
+ * 3. A document where most pages have no text left is reported as scanned ([ScannedDocumentDetector]); once its
+ *    pages went through OCR, that means no readable text could be recognized.
  * 4. Paragraphs are rebuilt across pages from gaps, indents, short lines, dialogue dashes and font sizes, joining
  *    words broken by hyphenation while keeping the hyphen of Portuguese enclisis such as "fazê-lo" (rules on
  *    [ParagraphRules], [LineJoiner] and [Enclisis]).
@@ -59,7 +60,10 @@ public sealed interface LayoutResult {
 
 /** Why a document's layout could not become a book. Each case is meant to map to one user-facing message. */
 public sealed interface LayoutError {
-    /** Most pages are pictures without a text layer, so the book needs OCR (see [ScannedDocumentDetector]). */
+    /**
+     * Most pages have no usable text: pictures of text that OCR did not read, or where it found no readable text (see
+     * [ScannedDocumentDetector]).
+     */
     public data object ScannedDocument : LayoutError
 
     /**
