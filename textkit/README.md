@@ -14,6 +14,7 @@ KDoc.
 | `...textkit.epub` | `EpubParser`: EPUB 2/3 container, OPF metadata, spine, nav/NCX chapter titles, cover and DRM detection, with safe ZIP and XML handling | implemented |
 | `...textkit.text` | `SentenceSegmenter` splits text into pt-BR aware sentence ranges (abbreviations, initials, dialogue dashes; never across paragraphs); `SegmentPlanner` groups them into rendered segments and finds the segment to resume from; `SpeechNormalizer.toSpeech` rewrites a segment or heading for voices at render time | implemented |
 | `...textkit.layout` | `LayoutBookBuilder`: PDF/OCR layout lines → `NormalizedBook` (running headers, footers and page numbers removed, hyphenation joined keeping Portuguese enclisis, paragraphs rebuilt, chapters from outline, headings or page ranges); `OcrPageLayout`: OCR boxes in pixels → layout lines in page units with estimated font sizes; `ScannedDocumentDetector`: pages without a usable text layer, scanned documents; `DocumentInfoCleaner` | implemented |
+| `...textkit.gutenberg` | Project Gutenberg books: `GutenbergBoilerplate` removes the English header, production credits and license Gutenberg adds around a book (applied by `EpubParser`) | implemented |
 | `...textkit.estimate` | `SpeakingRate` learns a voice's characters per second; `ReadingEstimates` derives progress, time left and character shifts (±15 s) across chapters from a `ReadingPosition` | implemented |
 
 ## EPUB parsing
@@ -43,6 +44,29 @@ when (val result = EpubParser().parse(file, fallbackTitle = file.nameWithoutExte
   zero-width characters are removed and accents are composed (NFC).
 - The cover comes from the EPUB 3 `cover-image` item or EPUB 2
   `<meta name="cover">`, images only.
+- Project Gutenberg's header and license are left out of the chapters (see
+  below).
+
+## Project Gutenberg books
+
+Gutenberg wraps every book in an English header and license.
+`GutenbergBoilerplate.strip(chapters)`, which `EpubParser` applies, removes
+them so they are not read aloud:
+
+- everything up to the `*** START OF THE PROJECT GUTENBERG EBOOK … ***` line,
+  looked for in the first 100 paragraphs, and up to three production credits
+  right after it ("Produced by …", "… Distributed Proofreading Team at
+  https://www.pgdp.net");
+- everything from the `*** END OF THE PROJECT GUTENBERG EBOOK … ***` line,
+  or from an "End of the Project Gutenberg EBook of …" line before it.
+
+The markers are matched in the spellings Gutenberg used over the years
+(`THE`/`THIS`, `EBOOK`/`E-BOOK`/`ETEXT`, any letter case), also inside a
+longer paragraph, as in old preformatted headers, whose remaining text is
+kept. Paragraphs are only removed, never rewritten. Chapters left empty are
+dropped, a chapter title naming Project Gutenberg is cleared, and a book
+without markers, or one that would be left without text, is returned
+unchanged.
 
 ## PDF and OCR layout
 

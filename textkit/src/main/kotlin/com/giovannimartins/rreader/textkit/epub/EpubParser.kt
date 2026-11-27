@@ -18,6 +18,9 @@ import java.io.File
  *   `h1`–`h3` heading. Chapters without readable text are dropped.
  * - Text keeps paragraphs and skips scripts, styles, navigation, ruby annotations and footnotes (references and
  *   bodies); whitespace is collapsed and invisible characters removed.
+ * - Books from Project Gutenberg lose the English header, production credits and license that Gutenberg adds around
+ *   them ([GutenbergBoilerplate][com.giovannimartins.rreader.textkit.gutenberg.GutenbergBoilerplate]), so they are
+ *   not read aloud; chapters left empty are dropped.
  * - The cover is the EPUB 3 `cover-image` item, else the item named by EPUB 2 `<meta name="cover">`, if it is an image.
  * - DRM is detected from `META-INF/rights.xml` or from `META-INF/encryption.xml` declaring anything other than font
  *   obfuscation.

@@ -8,6 +8,9 @@ All notable user-visible changes are documented here. The format follows
 
 ### Added
 
+- Books from Project Gutenberg are read without the English license text
+  that comes with them: listening starts with the book itself and stops at
+  its last page.
 - Importing a file that failed before (for example a format added in a later
   version) prepares it again instead of saying it is already in the library.
 - Follow-along text: "Text" in the player shows the chapter being read in
