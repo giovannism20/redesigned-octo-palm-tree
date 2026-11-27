@@ -33,6 +33,14 @@ internal object ArchivePaths {
         return normalize(base + path.split('/'))
     }
 
+    /** The fragment of [href] (what follows `#`), percent-decoded; null when there is none or it is empty. */
+    fun fragmentOf(href: String): String? =
+        href
+            .substringAfter('#', missingDelimiterValue = "")
+            .trim()
+            .ifEmpty { null }
+            ?.let(::percentDecode)
+
     private fun normalize(segments: List<String>): String? {
         val kept = ArrayDeque<String>()
         for (segment in segments) {

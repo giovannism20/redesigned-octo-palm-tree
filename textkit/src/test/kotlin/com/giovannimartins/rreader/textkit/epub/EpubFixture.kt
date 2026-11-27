@@ -50,6 +50,30 @@ internal fun navPoint(
     "<navPoint><navLabel><text>$title</text></navLabel><content src=\"$source\"/>" +
         "${children.joinToString("")}</navPoint>"
 
+/** An EPUB 3 navigation document whose `toc` nav lists [items] ([navItem]). */
+internal fun navigation(vararg items: String): String =
+    xhtml("<nav epub:type=\"toc\" id=\"toc\"><ol>${items.joinToString("")}</ol></nav>")
+
+/** A list item of a navigation document linking [title] to [href] and holding the nested [children]. */
+internal fun navItem(
+    title: String,
+    href: String,
+    vararg children: String,
+): String {
+    val nested = if (children.isEmpty()) "" else "<ol>${children.joinToString("")}</ol>"
+    return "<li><a href=\"$href\">$title</a>$nested</li>"
+}
+
+/** `p` elements of synthetic prose about [subject], [characters] characters or a little more in all. */
+internal fun prose(
+    subject: String,
+    characters: Int = 400,
+): String {
+    val paragraph = "O relato sobre $subject segue devagar, frase após frase, sem pressa nenhuma de acabar. ".repeat(3)
+    val count = (characters + paragraph.length - 1) / paragraph.length
+    return "<p>${paragraph.trim()}</p>".repeat(count.coerceAtLeast(1))
+}
+
 /** Parses [file] and fails the test, showing the error, unless it became a book. */
 internal fun parseBook(
     file: File,
@@ -122,6 +146,9 @@ internal class EpubFixture(
     fun remove(name: String) {
         removed += name
     }
+
+    /** Replaces the generated EPUB 3 table of contents with one that lists [items] ([navItem]). */
+    fun tableOfContents(vararg items: String) = entry(pathOf(NAV_FILE), navigation(*items))
 
     /** The archive entry name of [fileName] stored next to the package document. */
     fun pathOf(fileName: String): String {

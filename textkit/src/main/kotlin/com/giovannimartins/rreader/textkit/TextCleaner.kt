@@ -26,4 +26,8 @@ internal object TextCleaner {
         }
         return Normalizer.normalize(text, Normalizer.Form.NFC)
     }
+
+    /** Whether [clean] would keep anything of [raw]: a character that is neither whitespace nor invisible. */
+    fun hasVisibleText(raw: CharSequence): Boolean =
+        raw.any { char -> !char.isWhitespace() && char !in INVISIBLE && !char.isISOControl() }
 }

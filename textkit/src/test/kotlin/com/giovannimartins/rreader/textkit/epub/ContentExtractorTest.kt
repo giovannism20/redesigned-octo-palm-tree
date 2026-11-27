@@ -111,6 +111,68 @@ class ContentExtractorTest {
     }
 
     @Test
+    fun `points each anchor at the first paragraph that starts at or after it`() {
+        val body =
+            """
+            <h2 id="bloco">Capítulo 1</h2>
+            <p><a id="inicio"/>Começo do parágrafo.</p>
+            <p>Fim de frase.<a id="depois"></a></p>
+            <div id="vazio"></div>
+            <p>Seguinte <span id="meio">no meio</span>.</p>
+            <a name="antigo"></a><p id="dois" class="x">Com nome.</p>
+            <aside epub:type="footnote" id="nota"><p>Nota.</p></aside>
+            <p id="dois">Repetido.</p>
+            <a id="final"/>
+            """.trimIndent()
+
+        val anchors = extract(body).anchors
+
+        assertThat(anchors)
+            .containsExactly(
+                "bloco",
+                0,
+                "inicio",
+                1,
+                "depois",
+                3,
+                "vazio",
+                3,
+                "meio",
+                4,
+                "antigo",
+                4,
+                "dois",
+                4,
+                "nota",
+                5,
+                "final",
+                6,
+            )
+    }
+
+    @Test
+    fun `records every heading with the paragraphs it takes`() {
+        val document =
+            extract("<h1>Livro</h1><p>Texto.</p><h5> <a id='i'>I</a></h5><h4>Do <em>título</em></h4><h2></h2>")
+
+        assertThat(document.headings.map { Triple(it.level, it.firstParagraph, it.text) })
+            .containsExactly(Triple(1, 0, "Livro"), Triple(5, 2, "I"), Triple(4, 3, "Do título"))
+            .inOrder()
+        assertThat(document.headings.map { it.endParagraph }).containsExactly(1, 3, 4).inOrder()
+        assertThat(extract("<h4>Pequeno</h4><h3>Título</h3>").heading).isEqualTo("Título")
+    }
+
+    @Test
+    fun `records chapter divisions that have text`() {
+        val body =
+            "<p>Antes.</p><div class=\"chapter\"><h2>I</h2><p>Um.</p></div>" +
+                "<section epub:type=\"bodymatter chapter\"><p>Dois.</p></section>" +
+                "<div class=\"chapter\"><img src=\"a.png\" alt=\"\"/></div><div class=\"x chapter\">Três.</div>"
+
+        assertThat(extract(body).chapterDivisions).containsExactly(1, 3, 4).inOrder()
+    }
+
+    @Test
     fun `reads single-line labels for titles`() {
         val document = SafeXml.parse("<a href='c1.xhtml'>Capítulo<br/>Primeiro<sup>1</sup></a>".toByteArray(), "nav")
 
