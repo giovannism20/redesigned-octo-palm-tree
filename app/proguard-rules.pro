@@ -16,3 +16,16 @@
     public static int d(...);
     public static int i(...);
 }
+
+# sherpa-onnx and piper-phonemize (offline neural voices, ADR 0018) read their Kotlin configuration classes and
+# create their result classes from native code, by class, field and method name (JNI). Their AARs ship no
+# consumer rules, so keep those classes as they are.
+-keep class com.k2fsa.sherpa.onnx.** { *; }
+-keep class com.github.csukuangfj.piper.phonemize.** { *; }
+
+# Commons Compress refers to optional codecs and tools that R Reader does not ship (it only reads bzip2 tar
+# archives of voice models): XZ, Zstandard, Brotli and ASM.
+-dontwarn org.tukaani.xz.**
+-dontwarn com.github.luben.zstd.**
+-dontwarn org.brotli.dec.**
+-dontwarn org.objectweb.asm.**

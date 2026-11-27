@@ -37,7 +37,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | B2 | Inter-app intents and media controllers | Other apps → exported activity / media session service | Minimal exported components, accept only `content://` URIs with read grants, validate MIME and content; the media session accepts only trusted controllers and book-id requests, ignores media buttons and notification actions that other apps send as start intents, and grants the app's own commands to the app's own controllers only |
 | B3 | Network | Internet → catalogue client (search feeds, book downloads); later the model downloader | `CatalogHttp` is the only client: HTTPS only, host allowlist (`CatalogHosts`: exactly `www.gutenberg.org` and its official mirror `gutenberg.pglaf.org`, [ADR 0019](decisions/0019-gutenberg-site-and-mirror-only.md)) checked for every address and redirect, at most 5 redirects, expected media type, size limits, timeouts; the network security config disables cleartext and trusts no CA for other hosts; downloaded books then cross B1 like any file; SHA-256 pinning for models |
 | B4 | TTS engine | App → third-party TTS engine process | Prefer offline voices; flag voices that need the network (their text leaves the device) |
-| B5 | Build supply chain | Dependencies, Gradle wrapper, Actions → build | Version catalog, Dependabot, wrapper validation, Actions pinned by SHA, CodeQL |
+| B5 | Build supply chain | Dependencies, Gradle wrapper, Actions → build | Version catalog, Dependabot, wrapper validation, Actions pinned by SHA, CodeQL; the AARs published only on GitHub are downloaded by the build from their releases and refused unless they match pinned SHA-256 values |
 | B6 | Public repository | Developer machines → GitHub | Secret guard layers, no personal data, reviewed third-party content |
 
 ## STRIDE analysis
@@ -195,7 +195,11 @@ Each requirement is testable; reference its ID in tests and reviews.
   `MergedManifestTest`.
 - **SR-10** No secrets in the repository (see the layers below).
 - **SR-11** Dependencies are pinned in the version catalog and monitored by
-  Dependabot; CI runs CodeQL and validates the Gradle wrapper. (Known
+  Dependabot; CI runs CodeQL and validates the Gradle wrapper. Libraries that
+  exist only as release files (sherpa-onnx, piper-phonemize) are downloaded
+  by the build from their GitHub releases into `app/libs/` (not kept in git),
+  and `fetchVendoredLibraries` refuses any file that does not match its
+  SHA-256 in `app/libs/SHA256SUMS` ([app/libs/README.md](../app/libs/README.md)). (Known
   vulnerabilities that cannot be reached in a dependency are listed, with the
   reason, under [Known vulnerabilities in dependencies](#known-vulnerabilities-in-dependencies).)
 - **SR-12** No `WebView`, dynamic code loading or reflection-based plugins.

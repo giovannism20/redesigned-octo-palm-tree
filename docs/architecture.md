@@ -56,7 +56,14 @@ that can be pure Kotlin goes to `:textkit` so it is fast to test
   ([ADR 0014](decisions/0014-target-android-17.md)), `minSdk` 26;
   Java/Kotlin bytecode target 17.
 - APKs are split per ABI (`arm64-v8a` for phones, `x86_64` for the emulator)
-  because ML Kit ships native code.
+  because ML Kit and the neural voices ship native code.
+- sherpa-onnx and piper-phonemize (offline neural voices, ADR 0018) are
+  published only on GitHub releases: the build downloads their AARs from the
+  releases into `app/libs/` (not kept in git) and refuses any file that does
+  not match its pinned SHA-256 (`fetchVendoredLibraries`,
+  [app/libs/README.md](../app/libs/README.md)).
+  Only the Portuguese espeak-ng data ships (`assets/espeak-pt/`); the
+  library's data for every language is left out by `ignoreAssetsPattern`.
 - The Gradle daemon runs on a provisioned Temurin JDK 21
   (`gradle/gradle-daemon-jvm.properties`).
 - Quality gates in `./gradlew check`: unit tests, Android Lint (warnings

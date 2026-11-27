@@ -62,6 +62,10 @@ Libraries used by the app are declared in `gradle/libs.versions.toml`.
 | ML Kit Text Recognition v2 with the bundled Latin model (`com.google.mlkit:text-recognition` and the ML Kit `common`, `vision-common`, `vision-interfaces`, `text-recognition-bundled-common` and `play-services-mlkit-text-recognition` libraries it brings) | ML Kit Terms of Service (see below) |
 | Google Play services Base, Basement and Tasks, and ODML Image, which come with ML Kit | Android Software Development Kit License |
 | Firebase components and encoders, and Google datatransport, which come with ML Kit | Apache License 2.0 |
+| sherpa-onnx (on-device neural speech, AAR downloaded by the build, see `app/libs/README.md`) | Apache License 2.0 |
+| ONNX Runtime (linked statically into sherpa-onnx's native library) | MIT License (full text below) |
+| piper-phonemize with espeak-ng and its Portuguese data (pronunciation for the neural voices, AAR downloaded by the build, data in `app/src/main/assets/espeak-pt/`) | GNU General Public License v3.0 or later (see below) |
+| Apache Commons Compress, with Commons IO, Lang and Codec (unpacking downloaded voice packages) | Apache License 2.0 (NOTICE below) |
 
 ### jsoup
 
@@ -202,4 +206,72 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```
+
+### Offline neural voices: sherpa-onnx, ONNX Runtime, piper-phonemize and espeak-ng
+
+The neural voices ([ADR 0018](docs/decisions/0018-offline-neural-voices.md))
+run on the phone with [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)
+2.0.3 (Apache License 2.0), whose native library has
+[ONNX Runtime](https://github.com/microsoft/onnxruntime) linked in (MIT
+License, below). Text is turned into phonemes by
+[piper-phonemize](https://github.com/csukuangfj/piper-phonemize) 1.6.1, which
+contains [espeak-ng](https://github.com/espeak-ng/espeak-ng) and its
+pronunciation data. Both are licensed under the
+[GNU General Public License v3.0 or later](https://www.gnu.org/licenses/gpl-3.0.html),
+so the APK that includes them is distributed under the GPL-3.0; the source
+code in this repository stays MIT. The app shows the full license texts in
+its "About and licences" screen with a link to this repository. The release
+files, their checksums and the tags of their source code are listed in
+[app/libs/README.md](app/libs/README.md); the Portuguese espeak-ng files in
+`app/src/main/assets/espeak-pt/` are copied unmodified from the
+piper-phonemize AAR.
+
+```text
+MIT License
+
+Copyright (c) Microsoft Corporation
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+### Apache Commons
+
+[Apache Commons Compress](https://commons.apache.org/proper/commons-compress/)
+unpacks the downloaded voice packages (bzip2-compressed tar archives); it
+brings Commons IO, Commons Lang and Commons Codec. Used under the
+[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). Their
+NOTICE files:
+
+```text
+Apache Commons Compress
+Copyright 2002-2025 The Apache Software Foundation
+
+Apache Commons IO
+Copyright 2002-2025 The Apache Software Foundation
+
+Apache Commons Lang
+Copyright 2001-2025 The Apache Software Foundation
+
+Apache Commons Codec
+Copyright 2002-2025 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (https://www.apache.org/).
 ```

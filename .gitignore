@@ -57,3 +57,7 @@ Thumbs.db
 # ---------------------------------------------------------------------------
 /reference/
 /scratch/
+
+# Libraries the build downloads from their GitHub releases (app/libs/README.md)
+app/libs/*.aar
+app/libs/*.part

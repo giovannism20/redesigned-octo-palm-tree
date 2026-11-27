@@ -21,6 +21,7 @@ coroutines = "1.11.0"
 jsoup = "1.24.1"
 pdfbox-android = "2.0.27.0"
 mlkit-text-recognition = "16.0.1"
+commons-compress = "1.28.0"
 kotlinx-serialization = "1.13.0"
 junit4 = "4.13.2"
 junit-bom = "6.1.3"
@@ -71,6 +72,7 @@ jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 pdfbox-android = { module = "com.tom-roush:pdfbox-android", version.ref = "pdfbox-android" }
 mlkit-text-recognition = { module = "com.google.mlkit:text-recognition", version.ref = "mlkit-text-recognition" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
 junit4 = { module = "junit:junit", version.ref = "junit4" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit-bom" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
