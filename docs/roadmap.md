@@ -103,10 +103,11 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 ## Phase 7 — Personal settings (owner request 2026-11-27)
 
 - [x] Owner decisions: keep Atkinson Hyperlegible Next (its slashed zero included); settings for text size, light or dark theme and the reading font
-- [ ] "Ajustes" tab with a live preview; "Adicionar livro" moves into the Library so the bar keeps four tabs
-- [ ] Text size for the whole app, on top of the phone's font size
-- [ ] Light theme from the brand (paper, ink, sealing wax), dark by default, or the phone's choice; AA contrast checked for both
-- [ ] Reading font for the follow-along text: Atkinson Hyperlegible Next or a serif book face (Literata)
+- [x] "Ajustes" tab with a live preview; "Adicionar livro" moves into the Library so the bar keeps four tabs
+- [x] Text size for the whole app, on top of the phone's font size (Normal, Grande, Maior, Muito grande; dialogs, sheets and menus too)
+- [x] Light theme from the brand (paper, ink, sealing wax), dark by default, or the phone's choice; AA contrast checked for both
+- [x] Reading font for the follow-along text: Atkinson Hyperlegible Next or a serif book face (Literata)
+- [ ] On the phone: every screen in Claro and at Muito grande (with the phone's font at maximum too), the theme after a restart, Literata in the reader, sharing a book still works
 
 ## Release (every phase)
 
