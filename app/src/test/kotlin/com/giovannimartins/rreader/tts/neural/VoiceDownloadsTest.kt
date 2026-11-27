@@ -242,7 +242,7 @@ class VoiceDownloadsTest {
 
     @Test
     fun `waits longer by the same step before each new attempt`() {
-        val request = VoiceDownloadWork.request(pkg, wifiOnly = true)
+        val request = VoiceDownloadRequests.download(pkg, wifiOnly = true)
 
         assertThat(request.workSpec.backoffPolicy).isEqualTo(BackoffPolicy.LINEAR)
         assertThat(request.workSpec.backoffDelayDuration).isEqualTo(Duration.ofSeconds(30).toMillis())

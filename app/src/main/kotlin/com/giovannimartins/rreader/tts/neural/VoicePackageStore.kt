@@ -25,6 +25,7 @@ import javax.inject.Singleton
  * is there with its exact size.
  */
 @Singleton
+@Suppress("TooManyFunctions") // It owns every path under filesDir/voices; splitting it would scatter the layout.
 class VoicePackageStore internal constructor(
     private val root: File,
     private val io: CoroutineDispatcher,

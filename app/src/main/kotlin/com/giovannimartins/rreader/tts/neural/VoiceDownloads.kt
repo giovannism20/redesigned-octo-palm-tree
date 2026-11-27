@@ -90,7 +90,7 @@ class WorkManagerVoiceDownloads
                         WorkInfo.State.RUNNING
                 }
             val policy = if (running) ExistingWorkPolicy.KEEP else ExistingWorkPolicy.REPLACE
-            workManager.enqueueUniqueWork(name, policy, VoiceDownloadWork.request(pkg, wifiOnly))
+            workManager.enqueueUniqueWork(name, policy, VoiceDownloadRequests.download(pkg, wifiOnly))
         }
 
         override suspend fun cancel(pkg: VoicePackage) {
@@ -99,7 +99,7 @@ class WorkManagerVoiceDownloads
             // job is first replaced by a placeholder, which deletes it, and the placeholder is cancelled. WorkManager
             // does both in the background: until it has, an attempt of the job can still start and write to the
             // archive deleted below.
-            workManager.enqueueUniqueWork(name, ExistingWorkPolicy.REPLACE, VoiceDownloadWork.placeholder()).await()
+            workManager.enqueueUniqueWork(name, ExistingWorkPolicy.REPLACE, VoiceDownloadRequests.placeholder()).await()
             workManager.cancelUniqueWork(name).await()
             downloader.discard(pkg)
         }
@@ -126,6 +126,45 @@ class WorkManagerVoiceDownloads
         }
     }
 
+/** The WorkManager requests of voice downloads: the download job of a package, and the placeholder that removes one. */
+internal object VoiceDownloadRequests {
+    /** Longer than a placeholder ever waits: it is cancelled as soon as it has taken a job's place. */
+    private val PLACEHOLDER_DELAY: Duration = Duration.ofDays(365)
+
+    /**
+     * The download job of [pkg]: it waits for Wi-Fi (or another unmetered network) when [wifiOnly], else for any
+     * connection, and for storage that is not low, and retries with a linear backoff of
+     * [WorkManagerVoiceDownloads.RETRY_DELAY] per attempt.
+     */
+    fun download(
+        pkg: VoicePackage,
+        wifiOnly: Boolean,
+    ): OneTimeWorkRequest {
+        val network = if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED
+        return OneTimeWorkRequestBuilder<VoiceDownloadWorker>()
+            .setInputData(VoiceDownloadWork.input(pkg))
+            .setConstraints(
+                Constraints
+                    .Builder()
+                    .setRequiredNetworkType(network)
+                    .setRequiresStorageNotLow(true)
+                    .build(),
+            ).setBackoffCriteria(BackoffPolicy.LINEAR, WorkManagerVoiceDownloads.RETRY_DELAY)
+            .addTag(VoiceDownloadWork.TAG)
+            .addTag(VoiceDownloadWork.packageTag(pkg))
+            .apply { if (wifiOnly) addTag(VoiceDownloadWork.WIFI_ONLY_TAG) }
+            .build()
+    }
+
+    /**
+     * A job that takes the place of a download job to remove it, a finished one included, and is then cancelled. It
+     * has none of the download tags, so it never shows as a download, would not start for a year, and names no
+     * package, so it would do nothing if it did.
+     */
+    fun placeholder(): OneTimeWorkRequest =
+        OneTimeWorkRequestBuilder<VoiceDownloadWorker>().setInitialDelay(PLACEHOLDER_DELAY).build()
+}
+
 /** How voice download jobs are named and tagged, and what they keep in WorkManager's [Data]. */
 internal object VoiceDownloadWork {
     /** Tag of every voice download job. */
@@ -141,43 +180,7 @@ internal object VoiceDownloadWork {
     private const val MAX_PERCENT = 100
     private const val FULL = 100f
 
-    /** Longer than a placeholder ever waits: it is cancelled as soon as it has taken a job's place. */
-    private val PLACEHOLDER_DELAY: Duration = Duration.ofDays(365)
-
     fun uniqueName(pkg: VoicePackage) = "voice-download-${pkg.id}"
-
-    /**
-     * The download job of [pkg]: it waits for Wi-Fi (or another unmetered network) when [wifiOnly], else for any
-     * connection, and for storage that is not low, and retries with a linear backoff of
-     * [WorkManagerVoiceDownloads.RETRY_DELAY] per attempt.
-     */
-    fun request(
-        pkg: VoicePackage,
-        wifiOnly: Boolean,
-    ): OneTimeWorkRequest {
-        val network = if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED
-        return OneTimeWorkRequestBuilder<VoiceDownloadWorker>()
-            .setInputData(input(pkg))
-            .setConstraints(
-                Constraints
-                    .Builder()
-                    .setRequiredNetworkType(network)
-                    .setRequiresStorageNotLow(true)
-                    .build(),
-            ).setBackoffCriteria(BackoffPolicy.LINEAR, WorkManagerVoiceDownloads.RETRY_DELAY)
-            .addTag(TAG)
-            .addTag(packageTag(pkg))
-            .apply { if (wifiOnly) addTag(WIFI_ONLY_TAG) }
-            .build()
-    }
-
-    /**
-     * A job that takes the place of a download job to remove it, a finished one included, and is then cancelled. It
-     * has none of the download tags, so it never shows as a download, would not start for a year, and names no
-     * package, so it would do nothing if it did.
-     */
-    fun placeholder(): OneTimeWorkRequest =
-        OneTimeWorkRequestBuilder<VoiceDownloadWorker>().setInitialDelay(PLACEHOLDER_DELAY).build()
 
     fun packageTag(pkg: VoicePackage) = PACKAGE_TAG_PREFIX + pkg.id
 
