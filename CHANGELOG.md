@@ -19,6 +19,8 @@ All notable user-visible changes are documented here. The format follows
   headsets (−15 s, play/pause, +15 s; headset next/previous also move 15 s).
 - Listening resumes at the start of the sentence where it stopped; the place
   is saved as you listen, pause or stop, and a finished book starts over.
+  After a pause of more than five minutes (or a long phone call) it starts a
+  sentence or about ten seconds earlier, so the thread is not lost.
 - Player screen with cover, chapter progress and time left, large −15 s,
   play/pause and +15 s buttons, speed from 0.75× to 2× and a chapter list.
 - Mini player above the navigation bar while a book is open; tapping a book
