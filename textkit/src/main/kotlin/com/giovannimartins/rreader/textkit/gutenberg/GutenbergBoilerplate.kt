@@ -35,9 +35,16 @@ public object GutenbergBoilerplate {
     /** "THE PROJECT GUTENBERG EBOOK" as the markers spell it, after `START OF` or `END OF`. */
     private const val THE_EBOOK = "(?:THE\\s+|THIS\\s+)?PROJECT\\s+GUTENBERG(?:['’]S)?\\s+E-?(?:BOOK|TEXT)\\b"
 
+    /**
+     * The asterisks that open a marker: a run of at least two, matched only from its first asterisk and never given
+     * back (possessive, like the spaces after it). A backtracking `\*{2,}\s*` retried every position of a long run
+     * of asterisks, which took quadratic time on a hostile paragraph; this way a run is scanned once.
+     */
+    private const val OPENING = "(?<!\\*)\\*{2,}+\\s*+"
+
     /** The start marker, up to its closing asterisks or the end of the paragraph. */
-    private val START = marker("\\*{2,}\\s*START\\s+OF\\s+$THE_EBOOK.*?(?:\\*{2,}|$)")
-    private val END = marker("\\*{2,}\\s*END\\s+OF\\s+$THE_EBOOK")
+    private val START = marker("${OPENING}START\\s+OF\\s+$THE_EBOOK.*?(?:\\*{2,}|$)")
+    private val END = marker("${OPENING}END\\s+OF\\s+$THE_EBOOK")
 
     /** "End of the Project Gutenberg EBook of …" or "End of Project Gutenberg's …", opening a paragraph. */
     private val END_LINE = marker("^\\W{0,3}END\\s+OF\\s+(?:THE\\s+|THIS\\s+)?PROJECT\\s+GUTENBERG\\b")

@@ -3,8 +3,10 @@ package com.giovannimartins.rreader.textkit.gutenberg
 import com.giovannimartins.rreader.textkit.model.Chapter
 import com.google.common.truth.Truth.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertTimeoutPreemptively
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import java.time.Duration
 
 class GutenbergBoilerplateTest {
     @Test
@@ -215,12 +217,30 @@ class GutenbergBoilerplateTest {
             .isEqualTo("$dialogue${Chapter.PARAGRAPH_SEPARATOR}Não consultes diccionarios.")
     }
 
+    @Test
+    fun `SR-2 scans millions of asterisks in linear time, as markers or not`() {
+        val stars = "*".repeat(8_000_000)
+        val plain = listOf(chapter(null, stars, "Era uma vez.", "$stars END OF THE"))
+        val marked = listOf(chapter(null, *HEADER, "$stars START OF THE PROJECT GUTENBERG EBOOK LIVRO $stars", "Fim."))
+
+        val stripped =
+            assertTimeoutPreemptively(Duration.ofSeconds(LINEAR_TIME_LIMIT_S)) {
+                GutenbergBoilerplate.strip(plain) to GutenbergBoilerplate.strip(marked)
+            }
+
+        assertThat(stripped.first).isEqualTo(plain)
+        assertThat(stripped.second).containsExactly(chapter(null, "Fim."))
+    }
+
     private fun chapter(
         title: String?,
         vararg paragraphs: String,
     ) = Chapter.fromParagraphs(title, paragraphs.toList())
 
     private companion object {
+        /** Seconds for scanning tens of millions of characters; quadratic matching would take hours. */
+        const val LINEAR_TIME_LIMIT_S = 10L
+
         val HEADER =
             arrayOf(
                 "The Project Gutenberg eBook of Livro de Teste",
