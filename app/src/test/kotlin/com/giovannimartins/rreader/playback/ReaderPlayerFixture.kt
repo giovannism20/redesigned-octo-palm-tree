@@ -43,6 +43,9 @@ internal class ReaderPlayerFixture(
     private val context: Context = ApplicationProvider.getApplicationContext()
     val clock = FakeClock(false)
     val status = ListeningStatus()
+
+    /** The books asked to be rendered ahead while charging. */
+    val prerendered = mutableListOf<String>()
     val internal: ExoPlayer =
         ExoPlayer
             .Builder(context)
@@ -63,6 +66,7 @@ internal class ReaderPlayerFixture(
                 speech = SpeechNormalizer(),
                 rates = rates,
                 status = status,
+                prerender = PrerenderJobs { bookId -> prerendered += bookId },
                 saveScope = CoroutineScope(io),
                 cpu = io,
             )

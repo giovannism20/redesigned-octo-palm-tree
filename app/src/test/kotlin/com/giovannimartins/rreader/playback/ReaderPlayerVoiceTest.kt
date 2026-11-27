@@ -121,6 +121,18 @@ class ReaderPlayerVoiceTest {
     }
 
     @Test
+    fun `a voice slower than real time renders the book ahead while charging`() {
+        openAt(ReadingPosition.START)
+        assertThat(fixture.prerendered).isEmpty()
+        content.voice = phone.copy(slowToRender = true)
+
+        player.handle(ReaderCommand.RefreshVoice)
+        ShadowLooper.idleMainLooper()
+
+        assertThat(fixture.prerendered).containsExactly(BOOK_ID)
+    }
+
+    @Test
     fun `with no book open there is no voice to change`() {
         assertThat(player.handle(ReaderCommand.RefreshVoice)).isFalse()
     }

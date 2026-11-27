@@ -3,6 +3,9 @@ package com.giovannimartins.rreader.playback
 import com.giovannimartins.rreader.textkit.model.ReadingPosition
 import com.giovannimartins.rreader.textkit.model.TextRange
 import com.giovannimartins.rreader.textkit.text.SegmentPlanner
+import com.giovannimartins.rreader.textkit.text.SpeechNormalizer
+import com.giovannimartins.rreader.tts.SegmentRequest
+import com.giovannimartins.rreader.tts.Voice
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 
@@ -35,6 +38,21 @@ internal data class SegmentCursor(
 
     /** Whether the segment is the chapter's heading (its first segment and equal to the chapter title). */
     fun isHeading(): Boolean = index == 0 && plan.title?.trim()?.equals(text().trim(), ignoreCase = true) == true
+
+    /**
+     * What to render for this segment of book [bookId] with [voice]: its text in speech form ([speech]); null when
+     * there is nothing to say, such as a "* * *" scene break. The feeder and the pre-renderer both use it, so they
+     * write the same cache files.
+     */
+    fun request(
+        bookId: String,
+        voice: Voice,
+        speech: SpeechNormalizer,
+    ): SegmentRequest? =
+        speech
+            .toSpeech(text(), isHeading())
+            .takeIf(String::isNotBlank)
+            ?.let { SegmentRequest(bookId, voice, plan.index, range, it) }
 }
 
 /**

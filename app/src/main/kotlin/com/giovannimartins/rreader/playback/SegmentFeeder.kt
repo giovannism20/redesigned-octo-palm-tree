@@ -10,7 +10,6 @@ import com.giovannimartins.rreader.textkit.model.ReadingPosition
 import com.giovannimartins.rreader.textkit.text.SpeechNormalizer
 import com.giovannimartins.rreader.tts.SegmentAudio
 import com.giovannimartins.rreader.tts.SegmentRenderer
-import com.giovannimartins.rreader.tts.SegmentRequest
 import com.giovannimartins.rreader.tts.Voice
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -169,9 +168,8 @@ internal class SegmentFeeder(
         cursor: SegmentCursor,
     ): Boolean {
         last = cursor
-        val text = speech.toSpeech(cursor.text(), cursor.isHeading())
-        if (text.isBlank()) return true // For example a "* * *" scene break: nothing to say.
-        val request = SegmentRequest(source.bookId, source.voice, cursor.plan.index, cursor.range, text)
+        // For example a "* * *" scene break: nothing to say.
+        val request = cursor.request(source.bookId, source.voice, speech) ?: return true
         return when (val audio = renderer.render(request)) {
             is SegmentAudio.Ready -> {
                 append(cursor, audio)

@@ -40,7 +40,11 @@ class SegmentRendererTest {
             assertThat(second.file).isEqualTo(first.file)
             assertThat(second.durationMillis).isEqualTo(text.length * MILLIS_PER_CHAR)
             assertThat(first.file.name).isEqualTo("0-0-${text.length}.wav")
-            assertThat(File(first.file.parentFile, "${first.file.name}.part").exists()).isFalse()
+            assertThat(
+                first.file.parentFile
+                    ?.list()
+                    ?.toList(),
+            ).containsExactly(first.file.name)
         }
 
     @Test

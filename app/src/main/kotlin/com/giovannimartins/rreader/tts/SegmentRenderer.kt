@@ -51,6 +51,7 @@ class SegmentRenderer
         @IoDispatcher private val io: CoroutineDispatcher,
     ) {
         private val rendersSinceTrim = AtomicInteger(TRIM_INTERVAL)
+        private val renders = AtomicInteger()
         private val recent = ArrayDeque<File>()
 
         /** The audio of [request], from the cache or freshly synthesized. */
@@ -89,7 +90,9 @@ class SegmentRenderer
             request: SegmentRequest,
             target: File,
         ): SegmentAudio {
-            val partial = File(target.parentFile, target.name + PARTIAL_SUFFIX)
+            // A name of its own, so two renders of the same segment (the player's and the pre-render's) never write
+            // into each other's file.
+            val partial = File(target.parentFile, "${target.name}.${renders.incrementAndGet()}$PARTIAL_SUFFIX")
             withContext(io) { partial.delete() }
             val result = engine.synthesize(request.text, request.voice, partial)
             return withContext(io) {

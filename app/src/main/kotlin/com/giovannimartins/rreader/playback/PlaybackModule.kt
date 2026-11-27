@@ -15,6 +15,9 @@ abstract class PlaybackModule {
     @Binds
     abstract fun playbackContent(repository: PlaybackRepository): PlaybackContent
 
+    @Binds
+    abstract fun prerenderJobs(jobs: WorkManagerPrerenderJobs): PrerenderJobs
+
     companion object {
         /** Sentences grouped into segments with the textkit defaults (ADR 0003). */
         @Provides

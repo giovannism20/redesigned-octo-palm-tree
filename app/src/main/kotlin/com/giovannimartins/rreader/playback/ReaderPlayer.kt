@@ -50,6 +50,8 @@ data class ReaderPlayerDependencies
         val rates: SpeakingRateTracker,
         /** Where the segment being spoken is published for the UI. */
         val status: ListeningStatus,
+        /** Renders slow voices ahead while the phone charges. */
+        val prerender: PrerenderJobs,
         /** Outlives the player, so the last position and speed are saved even after a release. */
         @ApplicationScope val saveScope: CoroutineScope,
         @DefaultDispatcher val cpu: CoroutineDispatcher,
@@ -367,6 +369,7 @@ class ReaderPlayer internal constructor(
         position.clock = ChapterClock(deps.rates.rateFor(loaded.voice?.id))
         playlist = BookMediaItems.playlist(loaded, position.clock, labeler)
         bookMetadata = BookMediaItems.bookMetadata(loaded)
+        voiceSwitch.renderAheadIfSlow(loaded)
         val requestedChapter = request.chapterIndex?.takeIf { it in loaded.chapters.indices }
         position.anchor = resumeAt ?: requestedChapter?.let { ReadingPosition(it, 0) } ?: loaded.position
         reportedChapter = position.anchor.chapterIndex
@@ -543,6 +546,11 @@ class ReaderPlayer internal constructor(
             if (voice?.id != open.voice?.id || voiceFailed) switchTo(open.copy(voice = voice), voiceFailed)
         }
 
+        /** A voice slower than real time renders the book ahead while the phone charges (ADR 0018). */
+        fun renderAheadIfSlow(book: PlaybackBook) {
+            if (book.voice?.slowToRender == true) deps.prerender.schedule(book.id)
+        }
+
         private fun switchTo(
             changed: PlaybackBook,
             voiceFailed: Boolean,
@@ -552,6 +560,7 @@ class ReaderPlayer internal constructor(
                 fail(PlaybackErrors.noVoice())
             } else {
                 if (voiceFailed) error = null
+                renderAheadIfSlow(changed)
                 if (error == null && prepared) {
                     position.anchor = position.current()
                     discontinuity = Player.DISCONTINUITY_REASON_INTERNAL
