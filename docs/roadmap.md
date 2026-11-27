@@ -61,7 +61,7 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 - [x] Follow-along reader: highlighted sentence, auto-scroll, tap to read from here, text size
 - [x] Sleep timer (minutes or end of chapter, fade-out)
 - [x] Small automatic rewind when resuming after a long pause
-- [ ] Fix the latent audio-focus race in `ReaderPlayerTest`'s phone-call test (wait for the focus request)
+- [x] Fix the latent audio-focus race in `ReaderPlayerTest`'s phone-call test (wait for the focus request)
 
 ## Phase 4 — Scanned PDFs (OCR)
 

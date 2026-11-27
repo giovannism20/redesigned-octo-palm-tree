@@ -236,7 +236,10 @@ class ReaderPlayerTest {
         )
         open()
         player.play()
-        runMainLooperUntil { player.currentPosition > clock.millisFor(50) }
+        // The focus request is asynchronous; wait for it before simulating a loss.
+        runMainLooperUntil {
+            player.currentPosition > clock.millisFor(50) && shadowOf(audioManager).lastAudioFocusRequest != null
+        }
         val saves = content.savedPositions.size
 
         changeAudioFocus(AudioManager.AUDIOFOCUS_LOSS)
@@ -250,7 +253,8 @@ class ReaderPlayerTest {
     fun `a phone call suppresses playback and it resumes when the call ends`() {
         open()
         player.play()
-        runMainLooperUntil { player.isPlaying }
+        // The focus request is asynchronous; wait for it before simulating the call.
+        runMainLooperUntil { player.isPlaying && shadowOf(audioManager).lastAudioFocusRequest != null }
 
         changeAudioFocus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
         runMainLooperUntil {
@@ -379,9 +383,11 @@ class ReaderPlayerTest {
 
     private fun spoken(): SpokenSegment? = fixture.status.spokenSegment.value
 
+    private val audioManager: AudioManager get() = context.getSystemService(AudioManager::class.java)
+
     /** Delivers an audio focus change the way the platform does, on the internal player's thread. */
     private fun changeAudioFocus(focusChange: Int) {
-        val audioManager = context.getSystemService(AudioManager::class.java)
+        val audioManager = audioManager
         Handler(internal.playbackLooper).post {
             shadowOf(audioManager).lastAudioFocusRequest.listener.onAudioFocusChange(focusChange)
         }
