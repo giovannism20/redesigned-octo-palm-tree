@@ -67,7 +67,8 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | DoS | Book download (B3) | Low | A huge or endless answer fills storage or a stalled one hangs, or a site that is down keeps a download "waiting" for minutes | 100 MB limit announced or counted, 15 s connect and 30 s read timeouts, temporary file always deleted; no new try starts two minutes after the first, then the download fails and says why; the listener sees what it does and can cancel it ([ADR 0020](decisions/0020-bounded-catalogue-downloads.md)) |
 | Info disclosure | Searches and downloads (B3) | Low | Search words and book choices leak to logs or to third parties | Sent only to Gutenberg (its site, or its official mirror for a download the site cannot serve) over HTTPS after the listener acts; never logged (SR-8); no cookies, identifiers or device data; search pages kept only in memory |
 | Info disclosure | TTS engine (B4) | Low/Medium | Network-backed voices send book text to a vendor | Default to offline voices; label network voices in the UI |
-| Tampering / EoP / DoS | Book text into the native phonemizer and ONNX Runtime (B1, B3) | Medium | A crafted EPUB or PDF, or a Gutenberg book, carries text that the native espeak-ng in piper-phonemize turns into memory corruption or a crash in the app's process: this espeak-ng lacks the fixes of espeak-ng 1.52.0, among them a stack buffer overflow in `RemoveEnding` reached with crafted text (CVE-2023-49992); its phonemes then go to sherpa-onnx, which turns them into the token ids of an ONNX Runtime model | Text is spoken only after the book passed the import limits (SR-2, SR-4, SR-13); `PhonemizerText` turns letters of other scripts into spaces, so espeak-ng only switches to the dictionaries the app ships (`EspeakDictionariesTest`), and splits runs of more than 40 characters without a space and drops control and format characters; the models are pinned by SHA-256 (SR-6). Known vulnerability, listed below with its fix (rebuild piper-phonemize against espeak-ng 1.52.0 or later); running the native engine in a process of its own, so a crash there does not stop the app, is in progress |
+| Tampering / EoP / DoS | Book text into the native phonemizer and ONNX Runtime (B1, B3) | Medium | A crafted EPUB or PDF, or a Gutenberg book, carries text that the native espeak-ng in piper-phonemize turns into memory corruption or a crash in the app's process: this espeak-ng lacks the fixes of espeak-ng 1.52.0, among them a stack buffer overflow in `RemoveEnding` reached with crafted text (CVE-2023-49992); its phonemes then go to sherpa-onnx, which turns them into the token ids of an ONNX Runtime model | Text is spoken only after the book passed the import limits (SR-2, SR-4, SR-13); `PhonemizerText` turns letters of other scripts into spaces, so espeak-ng only switches to the dictionaries the app ships (`EspeakDictionariesTest`), and splits runs of more than 40 characters without a space and drops control and format characters; the models are pinned by SHA-256 (SR-6). Known vulnerability, listed below with its fix (rebuild piper-phonemize against espeak-ng 1.52.0 or later); a crash there no longer loops: a segment the app died in twice in a row is skipped, and a phonemizer or model that crashes as it starts gives way to the phone's voice (SR-14). Running the native engine in a process of its own, so a crash there would not stop the app at all, is a possible further step, not started |
+| DoS | Neural voices' native code (B1, B3) | Medium | A sentence makes espeak-ng (piper-phonemize) or ONNX Runtime crash, or a model or the phonemizer crashes as it starts; the crash kills the app with its playback service, every resume renders the same sentence and dies again, and WorkManager runs the pre-render job into it again and again | `NeuralCallMarkers` notes each native call in `noBackupFilesDir/neural.inflight` while it runs (`phonemizer`, `load <package>`, `speak <voice> <16 hex digits of the SHA-256 of the segment text>`; never the text, SR-8): a segment the app died in twice in a row becomes a 250 ms pause the audio cache keeps; a phonemizer or model that did so as it started is not started again and listening goes on with the phone's voice; `LinkageError` and `OutOfMemoryError` from the native layers release the model and are typed failures; a pre-render job started three times without ending is given up (SR-14) |
 | Spoofing | Settings intents (B2) | Low | An app that declares the text-to-speech settings action answers the Voices screen's "install voices" button and imitates the system settings | The intent, and its fallback to the system settings, are addressed to the system Settings app (`com.android.settings`) only; when neither opens, nothing happens (`SystemSettingsTest`) |
 | Info disclosure / Tampering | Media session (B2) | Low | Another app connects to the exported playback service to see what is being listened to, or to control playback | Untrusted controllers are rejected; media ids must be book UUIDs (optionally with a chapter); the notification's content intent is explicit and immutable; no media button receiver, so playback never starts from the background |
 | Tampering | Media session start intents (B2) | Medium | Another app sends the exported service a media button (`ACTION_MEDIA_BUTTON`) or a custom notification action as a start intent: Media3 finds the session by the URI of Media3's default session id, or asks for a session on behalf of an unknown caller, and the media notification's controller, which runs as the app, relays the action, so the app's reader commands (read from a position, sleep timer) and media keys could be triggered from outside | The session has a random id, so its URI is known only to the notification's own pending intents; the service gives its session to trusted controllers only, so the unknown caller of a start intent gets none; the media notification's controller does not get the reader commands (its −15 s and +15 s buttons are player commands); `ReaderSessionCallback` refuses reader commands from any other controller (SR-7) |
@@ -249,6 +250,24 @@ Each requirement is testable; reference its ID in tests and reviews.
   `MetadataLimitsTest`, `EpubSecurityTest`, `DocumentInfoCleanerTest`,
   `ChapterTest`, `BookDaoTest`, `ImportPipelineTest`, `LibraryViewModelTest`
   and `ExploreViewModelTest`.)
+- **SR-14** A crash in the native code of the neural voices cannot repeat for
+  good. (Every call the neural voices make into native code is noted by
+  `NeuralCallMarkers` (on `NativeCallNote`, shared with SR-4) in
+  `noBackupFilesDir/neural.inflight`, from just before the call until it
+  returns: starting espeak-ng, loading a model and speaking a segment, noted
+  as `phonemizer`, `load <package>` or `speak <voice> <first 16 hex digits of
+  the SHA-256 of the segment's text>`, never the text. Each process reads the
+  note the previous one left before its first call. A segment in which the
+  process died twice in a row becomes a 250 ms pause, which the audio cache
+  keeps, so neither listening nor the pre-render job tries it again while it
+  is cached. A phonemizer or model in which the process died twice in a row as
+  it started is refused before any native call (`ENGINE_UNAVAILABLE`), keeping
+  the note, until another neural call succeeds or the package is deleted;
+  listening then goes on with the phone's voice. `LinkageError` and
+  `OutOfMemoryError` from the native layers release the model and are
+  `ENGINE_UNAVAILABLE`. `PrerenderWorker` gives up a job started three times
+  without ending. Verified by `NeuralCallMarkersTest`, `NativeCallNoteTest`,
+  `SherpaOnnxEngineTest`, `PrerenderTest` and `ReaderPlayerVoiceTest`.)
 
 ## Permissions
 
@@ -300,8 +319,9 @@ stays removed, and the network security config lets TLS reach Gutenberg only.
   app ships, turns control characters into spaces, drops invisible format
   characters and splits any run of more than 40 characters without a space
   (fixed espeak-ng clamps a word at 160 bytes); the import limits bound what text reaches it (SR-2, SR-4,
-  SR-13); running the native voice engine in a process of its own, so a crash
-  there does not stop the app, is in progress. Fix: rebuild piper-phonemize
+  SR-13); a crash in it no longer loops: the segment is skipped after two
+  crashes in a row, and a phonemizer or model that crashes as it starts gives
+  way to the phone's voice (SR-14). Fix: rebuild piper-phonemize
   1.6.1 against espeak-ng 1.52.0 or later (1.52.0 lacks the clause-terminator
   API piper-phonemize calls, which espeak-ng added in pull request 2127 of
   2025-03-03 and which its main branch, at version 1.53.0 since 2026-07-22,
@@ -359,7 +379,7 @@ Leak response: [runbooks/secrets.md](runbooks/secrets.md).
 ## Review checklist (end of each phase)
 
 - [ ] New inputs or network calls are reflected in this document.
-- [ ] SR-1 … SR-13 still hold; new tests cover new parsing paths.
+- [ ] SR-1 … SR-14 still hold; new tests cover new parsing paths.
 - [ ] Exported components and permissions unchanged or justified.
 - [ ] No secrets, personal data or third-party branding in the diff.
 - [ ] Dependency changes reviewed (Dependabot PRs or manual bumps).
