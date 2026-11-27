@@ -105,6 +105,10 @@ All notable user-visible changes are documented here. The format follows
 - While Project Gutenberg's site is down for maintenance, catalogue books
   are downloaded from its official mirror, and a search says that the free
   books site is under maintenance instead of only "not working".
+- A catalogue download no longer keeps trying for many minutes without a
+  word: it shows "Downloading…", "Trying the alternative site…" or that it
+  will try again in a moment, can be cancelled, and after about two minutes
+  says why it could not finish, with "Try again".
 
 ### Security
 

@@ -166,6 +166,9 @@ class ExploreViewModel
         /** Downloads [entry] into the library in the background. */
         fun download(entry: CatalogEntry) = downloads.download(entry)
 
+        /** Stops the download of [entry], waiting or under way; it can be downloaded again. */
+        fun cancelDownload(entry: CatalogEntry) = downloads.cancel(entry.id)
+
         private fun search(terms: String) {
             searchJob?.cancel()
             lastPage = null

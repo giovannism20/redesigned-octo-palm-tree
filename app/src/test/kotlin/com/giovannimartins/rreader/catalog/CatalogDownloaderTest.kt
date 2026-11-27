@@ -213,10 +213,21 @@ class CatalogDownloaderTest {
             downloader.download(
                 DOM_CASMURRO.id,
                 DOM_CASMURRO.title,
-            ) { read, total -> reports += read to total }
+            ) { reports += it.received to it.total }
         }
 
         assertThat(reports.last()).isEqualTo(epub.size.toLong() to epub.size.toLong())
+    }
+
+    @Test
+    fun `tells when it turns to the mirror`() {
+        val sources = mutableListOf<Boolean>()
+        transport.answer(BOOK) { status(503) }
+        transport.answer(MIRROR) { ok(MinimalEpub.bytes(), OCTET_STREAM) }
+
+        runBlocking { downloader.download(DOM_CASMURRO.id, DOM_CASMURRO.title) { sources += it.fromMirror } }
+
+        assertThat(sources.distinct()).containsExactly(false, true).inOrder()
     }
 
     /** Serves [bytes] as ebook 55752's EPUB, behind the redirect Gutenberg answers with. */

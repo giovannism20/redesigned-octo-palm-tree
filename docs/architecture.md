@@ -324,11 +324,15 @@ The Explore tab offers free public-domain books from Project Gutenberg
   `CatalogDownloader` fetches the EPUB 3 into a temporary file in private
   storage and hands it to `BookIntake.importFile`, the intake of shared files:
   signature check, 300 MB limit, SHA-256 duplicate check (an already imported
-  book is reported as such), book row and import job. A lost connection or a
-  busy server (HTTP 429, 5xx) is retried with an exponential backoff from
-  30 seconds, at most four attempts in all. The job publishes its
-  percentage and ends with the book's id or a `DownloadFailure`, read back by
-  ebook number as a `DownloadState` for the books the screen shows. Jobs are
+  book is reported as such), book row and import job. When the site answers
+  5xx or 429 or cannot be reached, the book is asked from Gutenberg's
+  official mirror (ADR 0019). A failure that may pass is tried again after
+  15 seconds within the same job, but no new try starts two minutes after the
+  first (`DownloadRetryPolicy`, ADR 0020). The job publishes whether it is
+  receiving the book from the site (with its percentage) or the mirror, or
+  waiting to try again, and ends with the book's id or a `DownloadFailure`,
+  read back by ebook number as a `DownloadState` for the books the screen
+  shows; "Cancel" cancels the job. Jobs are
   found by their unique names and carry no tag naming their book, since
   WorkManager logs tags (SR-8).
 - **License.** The EPUB parser drops Gutenberg's header, credits and license

@@ -86,6 +86,28 @@ class CatalogDownloadsTest {
     }
 
     @Test
+    fun `a cancelled download is forgotten, and the book can be downloaded again`() {
+        val downloads = WorkManagerCatalogDownloads(workManager)
+        downloads.download(DOM_CASMURRO)
+
+        downloads.cancel(DOM_CASMURRO.id)
+
+        val job = workManager.getWorkInfosForUniqueWork(DownloadWork.uniqueName(DOM_CASMURRO.id)).get().single()
+        assertThat(job.state).isEqualTo(WorkInfo.State.CANCELLED)
+        assertThat(runBlocking { downloads.states(setOf(DOM_CASMURRO.id)).first() }).isEmpty()
+        downloads.download(DOM_CASMURRO)
+        assertThat(runBlocking { downloads.states(setOf(DOM_CASMURRO.id)).first() })
+            .containsExactly(DOM_CASMURRO.id, DownloadState.Waiting)
+    }
+
+    @Test
+    fun `reads receiving from the mirror and waiting to try again from a running job`() {
+        assertThat(state(WorkInfo.State.RUNNING, progress = DownloadWork.progress(30, fromMirror = true)))
+            .isEqualTo(DownloadState.Downloading(0.3f, fromMirror = true))
+        assertThat(state(WorkInfo.State.RUNNING, progress = DownloadWork.retrying())).isEqualTo(DownloadState.Retrying)
+    }
+
+    @Test
     fun `knows no download of books never asked for`() {
         val downloads = WorkManagerCatalogDownloads(workManager)
 

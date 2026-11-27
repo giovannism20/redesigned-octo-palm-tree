@@ -1,6 +1,5 @@
 package com.giovannimartins.rreader.catalog
 
-import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
@@ -15,18 +14,24 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import java.time.Duration
 import javax.inject.Inject
 
 /** Where the download of a catalogue book stands. */
 sealed interface DownloadState {
-    /** Queued: waiting for a connection, or for the next attempt after a failure that may pass. */
+    /** Queued: waiting for a connection. */
     data object Waiting : DownloadState
 
-    /** Receiving the book; [fraction] is between 0 and 1, or null while its size is unknown. */
+    /**
+     * Receiving the book, from Gutenberg's official mirror when [fromMirror] because the site could not serve it;
+     * [fraction] is between 0 and 1, or null while its size is unknown.
+     */
     data class Downloading(
         val fraction: Float?,
+        val fromMirror: Boolean = false,
     ) : DownloadState
+
+    /** The last try failed in a way that may pass; the download tries again in a moment, for a short while only. */
+    data object Retrying : DownloadState
 
     /** The book is in the library as [bookId]; [alreadyThere] when it was there before the download. */
     data class InLibrary(
@@ -45,14 +50,17 @@ interface CatalogDownloads {
     /** Downloads [entry] into the library, unless it is already queued or downloading. */
     fun download(entry: CatalogEntry)
 
+    /** Stops the download of ebook [id], queued or under way; the book can then be downloaded again. */
+    fun cancel(id: Int)
+
     /** Where the downloads of the books [ids] stand, by Gutenberg ebook number; books never asked for are absent. */
     fun states(ids: Set<Int>): Flow<Map<Int, DownloadState>>
 }
 
 /**
  * [CatalogDownloads] on WorkManager: one unique [DownloadBookWorker] job per ebook that waits for a connection
- * (`NetworkType.CONNECTED`), so a book asked for offline downloads as soon as the phone is back online, and failures
- * that may pass are retried with an exponential backoff from [RETRY_DELAY]. A job is found by its unique name
+ * (`NetworkType.CONNECTED`), so a book asked for offline downloads as soon as the phone is back online; the job tries
+ * again by itself for a short while only ([DownloadRetryPolicy]). A job is found by its unique name
  * ([DownloadWork.uniqueName]) and carries no tag naming its book: WorkManager writes tags to the log (SR-8).
  */
 class WorkManagerCatalogDownloads
@@ -65,9 +73,12 @@ class WorkManagerCatalogDownloads
                 OneTimeWorkRequestBuilder<DownloadBookWorker>()
                     .setInputData(DownloadWork.input(entry))
                     .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
-                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, RETRY_DELAY)
                     .build()
             workManager.enqueueUniqueWork(DownloadWork.uniqueName(entry.id), ExistingWorkPolicy.KEEP, request)
+        }
+
+        override fun cancel(id: Int) {
+            workManager.cancelUniqueWork(DownloadWork.uniqueName(id))
         }
 
         override fun states(ids: Set<Int>): Flow<Map<Int, DownloadState>> =
@@ -82,11 +93,6 @@ class WorkManagerCatalogDownloads
             workManager.getWorkInfosForUniqueWorkFlow(DownloadWork.uniqueName(id)).map { jobs ->
                 jobs.lastOrNull()?.let(DownloadWork::stateOf)?.let { id to it }
             }
-
-        companion object {
-            /** The wait before the first retry; it doubles after each failed attempt. */
-            val RETRY_DELAY: Duration = Duration.ofSeconds(30)
-        }
     }
 
 /** How download jobs are named, and what they keep in WorkManager's [Data]. */
@@ -106,8 +112,18 @@ internal object DownloadWork {
 
     fun titleOf(input: Data): String = input.getString(Keys.TITLE).orEmpty()
 
-    /** Progress of [percent] (0–100), or of an unknown share while the size of the book is not known. */
-    fun progress(percent: Int?): Data = workDataOf(Keys.PERCENT to (percent ?: Keys.UNKNOWN))
+    /** Receiving the book, from the mirror when [fromMirror]: [percent] (0–100), or null while its size is unknown. */
+    fun progress(
+        percent: Int?,
+        fromMirror: Boolean = false,
+    ): Data =
+        workDataOf(
+            Keys.PERCENT to (percent ?: Keys.UNKNOWN),
+            Keys.STAGE to if (fromMirror) Keys.MIRROR else Keys.SITE,
+        )
+
+    /** Waiting to try again after a failure that may pass. */
+    fun retrying(): Data = workDataOf(Keys.STAGE to Keys.RETRYING)
 
     fun inLibrary(outcome: DownloadOutcome.InLibrary): Data =
         workDataOf(Keys.BOOK_ID to outcome.bookId, Keys.ALREADY_THERE to outcome.alreadyThere)
@@ -118,7 +134,7 @@ internal object DownloadWork {
     fun stateOf(job: WorkInfo): DownloadState? =
         when (job.state) {
             WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED -> DownloadState.Waiting
-            WorkInfo.State.RUNNING -> DownloadState.Downloading(JobData.fraction(job.progress))
+            WorkInfo.State.RUNNING -> JobData.running(job.progress)
             WorkInfo.State.SUCCEEDED -> JobData.inLibrary(job.outputData)
             WorkInfo.State.FAILED -> DownloadState.Failed(JobData.failure(job.outputData))
             WorkInfo.State.CANCELLED -> null
@@ -133,6 +149,10 @@ private object Keys {
     const val BOOK_ID = "book_id"
     const val ALREADY_THERE = "already_there"
     const val FAILURE = "failure"
+    const val STAGE = "stage"
+    const val SITE = "site"
+    const val MIRROR = "mirror"
+    const val RETRYING = "retrying"
     const val UNKNOWN = -1
 }
 
@@ -140,7 +160,17 @@ private object Keys {
 private object JobData {
     private const val PERCENT = 100f
 
-    fun fraction(progress: Data): Float? =
+    /** What a running job last reported: receiving the book from the site or the mirror, or waiting to try again. */
+    fun running(progress: Data): DownloadState {
+        val stage = progress.getString(Keys.STAGE)
+        return if (stage == Keys.RETRYING) {
+            DownloadState.Retrying
+        } else {
+            DownloadState.Downloading(fraction(progress), fromMirror = stage == Keys.MIRROR)
+        }
+    }
+
+    private fun fraction(progress: Data): Float? =
         progress.getInt(Keys.PERCENT, Keys.UNKNOWN).takeIf { it in 0..PERCENT.toInt() }?.let { it / PERCENT }
 
     fun inLibrary(output: Data): DownloadState? =

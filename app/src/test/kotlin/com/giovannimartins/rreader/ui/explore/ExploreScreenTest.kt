@@ -186,6 +186,30 @@ class ExploreScreenTest {
     }
 
     @Test
+    fun `a download under way says what it is doing and can be cancelled`() {
+        val statuses =
+            mapOf(
+                DownloadState.Waiting to "Waiting for the internet to download…",
+                DownloadState.Downloading(null) to "Downloading…",
+                DownloadState.Downloading(0.4f) to "Downloading… 40%",
+                DownloadState.Downloading(null, fromMirror = true) to "Trying the alternative site…",
+                DownloadState.Retrying to "The site is not answering. Trying again in a moment…",
+            )
+        val update = show(ExploreUiState(curated = listOf(DOM_CASMURRO)))
+
+        statuses.forEach { (state, text) ->
+            update(ExploreUiState(curated = listOf(DOM_CASMURRO), downloads = mapOf(DOM_CASMURRO.id to state)))
+            scrollTo(hasText(text))
+        }
+        compose
+            .onNodeWithContentDescription("Cancel the download of Dom Casmurro")
+            .assertHeightIsAtLeast(56.dp)
+            .performClick()
+
+        assertThat(events).containsExactly("cancel 55752")
+    }
+
+    @Test
     fun `says when the free books site is down, for searches and downloads`() {
         show(ExploreUiState(search = SearchUiState.Failed("machado", SearchFailure.SITE_DOWN)))
 
@@ -209,7 +233,8 @@ class ExploreScreenTest {
         compose.onNode(matcher).assertExists()
     }
 
-    private fun show(initial: ExploreUiState) {
+    /** Shows [initial]; the function returned shows another state. */
+    private fun show(initial: ExploreUiState): (ExploreUiState) -> Unit {
         var state by mutableStateOf(initial)
         compose.setContent {
             RReaderTheme {
@@ -224,10 +249,12 @@ class ExploreScreenTest {
                     onMoreResults = { events += "more" },
                     onRetrySearch = { events += "retry" },
                     onDownload = { events += "download ${it.id}" },
+                    onCancelDownload = { events += "cancel ${it.id}" },
                     onOpenLibrary = { events += "library" },
                 )
             }
         }
+        return { state = it }
     }
 
     private companion object {

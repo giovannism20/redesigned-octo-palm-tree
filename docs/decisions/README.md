@@ -23,6 +23,7 @@ record supersedes an old one, and the old one is marked
 | [0014](0014-target-android-17.md) | Target Android 17 (API 37) and test on it first | Accepted |
 | [0015](0015-on-device-ocr-with-bundled-ml-kit.md) | On-device OCR with bundled ML Kit, resumable per page, in a dataSync foreground job | Accepted |
 | [0016](0016-in-process-listening-state.md) | Share the spoken segment in-process; reader commands through the session | Accepted |
-| [0017](0017-free-catalogue-from-project-gutenberg.md) | Free catalogue from Project Gutenberg through an allowlisted HTTPS client | Accepted; allowlist replaced by 0019 |
+| [0017](0017-free-catalogue-from-project-gutenberg.md) | Free catalogue from Project Gutenberg through an allowlisted HTTPS client | Accepted; allowlist replaced by 0019, download retries by 0020 |
 | [0018](0018-offline-neural-voices.md) | Offline neural voices with sherpa-onnx; GPL-3.0 applies to the APK | Accepted |
 | [0019](0019-gutenberg-site-and-mirror-only.md) | Allowlist exactly Gutenberg's site and its official mirror; download from the mirror when the site is down | Accepted |
+| [0020](0020-bounded-catalogue-downloads.md) | Bound catalogue downloads to about two minutes, and show and cancel them | Accepted |

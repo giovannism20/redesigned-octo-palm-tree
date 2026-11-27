@@ -67,6 +67,7 @@ fun ExploreRoute(
         onMoreResults = viewModel::moreResults,
         onRetrySearch = viewModel::retrySearch,
         onDownload = viewModel::download,
+        onCancelDownload = viewModel::cancelDownload,
         onOpenLibrary = onOpenLibrary,
         modifier = modifier,
     )
@@ -85,10 +86,11 @@ fun ExploreScreen(
     onMoreResults: () -> Unit,
     onRetrySearch: () -> Unit,
     onDownload: (CatalogEntry) -> Unit,
+    onCancelDownload: (CatalogEntry) -> Unit,
     onOpenLibrary: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val books = BookActions(state.downloads, onDownload, onOpenLibrary)
+    val books = BookActions(state.downloads, onDownload, onCancelDownload, onOpenLibrary)
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(24.dp),
@@ -109,6 +111,7 @@ fun ExploreScreen(
 private class BookActions(
     val downloads: Map<Int, DownloadState>,
     val onDownload: (CatalogEntry) -> Unit,
+    val onCancel: (CatalogEntry) -> Unit,
     val onOpenLibrary: () -> Unit,
 )
 
@@ -153,6 +156,7 @@ private fun LazyListScope.bookItems(
             entry = entry,
             download = books.downloads[entry.id],
             onDownload = { books.onDownload(entry) },
+            onCancel = { books.onCancel(entry) },
             onOpenLibrary = books.onOpenLibrary,
         )
     }
@@ -207,6 +211,7 @@ private fun ExploreScreenPreview() {
             onMoreResults = {},
             onRetrySearch = {},
             onDownload = {},
+            onCancelDownload = {},
             onOpenLibrary = {},
         )
     }

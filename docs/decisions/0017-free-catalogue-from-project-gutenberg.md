@@ -2,7 +2,9 @@
 
 - **Status:** Accepted; the allowlisted hosts of decision 5 are replaced by
   [ADR 0019](0019-gutenberg-site-and-mirror-only.md) (exactly the site and its
-  official mirror)
+  official mirror), and the retries of decision 3 by
+  [ADR 0020](0020-bounded-catalogue-downloads.md) (about two minutes, with
+  status and cancel)
 - **Date:** 2026-11-27
 
 ## Context

@@ -39,6 +39,16 @@ enum class DownloadFailure {
     STORAGE,
 }
 
+/** How a download goes: where the book comes from, and how much of it arrived. */
+data class DownloadProgress(
+    /** Whether it comes from Gutenberg's official mirror, because the site could not serve it. */
+    val fromMirror: Boolean,
+    /** The bytes received so far. */
+    val received: Long = 0,
+    /** The length announced, or -1 while it is unknown. */
+    val total: Long = -1,
+)
+
 /** Outcome of downloading a catalogue book. */
 sealed interface DownloadOutcome {
     /** The book is in the library as [bookId]; [alreadyThere] when it was there before this download. */
@@ -70,11 +80,14 @@ class CatalogDownloader
         private val files: BookFileStore,
         @IoDispatcher private val io: CoroutineDispatcher,
     ) {
-        /** Downloads ebook [id], titled [title] until its own metadata is read, telling [onProgress] how it goes. */
+        /**
+         * Downloads ebook [id], titled [title] until its own metadata is read, telling [onProgress] where the book
+         * comes from as soon as a source is asked, and how much of it arrived.
+         */
         suspend fun download(
             id: Int,
             title: String,
-            onProgress: (received: Long, total: Long) -> Unit = { _, _ -> },
+            onProgress: (DownloadProgress) -> Unit = {},
         ): DownloadOutcome =
             withContext(io) {
                 val temp = files.newImportTempFile()
@@ -98,13 +111,13 @@ class CatalogDownloader
         private suspend fun fetch(
             id: Int,
             file: File,
-            onProgress: (Long, Long) -> Unit,
+            onProgress: (DownloadProgress) -> Unit,
         ): FetchResult {
-            val site = fetchInto(file, GutenbergEndpoints.epub(id), onProgress)
+            val site = fetchInto(file, GutenbergEndpoints.epub(id), fromMirror = false, onProgress)
             val useMirror = site is FetchResult.Failed && site.failure in MIRROR_FAILURES
             return if (useMirror) {
-                fetchInto(file, GutenbergEndpoints.mirrorEpub(id), onProgress).takeIf { it is FetchResult.Received }
-                    ?: site
+                fetchInto(file, GutenbergEndpoints.mirrorEpub(id), fromMirror = true, onProgress)
+                    .takeIf { it is FetchResult.Received } ?: site
             } else {
                 site
             }
@@ -114,11 +127,16 @@ class CatalogDownloader
         private suspend fun fetchInto(
             file: File,
             address: String,
-            onProgress: (Long, Long) -> Unit,
-        ): FetchResult =
-            file.outputStream().use { sink ->
-                http.fetch(CatalogRequest(address, EPUB_TYPES, MAX_DOWNLOAD_BYTES), sink, onProgress)
+            fromMirror: Boolean,
+            onProgress: (DownloadProgress) -> Unit,
+        ): FetchResult {
+            onProgress(DownloadProgress(fromMirror))
+            return file.outputStream().use { sink ->
+                http.fetch(CatalogRequest(address, EPUB_TYPES, MAX_DOWNLOAD_BYTES), sink) { received, total ->
+                    onProgress(DownloadProgress(fromMirror, received, total))
+                }
             }
+        }
 
         private fun failed(failure: FetchFailure): DownloadOutcome.Failed {
             val reason =

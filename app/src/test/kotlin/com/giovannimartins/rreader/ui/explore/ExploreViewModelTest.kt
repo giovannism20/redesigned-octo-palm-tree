@@ -223,6 +223,14 @@ class ExploreViewModelTest {
         }
 
     @Test
+    fun `cancels a download the listener no longer wants`() =
+        runTest {
+            viewModel().cancelDownload(DOM_CASMURRO)
+
+            assertThat(downloads.cancelled).containsExactly(DOM_CASMURRO.id)
+        }
+
+    @Test
     fun `a library that cannot be read leaves the downloads as they are`() =
         runTest {
             val viewModel = viewModel(BrokenLibraryDao(database.bookDao()))
@@ -284,8 +292,14 @@ class ExploreViewModelTest {
         val requested = mutableListOf<CatalogEntry>()
         val states = MutableStateFlow<Map<Int, DownloadState>>(emptyMap())
 
+        val cancelled = mutableListOf<Int>()
+
         override fun download(entry: CatalogEntry) {
             requested += entry
+        }
+
+        override fun cancel(id: Int) {
+            cancelled += id
         }
 
         override fun states(ids: Set<Int>): Flow<Map<Int, DownloadState>> = states.map { it.filterKeys(ids::contains) }

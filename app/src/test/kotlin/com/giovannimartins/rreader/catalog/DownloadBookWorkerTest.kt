@@ -29,11 +29,16 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.net.SocketTimeoutException
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.Collections
 import java.util.UUID
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TestTimeSource
 
 /** The download job: what it reports, when it retries and what it leaves for the Explore screen. */
 @RunWith(RobolectricTestRunner::class)
@@ -44,6 +49,10 @@ class DownloadBookWorkerTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val transport = FakeTransport()
     private val published: MutableList<Data> = Collections.synchronizedList(mutableListOf())
+
+    /** Moves on only when a fake answer says how long it took. */
+    private val clock = TestTimeSource()
+    private val policy = DownloadRetryPolicy(deadline = 2.minutes, pause = 1.milliseconds, timeSource = clock)
     private lateinit var database: RReaderDatabase
     private lateinit var downloader: CatalogDownloader
 
@@ -82,50 +91,72 @@ class DownloadBookWorkerTest {
     }
 
     @Test
-    fun `retries a failure that may pass, until the last attempt`() {
-        assertThat(run(attempt = 0)).isEqualTo(ListenableWorker.Result.retry())
-        assertThat(run(attempt = DownloadBookWorker.MAX_ATTEMPTS - 2)).isEqualTo(ListenableWorker.Result.retry())
+    fun `tries again while a failure may pass, but starts no try two minutes after the first`() {
+        transport.answer(BOOK) {
+            clock += 30.seconds
+            status(503)
+        }
+        transport.answer(MIRROR) {
+            clock += 30.seconds
+            status(503)
+        }
 
-        val last = run(attempt = DownloadBookWorker.MAX_ATTEMPTS - 1)
+        val result = run()
 
-        assertThat(stateAfter(last, WorkInfo.State.FAILED)).isEqualTo(DownloadState.Failed(DownloadFailure.NETWORK))
+        assertThat(stateAfter(result, WorkInfo.State.FAILED)).isEqualTo(DownloadState.Failed(DownloadFailure.SITE_DOWN))
+        assertThat(transport.requests.map { it.address }).containsExactly(BOOK, MIRROR, BOOK, MIRROR).inOrder()
     }
 
     @Test
-    fun `retries while the site is down, then says so`() {
+    fun `a try that works after a failure adds the book, and says it was trying again`() {
+        var tries = 0
+        transport.answer(BOOK) {
+            if (tries++ == 0) throw SocketTimeoutException("connect timed out") else ok(MinimalEpub.bytes(), EPUB)
+        }
+
+        val result = run()
+
+        assertThat(stateAfter(result, WorkInfo.State.SUCCEEDED)).isInstanceOf(DownloadState.InLibrary::class.java)
+        assertThat(published.map(::stateOf)).contains(DownloadState.Retrying)
+    }
+
+    @Test
+    fun `says when the book comes from the mirror`() {
         transport.answer(BOOK) { status(503) }
+        transport.answer(MIRROR) { ok(MinimalEpub.bytes(), "application/octet-stream") }
 
-        assertThat(run(attempt = 0)).isEqualTo(ListenableWorker.Result.retry())
-        val last = run(attempt = DownloadBookWorker.MAX_ATTEMPTS - 1)
+        val result = run()
 
-        assertThat(stateAfter(last, WorkInfo.State.FAILED)).isEqualTo(DownloadState.Failed(DownloadFailure.SITE_DOWN))
+        assertThat(stateAfter(result, WorkInfo.State.SUCCEEDED)).isInstanceOf(DownloadState.InLibrary::class.java)
+        assertThat(published.map(::stateOf).last()).isEqualTo(DownloadState.Downloading(1f, fromMirror = true))
     }
 
     @Test
-    fun `does not retry a failure that will not pass`() {
+    fun `does not try again a failure that will not pass`() {
         val body = FakeTransport.Companion.CountingBody(1)
         transport.answer(BOOK) { ok(body, EPUB, contentLength = CatalogDownloader.MAX_DOWNLOAD_BYTES + 1) }
 
-        val result = run(attempt = 0)
+        val result = run()
 
         assertThat(stateAfter(result, WorkInfo.State.FAILED)).isEqualTo(DownloadState.Failed(DownloadFailure.TOO_LARGE))
+        assertThat(transport.requests).hasSize(1)
     }
 
     @Test
-    fun `an answer that is not the book fails without retrying`() {
+    fun `an answer that is not the book fails without trying again`() {
         transport.answer(BOOK) { ok("<html>Down for maintenance</html>".toByteArray(), "text/html") }
 
-        val result = run(attempt = 0)
+        val result = run()
 
         assertThat(stateAfter(result, WorkInfo.State.FAILED))
             .isEqualTo(DownloadState.Failed(DownloadFailure.UNAVAILABLE))
     }
 
     @Test
-    fun `a redirect off the allowlist is refused without contacting it, and not retried`() {
+    fun `a redirect off the allowlist is refused without contacting it, and not tried again`() {
         transport.answer(BOOK) { redirect("https://mirror.example/pg55752-images-3.epub") }
 
-        val result = run(attempt = 0)
+        val result = run()
 
         assertThat(stateAfter(result, WorkInfo.State.FAILED))
             .isEqualTo(DownloadState.Failed(DownloadFailure.UNAVAILABLE))
@@ -140,14 +171,10 @@ class DownloadBookWorkerTest {
         assertThat(transport.requests).isEmpty()
     }
 
-    private fun run(
-        attempt: Int = 0,
-        input: Data = DownloadWork.input(DOM_CASMURRO),
-    ): ListenableWorker.Result {
+    private fun run(input: Data = DownloadWork.input(DOM_CASMURRO)): ListenableWorker.Result {
         val worker =
             TestListenableWorkerBuilder<DownloadBookWorker>(context)
                 .setInputData(input)
-                .setRunAttemptCount(attempt)
                 .setWorkerFactory(factory())
                 .setProgressUpdater { _, _, data ->
                     published += data
@@ -171,16 +198,11 @@ class DownloadBookWorkerTest {
         return DownloadWork.stateOf(job)
     }
 
-    private fun fractionOf(progress: Data): Float? {
-        val job =
-            WorkInfo(
-                id = UUID.randomUUID(),
-                state = WorkInfo.State.RUNNING,
-                tags = emptySet(),
-                progress = progress,
-            )
-        return (DownloadWork.stateOf(job) as? DownloadState.Downloading)?.fraction
-    }
+    /** The state the Explore screen reads from a running job that published [progress]. */
+    private fun stateOf(progress: Data): DownloadState? =
+        DownloadWork.stateOf(WorkInfo(UUID.randomUUID(), WorkInfo.State.RUNNING, emptySet(), progress = progress))
+
+    private fun fractionOf(progress: Data): Float? = (stateOf(progress) as? DownloadState.Downloading)?.fraction
 
     private fun factory() =
         object : WorkerFactory() {
@@ -188,10 +210,11 @@ class DownloadBookWorkerTest {
                 appContext: Context,
                 workerClassName: String,
                 workerParameters: WorkerParameters,
-            ) = DownloadBookWorker(appContext, workerParameters, downloader)
+            ) = DownloadBookWorker(appContext, workerParameters, downloader, policy)
         }
 
     private companion object {
         const val BOOK = "https://www.gutenberg.org/ebooks/55752.epub3.images"
+        const val MIRROR = "https://gutenberg.pglaf.org/cache/epub/55752/pg55752-images-3.epub"
     }
 }

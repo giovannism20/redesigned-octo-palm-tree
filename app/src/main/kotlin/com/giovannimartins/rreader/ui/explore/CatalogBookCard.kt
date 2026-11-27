@@ -51,12 +51,13 @@ import com.giovannimartins.rreader.catalog.DownloadState
 import com.giovannimartins.rreader.ui.theme.RReaderTheme
 import kotlin.math.roundToInt
 
-/** One book: author, title, description when there is one, and its download button or progress. */
+/** One book: author, title, description when there is one, and its download button, or its progress and "Cancel". */
 @Composable
 internal fun CatalogBookCard(
     entry: CatalogEntry,
     download: DownloadState?,
     onDownload: () -> Unit,
+    onCancel: () -> Unit,
     onOpenLibrary: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -75,6 +76,7 @@ internal fun CatalogBookCard(
                 title = entry.title,
                 state = download,
                 onDownload = onDownload,
+                onCancel = onCancel,
                 onOpenLibrary = onOpenLibrary,
             )
         }
@@ -87,6 +89,7 @@ private fun DownloadAction(
     title: String,
     state: DownloadState?,
     onDownload: () -> Unit,
+    onCancel: () -> Unit,
     onOpenLibrary: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -96,20 +99,9 @@ private fun DownloadAction(
                 DownloadButton(title = title, retry = false, onClick = onDownload)
             }
 
-            DownloadState.Waiting -> {
-                Status(stringResource(R.string.explore_waiting))
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            }
-
-            is DownloadState.Downloading -> {
-                val fraction = state.fraction
-                if (fraction == null) {
-                    Status(stringResource(R.string.explore_downloading))
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                } else {
-                    Status(stringResource(R.string.explore_downloading_percent, (fraction * PERCENT).roundToInt()))
-                    LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth())
-                }
+            DownloadState.Waiting, DownloadState.Retrying, is DownloadState.Downloading -> {
+                Underway(state)
+                CancelButton(title = title, onClick = onCancel)
             }
 
             is DownloadState.InLibrary -> {
@@ -128,6 +120,42 @@ private fun DownloadAction(
                 DownloadButton(title = title, retry = true, onClick = onDownload)
             }
         }
+    }
+}
+
+/** What a download under way is doing: waiting, receiving the book from the site or the mirror, or trying again. */
+@Composable
+private fun Underway(state: DownloadState) {
+    val fraction = (state as? DownloadState.Downloading)?.fraction
+    val status =
+        when {
+            state == DownloadState.Retrying -> stringResource(R.string.explore_retrying)
+            state is DownloadState.Downloading && state.fromMirror -> stringResource(R.string.explore_trying_mirror)
+            fraction != null -> stringResource(R.string.explore_downloading_percent, (fraction * PERCENT).roundToInt())
+            state is DownloadState.Downloading -> stringResource(R.string.explore_downloading)
+            else -> stringResource(R.string.explore_waiting)
+        }
+    Status(status)
+    if (fraction == null) {
+        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+    } else {
+        LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+/** Stops a download that is waiting or under way. */
+@Composable
+private fun CancelButton(
+    title: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val description = stringResource(R.string.explore_cancel_download_book, title)
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth().heightIn(min = 56.dp).semantics { contentDescription = description },
+    ) {
+        Text(text = stringResource(R.string.explore_cancel), style = MaterialTheme.typography.labelLarge)
     }
 }
 

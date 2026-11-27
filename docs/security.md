@@ -59,7 +59,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | Spoofing / Tampering | Downloads (B3) | Medium | Network attacker swaps a voice model or book | HTTPS only, system CAs for the two allowlisted hosts only; pinned SHA-256 for models; books validated like any import (signature, size, EPUB limits) |
 | Spoofing / Tampering | Redirects (B3) | Medium | A redirect (or a feed's next-page link) sends the app to another host or to cleartext | Each hop checked against the allowlist and HTTPS before any connection, at most 5 redirects; TLS to other hosts fails anyway (network security config) |
 | Tampering / DoS | Catalogue feed (B3) | Medium | A hostile or broken feed carries XXE, a billion laughs, a huge body or thousands of entries, or a title too large for a download job's 10 KB of data | Same safe XML parser as EPUBs (SR-3), 1 MiB per page, at most 100 books per page, only ebook numbers kept from links; titles and authors cut to 300 characters by the feed parser and again before they enter a job's data (SR-13) |
-| DoS | Book download (B3) | Low | A huge or endless answer fills storage or a stalled one hangs | 100 MB limit announced or counted, 15 s connect and 30 s read timeouts, temporary file always deleted, at most 4 attempts |
+| DoS | Book download (B3) | Low | A huge or endless answer fills storage or a stalled one hangs, or a site that is down keeps a download "waiting" for minutes | 100 MB limit announced or counted, 15 s connect and 30 s read timeouts, temporary file always deleted; no new try starts two minutes after the first, then the download fails and says why; the listener sees what it does and can cancel it ([ADR 0020](decisions/0020-bounded-catalogue-downloads.md)) |
 | Info disclosure | Searches and downloads (B3) | Low | Search words and book choices leak to logs or to third parties | Sent only to Gutenberg (its site, or its official mirror for a download the site cannot serve) over HTTPS after the listener acts; never logged (SR-8); no cookies, identifiers or device data; search pages kept only in memory |
 | Info disclosure | TTS engine (B4) | Low/Medium | Network-backed voices send book text to a vendor | Default to offline voices; label network voices in the UI |
 | Info disclosure / Tampering | Media session (B2) | Low | Another app connects to the exported playback service to see what is being listened to, or to control playback | Untrusted controllers are rejected; media ids must be book UUIDs (optionally with a chapter); the notification's content intent is explicit and immutable; no media button receiver, so playback never starts from the background |
@@ -137,8 +137,9 @@ Each requirement is testable; reference its ID in tests and reviews.
   allowlisted HTTPS hosts are contacted, and only after a user action. (ADR
   0017: `CatalogHttp` is the app's only network client and sends a request
   only when the listener searches, asks for more results or downloads a book;
-  a queued download waits for a connection and retries a lost connection or
-  a busy server, at most 4 attempts in all. Every address and every redirect
+  a queued download waits for a connection, tries again after a lost
+  connection or a site that is down or busy, but starts no new try two minutes
+  after the first, and can be cancelled (ADR 0020). Every address and every redirect
   must be HTTPS on the default port, without user information, on exactly
   `www.gutenberg.org` or Gutenberg's official mirror `gutenberg.pglaf.org`
   (`CatalogHosts`, ADR 0019); at most 5 redirects; only a 200 answer of the

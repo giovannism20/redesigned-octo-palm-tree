@@ -142,3 +142,7 @@ new version:
     there is no connection; "Baixar" waits, and the download starts by
     itself once airplane mode is off.
 16. Start a download and lock the phone or switch apps: it finishes.
+17. While a download runs, the book shows "Baixando…" (or "Tentando o site
+    alternativo…" when Gutenberg's site is down) and "Cancelar", which stops
+    it. A download that cannot finish says why within about two minutes and
+    offers "Tentar de novo".

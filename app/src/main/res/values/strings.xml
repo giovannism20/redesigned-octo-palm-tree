@@ -76,6 +76,10 @@
     <string name="explore_waiting">Waiting for the internet to download…</string>
     <string name="explore_downloading">Downloading…</string>
     <string name="explore_downloading_percent">Downloading… %1$d%%</string>
+    <string name="explore_trying_mirror">Trying the alternative site…</string>
+    <string name="explore_retrying">The site is not answering. Trying again in a moment…</string>
+    <string name="explore_cancel">Cancel</string>
+    <string name="explore_cancel_download_book">Cancel the download of %1$s</string>
     <string name="explore_added">Added to your library.</string>
     <string name="explore_already_in_library">This book is already in your library.</string>
     <string name="explore_open_library">Open in the library</string>
