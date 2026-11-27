@@ -1,5 +1,6 @@
 package com.giovannimartins.rreader.textkit.epub
 
+import com.giovannimartins.rreader.textkit.TextCleaner
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode

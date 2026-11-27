@@ -1,8 +1,8 @@
-package com.giovannimartins.rreader.textkit.epub
+package com.giovannimartins.rreader.textkit
 
 import java.text.Normalizer
 
-/** Turns raw document text into the normalized form stored in chapters. */
+/** Turns raw document text into the normalized form stored in chapters, for every source format. */
 internal object TextCleaner {
     /** Soft hyphen and zero-width characters: invisible in print, and noise for a voice. */
     private val INVISIBLE = setOf('\u00AD', '\u200B', '\u200C', '\u200D', '\u2060', '\uFEFF')
