@@ -13,6 +13,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.giovannimartins.rreader.textkit.text.SegmentPlanner
 import com.giovannimartins.rreader.textkit.text.SpeechNormalizer
 import com.giovannimartins.rreader.tts.AudioCache
+import com.giovannimartins.rreader.tts.InMemorySpeakingRateStore
 import com.giovannimartins.rreader.tts.SegmentRenderer
 import com.giovannimartins.rreader.tts.SpeakingRateTracker
 import kotlinx.coroutines.CoroutineScope
@@ -52,7 +53,7 @@ internal class ReaderPlayerFixture(
 
     init {
         val io = UnconfinedTestDispatcher()
-        val rates = SpeakingRateTracker()
+        val rates = SpeakingRateTracker(InMemorySpeakingRateStore(), CoroutineScope(io))
         val renderer = SegmentRenderer(engine, AudioCache(cacheDir), rates, Clock.systemUTC(), io)
         val dependencies =
             ReaderPlayerDependencies(

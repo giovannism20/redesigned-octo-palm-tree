@@ -11,9 +11,13 @@ import com.giovannimartins.rreader.data.db.RReaderDatabase
 import com.giovannimartins.rreader.data.db.ReadingPositionEntity
 import com.giovannimartins.rreader.data.files.BookFileStore
 import com.giovannimartins.rreader.data.settings.SettingsRepository
+import com.giovannimartins.rreader.textkit.estimate.SpeakingRate
 import com.giovannimartins.rreader.textkit.model.Chapter
 import com.giovannimartins.rreader.textkit.model.CoverImage
 import com.giovannimartins.rreader.textkit.model.ReadingPosition
+import com.giovannimartins.rreader.tts.InMemorySpeakingRateStore
+import com.giovannimartins.rreader.tts.SpeakingRateTracker
+import com.giovannimartins.rreader.tts.SpeakingRates
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -42,6 +46,8 @@ class PlaybackRepositoryTest {
     private lateinit var database: RReaderDatabase
     private lateinit var files: BookFileStore
     private lateinit var settings: SettingsRepository
+    private val rateStore = InMemorySpeakingRateStore()
+    private lateinit var rates: SpeakingRateTracker
 
     @Before
     fun setUp() {
@@ -86,6 +92,18 @@ class PlaybackRepositoryTest {
 
             assertThat(loaded.position).isEqualTo(ReadingPosition.START)
             assertThat(loaded.pausedFor).isNull()
+        }
+
+    @Test
+    fun `loading a book restores the speaking rates learned before`() =
+        runTest {
+            insertBook()
+            rateStore.saved = SpeakingRates(mapOf(voice().id to SpeakingRate(17.0)), voice().id)
+            val repository = repository()
+
+            repository.load(BOOK_ID)
+
+            assertThat(rates.rateFor(voice().id)).isEqualTo(SpeakingRate(17.0))
         }
 
     @Test
@@ -137,6 +155,7 @@ class PlaybackRepositoryTest {
         }
 
     private fun TestScope.repository(): PlaybackRepository {
+        rates = SpeakingRateTracker(rateStore, backgroundScope)
         settings =
             SettingsRepository(
                 PreferenceDataStoreFactory.create(
@@ -148,6 +167,7 @@ class PlaybackRepositoryTest {
             positionDao = database.readingPositionDao(),
             files = files,
             preferences = PlaybackPreferences(settings, FakeSpeechEngine()),
+            rates = rates,
             clock = clock,
             io = UnconfinedTestDispatcher(testScheduler),
         )

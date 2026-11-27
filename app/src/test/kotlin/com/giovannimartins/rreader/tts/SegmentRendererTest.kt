@@ -3,6 +3,7 @@ package com.giovannimartins.rreader.tts
 import com.giovannimartins.rreader.textkit.estimate.SpeakingRate
 import com.giovannimartins.rreader.textkit.model.TextRange
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -23,7 +24,7 @@ class SegmentRendererTest {
 
     private val voice = Voice("system:engine:pt", "engine", "Engine", "pt", Locale.forLanguageTag("pt-BR"), false, 400)
     private val engine = CountingEngine()
-    private val rates = SpeakingRateTracker()
+    private val rates = SpeakingRateTracker(InMemorySpeakingRateStore(), CoroutineScope(UnconfinedTestDispatcher()))
     private val clock = Clock.fixed(Instant.ofEpochMilli(5_000_000), ZoneOffset.UTC)
     private val text = "Era uma vez um livro que queria ser ouvido em voz alta."
 

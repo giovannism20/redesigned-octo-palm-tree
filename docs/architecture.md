@@ -66,10 +66,10 @@ Base package: `com.giovannimartins.rreader`.
 
 | Package | Responsibility | Status |
 |---------|----------------|--------|
-| `data` | Room database (`db`), book file storage (`files`), library repository (`library`), DataStore settings (`settings`) | implemented |
+| `data` | Room database (`db`), book file storage (`files`), library repository (`library`), DataStore settings and learned speaking rates (`settings`) | implemented |
 | `importer` | `BookIntake` (picker/share/view URIs → signature check, size-limited copy, SHA-256 dedupe, book row), `ImportBookWorker` + `BookImportProcessor` (parse and persist), `BookParser` per format (`EpubBookParser`, `PdfBookParser`) | implemented |
 | `pdf` | PdfBox text extraction (`PdfLayoutExtractor`: positioned lines, outline and document info within `PdfLimits`), `PdfRenderer` page rendering (`FirstPageCoverRenderer`: first page → JPEG cover), ML Kit OCR → layout lines | in progress (text-layer PDFs; OCR in Phase 4) |
-| `tts` | `SpeechEngine` interface and `SystemTtsEngine` (multi-engine Android TTS → WAV), `AudioCache`, `WavInfo`, `SegmentRenderer` (segment → cached WAV, 300 MB LRU trim), `SpeakingRateTracker` (per-voice rate learned from rendered audio); later `SherpaOnnxEngine` | implemented (neural voices in Phase 5) |
+| `tts` | `SpeechEngine` interface and `SystemTtsEngine` (multi-engine Android TTS → WAV), `AudioCache`, `WavInfo`, `SegmentRenderer` (segment → cached WAV, 300 MB LRU trim), `SpeakingRateTracker` (per-voice rate learned from rendered audio, kept across restarts through `SpeakingRateStore`); later `SherpaOnnxEngine` | implemented (neural voices in Phase 5) |
 | `playback` | `PlaybackService` (`MediaSessionService`, trusted controllers only), `ReaderPlayer` facade (chapter playlist over an internal ExoPlayer), `SegmentFeeder` (render-ahead window), `ChapterPlans`, `SeekTargets`, `PositionSaver`, `PlaybackRepository`, `ListeningStatus` (spoken segment and sleep timer for the UI), `ReaderCommands` (custom session commands), `SleepTimer` | implemented |
 | `catalog` | Public-domain catalogue client and downloads | planned |
 | `ui` | Compose screens, ViewModels, navigation, theme, design system; `ui/player`: `PlaybackConnection` (`MediaController` while the app is visible), mini player, full player with speed and chapters | in progress (shell, library, add book, voices, player) |
@@ -254,7 +254,8 @@ the volume on Android 17 ([ADR 0014](decisions/0014-target-android-17.md)).
 | What | Where | Notes |
 |------|-------|-------|
 | Books, chapters metadata, reading positions, per-book voice | Room (`rreader.db`) | Schema versioned; exported to `app/schemas/` for migration tests |
-| Settings (default voice, speed, text size) | DataStore | |
+| Settings (default voice, speed, text size) | DataStore (`settings`) | |
+| Learned speaking rates per voice, last voice that read | DataStore (`speaking_rates`, `SpeakingRatePreferences`) | Apart from the settings because they are measured, not chosen. Restored before the first book plays (`PlaybackRepository.load`) and for the library's time left; saved right after a change, then at most every 30 s |
 | Original file | `filesDir/books/{bookId}/source.{pdf,epub}` | Private app storage |
 | Normalized chapters | `filesDir/books/{bookId}/chapters/{index}.txt` | UTF-8 text, immutable after import |
 | Covers | `filesDir/books/{bookId}/cover` | Raw image bytes as extracted or rendered |

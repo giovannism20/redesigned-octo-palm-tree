@@ -16,7 +16,13 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import java.time.Clock
+import javax.inject.Qualifier
 import javax.inject.Singleton
+
+/** The preferences file of learned speaking rates, apart from the listener's settings. */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class SpeakingRatesData
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -46,4 +52,11 @@ object DataModule {
     fun settingsDataStore(
         @ApplicationContext context: Context,
     ): DataStore<Preferences> = PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("settings") }
+
+    @Provides
+    @Singleton
+    @SpeakingRatesData
+    fun speakingRatesDataStore(
+        @ApplicationContext context: Context,
+    ): DataStore<Preferences> = PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("speaking_rates") }
 }

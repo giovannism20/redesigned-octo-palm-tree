@@ -10,6 +10,7 @@ import com.giovannimartins.rreader.data.files.BookFileStore
 import com.giovannimartins.rreader.di.IoDispatcher
 import com.giovannimartins.rreader.textkit.estimate.ReadingEstimates
 import com.giovannimartins.rreader.textkit.model.ReadingPosition
+import com.giovannimartins.rreader.tts.SpeakingRateTracker
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -18,7 +19,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
-/** [PlaybackContent] backed by the library database, the book files and the listener's preferences. */
+/**
+ * [PlaybackContent] backed by the library database, the book files and the listener's preferences. Loading a
+ * book first restores the speaking rates learned in earlier sessions, so its chapter durations use them.
+ */
 @Singleton
 class PlaybackRepository
     @Inject
@@ -27,11 +31,13 @@ class PlaybackRepository
         private val positionDao: ReadingPositionDao,
         private val files: BookFileStore,
         private val preferences: PlaybackPreferences,
+        private val rates: SpeakingRateTracker,
         private val clock: Clock,
         @IoDispatcher private val io: CoroutineDispatcher,
     ) : PlaybackContent {
         override suspend fun load(bookId: String): BookLoad =
             try {
+                rates.restore()
                 withContext(io) { loadReadyBook(bookId) }
             } catch (e: SQLiteException) {
                 Diagnostics.recordHandled("load book for playback", e)
