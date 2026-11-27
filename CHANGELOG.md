@@ -98,6 +98,9 @@ All notable user-visible changes are documented here. The format follows
   reader crash no longer makes the app close again and again while the book
   is prepared: after the second time, that cover is left out or that page is
   skipped.
+- Sharing a book from an app that misbehaves no longer closes R Reader: it
+  says the book could not be saved. The same book shared twice at the same
+  time is added once.
 
 ### Security
 

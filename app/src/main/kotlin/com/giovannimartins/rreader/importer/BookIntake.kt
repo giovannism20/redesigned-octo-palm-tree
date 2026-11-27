@@ -1,6 +1,7 @@
 package com.giovannimartins.rreader.importer
 
 import android.content.ContentResolver
+import android.database.sqlite.SQLiteConstraintException
 import android.net.Uri
 import android.provider.OpenableColumns
 import com.giovannimartins.rreader.Diagnostics
@@ -14,15 +15,20 @@ import com.giovannimartins.rreader.textkit.BookFormat
 import com.giovannimartins.rreader.textkit.BookFormatDetector
 import com.giovannimartins.rreader.textkit.FormatDetection
 import com.giovannimartins.rreader.textkit.model.MetadataLimits
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
 import java.security.MessageDigest
 import java.time.Clock
 import java.util.UUID
 import javax.inject.Inject
+import javax.inject.Singleton
 
 /** Outcome of handing a file to [BookIntake]. */
 sealed interface IntakeResult {
@@ -45,7 +51,15 @@ sealed interface IntakeResult {
  * private storage with a size limit while hashing it, rejects duplicates,
  * creates the book row and queues [ImportBookWorker] (SR-7: only `content://`
  * URIs are accepted).
+ *
+ * Never throws for a bad file, a misbehaving provider or a storage error:
+ * the sharing app's provider is code of another app and may throw anything
+ * when its file or its name is read, and all of that is a rejection. Books are
+ * registered one at a time, so the same file shared twice at once is added
+ * once; if another intake still adds it first, the second is reported as a
+ * duplicate.
  */
+@Singleton
 class BookIntake
     @Inject
     constructor(
@@ -56,24 +70,19 @@ class BookIntake
         private val clock: Clock,
         @IoDispatcher private val io: CoroutineDispatcher,
     ) {
+        /** Registers one book at a time: the duplicate check and the new row go together. */
+        private val registering = Mutex()
+
         suspend fun import(uri: Uri): IntakeResult =
             withContext(io) {
-                if (uri.scheme !=
-                    ContentResolver.SCHEME_CONTENT
-                ) {
-                    return@withContext IntakeResult.Rejected(ImportFailure.UNSUPPORTED_FORMAT)
+                if (uri.scheme != ContentResolver.SCHEME_CONTENT) {
+                    IntakeResult.Rejected(ImportFailure.UNSUPPORTED_FORMAT)
+                } else {
+                    guarded("open shared file") {
+                        val stream = contentResolver.openInputStream(uri) ?: throw FileNotFoundException("No stream")
+                        stream.use { importStream(it, displayTitle(uri)) }
+                    }
                 }
-                val stream =
-                    try {
-                        contentResolver.openInputStream(uri)
-                    } catch (e: IOException) {
-                        Diagnostics.recordHandled("open shared file", e)
-                        null
-                    } catch (e: SecurityException) {
-                        Diagnostics.recordHandled("open shared file", e)
-                        null
-                    } ?: return@withContext IntakeResult.Rejected(ImportFailure.STORAGE_ERROR)
-                stream.use { importStream(it, displayTitle(uri)) }
             }
 
         /**
@@ -85,12 +94,7 @@ class BookIntake
             fallbackTitle: String,
         ): IntakeResult =
             withContext(io) {
-                try {
-                    file.inputStream().use { importStream(it, fallbackTitle) }
-                } catch (e: IOException) {
-                    Diagnostics.recordHandled("open downloaded book", e)
-                    IntakeResult.Rejected(ImportFailure.STORAGE_ERROR)
-                }
+                guarded("open downloaded book") { file.inputStream().use { importStream(it, fallbackTitle) } }
             }
 
         /** Imports from an already opened stream; separated from [import] for testing. */
@@ -101,27 +105,63 @@ class BookIntake
             withContext(io) {
                 val temp = files.newImportTempFile()
                 try {
-                    val copy = copyWithLimit(input, temp)
-                    val format =
-                        detectFormat(temp) ?: return@withContext IntakeResult.Rejected(ImportFailure.UNSUPPORTED_FORMAT)
-                    bookDao.findBySourceSha256(copy.sha256)?.let { existing ->
-                        return@withContext retryOrReportDuplicate(existing)
+                    guarded("copy import") {
+                        val copy = copyWithLimit(input, temp)
+                        when (val format = detectFormat(temp)) {
+                            null -> IntakeResult.Rejected(ImportFailure.UNSUPPORTED_FORMAT)
+                            else -> registering.withLock { register(temp, format, copy, fallbackTitle) }
+                        }
                     }
-                    val bookId = UUID.randomUUID().toString()
-                    files.adoptSource(temp, bookId, format)
-                    bookDao.insert(newBook(bookId, fallbackTitle, format, copy))
-                    jobs.enqueue(bookId)
-                    IntakeResult.Queued(bookId)
-                } catch (e: TooLargeException) {
-                    Diagnostics.recordHandled("copy import", e)
-                    IntakeResult.Rejected(ImportFailure.TOO_LARGE)
-                } catch (e: IOException) {
-                    Diagnostics.recordHandled("copy import", e)
-                    IntakeResult.Rejected(ImportFailure.STORAGE_ERROR)
                 } finally {
                     temp.delete()
                 }
             }
+
+        /**
+         * Runs [block], turning what a provider or the storage throws into a rejection: a file over the size limit is
+         * too large, anything else could not be stored. Cancellation goes through.
+         */
+        @Suppress("TooGenericExceptionCaught") // Providers are other apps' code and throw whatever they like.
+        private inline fun guarded(
+            where: String,
+            block: () -> IntakeResult,
+        ): IntakeResult =
+            try {
+                block()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Diagnostics.recordHandled(where, e)
+                IntakeResult.Rejected(
+                    if (e is TooLargeException) ImportFailure.TOO_LARGE else ImportFailure.STORAGE_ERROR,
+                )
+            }
+
+        /**
+         * Adds the copied [temp] file as a new book, unless the same file is already in the library. Runs under
+         * [registering]; when another intake (not serialized with this one) added the same file first, the unique index
+         * on its hash refuses the row, and this copy is deleted.
+         */
+        private suspend fun register(
+            temp: File,
+            format: BookFormat,
+            copy: CopiedFile,
+            title: String,
+        ): IntakeResult {
+            val existing = bookDao.findBySourceSha256(copy.sha256)
+            if (existing != null) return retryOrReportDuplicate(existing)
+            val bookId = UUID.randomUUID().toString()
+            files.adoptSource(temp, bookId, format)
+            return try {
+                bookDao.insert(newBook(bookId, title, format, copy))
+                jobs.enqueue(bookId)
+                IntakeResult.Queued(bookId)
+            } catch (e: SQLiteConstraintException) {
+                Diagnostics.recordHandled("register import", e)
+                files.delete(bookId)
+                IntakeResult.Duplicate(bookDao.findBySourceSha256(copy.sha256)?.id ?: throw e)
+            }
+        }
 
         /**
          * The same file again: a book that failed before (for example a format

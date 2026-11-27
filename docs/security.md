@@ -55,6 +55,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | DoS | Cover rendering (B1) | Low | A crafted first page crashes or stalls the platform PDF renderer (native code); a crash kills the process, and WorkManager runs the import again, which crashes again | Rendered only after PdfBox read the file, one page downscaled to at most 600 x 900 px, inside the import worker; a failure means no cover; a native call marker (`native.inflight`) names the call in flight, so a cover whose drawing killed the process twice in a row is left out, and an import started ten times without ending is given up (SR-4) |
 | DoS | OCR page rendering and recognition (B1) | Medium | A scan with huge or crafted pages exhausts memory, or stalls or crashes the native renderer or the recognizer, the crash repeating at every run of the import | Pages are drawn only after PdfBox read the file within its limits, one at a time, into a bitmap capped at 4,096 px a side and 12 million pixels; ML Kit gets one minute per page; allocation failures end in a typed failure; a page in which the process died twice in a row is kept without text, a file whose opening did so fails as "too complex", and an import started ten times without ending is given up (SR-4, ADR 0015) |
 | Tampering | Intents (B2) | Medium | Another app sends a crafted `file://` URI or huge stream | Accept `content://` only, copy with size limit, re-detect type |
+| DoS | Intents (B2) | Low | The sharing app's provider throws an exception the app does not expect (security, argument, state) when its file is opened or its name is read, or the same file is shared twice at once and both copies race to the unique index of file hashes, so the app closes | `BookIntake` turns anything a provider or the storage throws into a rejection; books are registered one at a time (a mutex around the duplicate check and the new row), and a row refused by the unique index makes the copy a duplicate, its file deleted (SR-7) |
 | Spoofing / Tampering | Downloads (B3) | Medium | Network attacker swaps a voice model or book | HTTPS only, system CAs for `gutenberg.org` only; pinned SHA-256 for models; books validated like any import (signature, size, EPUB limits) |
 | Spoofing / Tampering | Redirects (B3) | Medium | A redirect (or a feed's next-page link) sends the app to another host or to cleartext | Each hop checked against the allowlist and HTTPS before any connection, at most 5 redirects; TLS to other hosts fails anyway (network security config) |
 | Tampering / DoS | Catalogue feed (B3) | Medium | A hostile or broken feed carries XXE, a billion laughs, a huge body or thousands of entries | Same safe XML parser as EPUBs (SR-3), 1 MiB per page, at most 100 books per page, only ebook numbers kept from links |
@@ -152,7 +153,11 @@ Each requirement is testable; reference its ID in tests and reviews.
   validated like any imported file, SR-1 to SR-3 and SR-7.)
 - **SR-7** Exported components are limited to the launcher/intake activity and
   the media session service; intake accepts only `content://` URIs. (`BookIntake`; content is re-detected by signature and copied with a
-  300 MB limit. `PlaybackService` must be exported for the system to bind
+  300 MB limit. Whatever the sharing app's provider throws when its file is
+  opened, read or named, and any storage error, is a rejection, never a
+  crash; books are registered one at a time, and a file another intake added
+  first is reported as a duplicate with its copy deleted. Verified by
+  `BookIntakeTest` and `ImportViewModelTest`. `PlaybackService` must be exported for the system to bind
   it; `ReaderSessionCallback` accepts only trusted controllers — this app,
   the system and apps the user allowed to control media — and only book ids,
   and the service hands its session (`onGetSession`) to trusted controllers
