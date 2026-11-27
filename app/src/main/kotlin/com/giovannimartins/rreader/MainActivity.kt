@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.IntentCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.giovannimartins.rreader.ui.RReaderApp
 import com.giovannimartins.rreader.ui.importer.ImportViewModel
 import com.giovannimartins.rreader.ui.player.PlaybackConnection
@@ -33,6 +34,7 @@ class MainActivity : ComponentActivity() {
     private var openPlayerRequests by mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         lifecycle.addObserver(playbackConnection)

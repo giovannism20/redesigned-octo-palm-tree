@@ -8,6 +8,9 @@ All notable user-visible changes are documented here. The format follows
 
 ### Added
 
+- New app icon "Livro Aberto" (an open book formed by two R's with a
+  bookmark ribbon), with a themed version for Android 13+, a launch screen and
+  the app's colours taken from it.
 - Explore tab: free classics in Portuguese from Project Gutenberg, such as
   Dom Casmurro, Iracema and Os Maias, each with a short description, and a
   search by title or author. One tap on "Download" adds a book to the

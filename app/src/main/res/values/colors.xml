@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Window background shown before Compose draws; matches the theme's Ink color. -->
-    <color name="window_background">#FF111214</color>
-    <!-- Provisional launcher icon colors until the logo is defined (roadmap Phase 0b). -->
-    <color name="launcher_background">#FF111214</color>
+    <!-- Brand colours (docs/design/brand.md). -->
+    <color name="brand_night">#FF18233F</color>
+    <color name="brand_paper">#FFF5EAD6</color>
+    <color name="brand_seal">#FFE4664A</color>
+    <!-- Window background shown before Compose draws; matches the theme's Ink colour. -->
+    <color name="window_background">#FF0E1526</color>
+    <color name="launcher_background">@color/brand_night</color>
 </resources>

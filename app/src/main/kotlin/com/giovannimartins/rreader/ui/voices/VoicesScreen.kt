@@ -4,6 +4,7 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -141,7 +142,9 @@ private fun VoiceCard(
         } else {
             CardDefaults.cardColors()
         }
-    Card(modifier = modifier.fillMaxWidth(), colors = colors) {
+    // The selected voice is marked by a border as well as colour, so it does not rely on colour alone.
+    val border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
+    Card(modifier = modifier.fillMaxWidth(), colors = colors, border = border) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
                 text =

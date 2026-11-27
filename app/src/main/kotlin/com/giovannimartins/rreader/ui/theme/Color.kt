@@ -2,13 +2,16 @@ package com.giovannimartins.rreader.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Provisional palette until the visual identity is defined (roadmap Phase 0b).
-// Dark by default with high contrast for long listening sessions.
-internal val Ink = Color(0xFF111214)
-internal val Surface = Color(0xFF1C1D21)
-internal val SurfaceHigh = Color(0xFF26282D)
-internal val OnInk = Color(0xFFF4F4F5)
-internal val OnInkMuted = Color(0xFFB9BBC2)
-internal val Accent = Color(0xFFF2B84B)
-internal val OnAccent = Color(0xFF231A05)
-internal val Danger = Color(0xFFFF8A80)
+// Palette derived from the "Livro Aberto" logo (docs/design/brand.md): night blue,
+// paper and sealing-wax red. Dark by default with high contrast for long listening
+// sessions; every text/background pair meets WCAG AA (ratios in brand.md).
+internal val Ink = Color(0xFF0E1526)
+internal val Surface = Color(0xFF18233F)
+internal val SurfaceHigh = Color(0xFF22304F)
+internal val OnInk = Color(0xFFF5EAD6)
+internal val OnInkMuted = Color(0xFFC8BEAD)
+internal val Seal = Color(0xFFEE7A5F)
+internal val OnSeal = Color(0xFF0E1526)
+internal val SealContainer = Color(0xFF4A2B2A)
+internal val Outline = Color(0xFF8792AE)
+internal val Danger = Color(0xFFFFB4A9)

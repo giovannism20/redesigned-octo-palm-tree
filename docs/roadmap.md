@@ -23,9 +23,9 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 
 ## Phase 0b — Visual identity
 
-- [x] 3–4 logo concepts ("an R overlapping another R") as SVG, shown on a comparison page (awaiting the owner's choice)
-- [ ] Chosen logo → adaptive icon (foreground/background), monochrome themed icon, splash screen, in-app logo
-- [ ] Palette, large type scale and core components → Compose theme (`docs/design/`)
+- [x] 3–4 logo concepts ("an R overlapping another R") as SVG, shown on a comparison page — owner chose "Livro Aberto"
+- [x] Chosen logo → adaptive icon (foreground/background), monochrome themed icon, splash screen, in-app logo
+- [x] Palette, large type scale and core components → Compose theme ([brand.md](design/brand.md))
 - [x] Short usability test script for the primary user ([docs/design/usability-test.md](design/usability-test.md))
 
 ## Phase 1 — EPUB MVP (first version on the phone)
