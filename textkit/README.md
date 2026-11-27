@@ -13,7 +13,7 @@ KDoc.
 | `...textkit.model` | `NormalizedBook`, `Chapter`, `BookMetadata`, `CoverImage`, `TextRange`, `ReadingPosition` | implemented |
 | `...textkit.epub` | `EpubParser`: EPUB 2/3 container, OPF metadata, spine, nav/NCX chapter titles, cover and DRM detection, with safe ZIP and XML handling | implemented |
 | `...textkit.text` | `SentenceSegmenter` splits text into pt-BR aware sentence ranges (abbreviations, initials, dialogue dashes; never across paragraphs); `SegmentPlanner` groups them into rendered segments and finds the segment to resume from; `SpeechNormalizer.toSpeech` rewrites a segment or heading for voices at render time | implemented |
-| `...textkit.layout` | `LayoutBookBuilder`: PDF/OCR layout lines → `NormalizedBook` (running headers, footers and page numbers removed, hyphenation joined keeping Portuguese enclisis, paragraphs rebuilt, chapters from outline, headings or page ranges); `ScannedDocumentDetector` | implemented |
+| `...textkit.layout` | `LayoutBookBuilder`: PDF/OCR layout lines → `NormalizedBook` (running headers, footers and page numbers removed, hyphenation joined keeping Portuguese enclisis, paragraphs rebuilt, chapters from outline, headings or page ranges); `ScannedDocumentDetector`; `DocumentInfoCleaner` | implemented |
 | `...textkit.estimate` | `SpeakingRate` learns a voice's characters per second; `ReadingEstimates` derives progress, time left and character shifts (±15 s) across chapters from a `ReadingPosition` | implemented |
 
 ## EPUB parsing
@@ -92,6 +92,9 @@ when (val result = LayoutBookBuilder().build(metadata, pages, outline)) {
   without titles. A strategy needs two chapters, or one in a document of at
   most ten pages. Text before the first chapter start becomes an untitled
   chapter; chapters are never empty.
+- `DocumentInfoCleaner` keeps a PDF's own title, authors and language only
+  when meaningful: file names, "Microsoft Word - ..." exports, placeholders
+  ("Untitled", "Documento1") and computer user names are ignored.
 
 ## Testing
 
