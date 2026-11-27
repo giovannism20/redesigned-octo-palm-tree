@@ -32,7 +32,7 @@ fun MiniPlayer(
     modifier: Modifier = Modifier,
 ) {
     val title = nowPlaying.title.ifBlank { stringResource(R.string.library_untitled) }
-    Surface(color = MaterialTheme.colorScheme.surfaceVariant, modifier = modifier.fillMaxWidth()) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = modifier.fillMaxWidth()) {
         Column {
             LinearProgressIndicator(progress = { nowPlaying.progress }, modifier = Modifier.fillMaxWidth())
             Row(

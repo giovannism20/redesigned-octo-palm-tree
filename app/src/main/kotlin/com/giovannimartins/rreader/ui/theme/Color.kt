@@ -18,6 +18,12 @@ internal val Danger = Color(0xFFFFB4A9)
 
 // Supporting tones so that every Material colour role maps to the brand (see RReaderColorScheme).
 
+/**
+ * Material's legacy surfaceVariant role, between [Surface] and [SurfaceHigh]. It must differ from the container
+ * tones: Material picks a surface's content colour by its value, and surfaceVariant gets the muted text colour.
+ */
+internal val SurfaceMid = Color(0xFF1E2B49)
+
 /** Sealing wax deep enough for actions on the paper-coloured inverse surface, such as snackbar buttons. */
 internal val SealDeep = Color(0xFFB4442B)
 

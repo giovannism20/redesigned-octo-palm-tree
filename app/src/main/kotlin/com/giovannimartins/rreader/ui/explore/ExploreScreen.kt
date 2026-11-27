@@ -175,7 +175,7 @@ private fun ExploreHeader(
         )
         Text(text = stringResource(R.string.explore_intro), style = MaterialTheme.typography.bodyLarge)
         if (!online) {
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
                 Text(
                     text = stringResource(R.string.explore_offline),
                     style = MaterialTheme.typography.bodyLarge,

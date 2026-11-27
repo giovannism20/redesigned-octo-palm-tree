@@ -40,7 +40,7 @@ slightly lighter sealing wax so it reaches AA on every background.
 |-----------------|-----|-----|----------|
 | `Ink` (background) | `#0E1526` | screen background, window background | — |
 | `Surface` | `#18233F` | cards, sheets (the logo's night blue) | — |
-| `SurfaceHigh` | `#22304F` | raised surfaces, surface variant | — |
+| `SurfaceHigh` | `#22304F` | raised surfaces: cards, dialogs, mini player | — |
 | `OnInk` | `#F5EAD6` | body text | 15.3 on Ink, 13.0 on Surface |
 | `OnInkMuted` | `#C8BEAD` | secondary text | 9.9 on Ink, 8.5 on Surface, 7.1 on SurfaceHigh |
 | `Seal` (primary) | `#EE7A5F` | buttons, highlights, links | 6.6 on Ink, 5.6 on Surface |
@@ -53,6 +53,7 @@ Supporting tokens, so every Material role has a brand colour:
 
 | Token (Compose) | Hex | Use | Contrast |
 |-----------------|-----|-----|----------|
+| `SurfaceMid` | `#1E2B49` | Material's legacy surfaceVariant role only; kept distinct from the container tones because Material picks content colours by value | OnInkMuted 7.6 on it |
 | `SealDeep` | `#B4442B` | actions on the paper-coloured inverse surface (snackbars) | 4.6 on OnInk |
 | `DangerContainer` | `#5C2020` | error containers | OnInk 10.5 on it |
 | `OutlineVariant` | `#3A4766` | decorative dividers, disabled borders (never text) | — |
@@ -71,7 +72,8 @@ fails if a role is off-palette or a text/surface pair drops below 4.5 : 1.
 | primary/secondary/tertiary containers (selection, active tab, tracks) | `SealContainer`, with `OnInk` on it |
 | background, surfaceDim, surfaceContainerLowest | `Ink` |
 | surface, surfaceContainerLow, surfaceContainer (navigation bar, sheets, menus) | `Surface` |
-| surfaceVariant, surfaceContainerHigh/Highest, surfaceBright (cards, dialogs) | `SurfaceHigh` |
+| surfaceContainerHigh/Highest, surfaceBright (cards, dialogs, mini player) | `SurfaceHigh` |
+| surfaceVariant (legacy; screens use the container roles) | `SurfaceMid` |
 | onBackground, onSurface / onSurfaceVariant | `OnInk` / `OnInkMuted` |
 | inverseSurface, inverseOnSurface, inversePrimary | `OnInk`, `Ink`, `SealDeep` |
 | error, onError, errorContainer, onErrorContainer | `Danger`, `Ink`, `DangerContainer`, `OnInk` |
@@ -108,6 +110,9 @@ Rules:
 - Screens use theme roles only (`MaterialTheme.colorScheme`,
   `MaterialTheme.typography`); a new colour becomes a token in
   `ui/theme/Color.kt` first.
+- Raised areas (cards, the mini player) use the container roles
+  (`surfaceContainerHigh`), not the legacy `surfaceVariant`, so their text
+  gets the full-strength colour.
 - Every full screen draws on `ScreenSurface` (`ui/components/`), directly or
   through the app shell, so text and icons take the theme's content colour.
 - State is never shown by colour alone (selected voice: border + "In use").

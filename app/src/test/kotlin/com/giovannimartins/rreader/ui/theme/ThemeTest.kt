@@ -1,6 +1,7 @@
 package com.giovannimartins.rreader.ui.theme
 
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.contentColorFor
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.TextUnit
 import com.giovannimartins.rreader.ui.MIN_CONTRAST
@@ -15,6 +16,7 @@ class ThemeTest {
         listOf(
             Ink,
             Surface,
+            SurfaceMid,
             SurfaceHigh,
             OnInk,
             OnInkMuted,
@@ -96,6 +98,31 @@ class ThemeTest {
 
         pairs.forEach { (name, colors) ->
             assertWithMessage(name).that(contrastRatio(colors.first, colors.second)).isAtLeast(MIN_CONTRAST)
+        }
+    }
+
+    @Test
+    fun `components get the intended content colour on every surface`() {
+        with(RReaderColorScheme) {
+            val plainSurfaces =
+                listOf(
+                    background,
+                    surface,
+                    surfaceDim,
+                    surfaceBright,
+                    surfaceContainerLowest,
+                    surfaceContainerLow,
+                    surfaceContainer,
+                    surfaceContainerHigh,
+                    surfaceContainerHighest,
+                )
+            plainSurfaces.forEach { assertThat(contentColorFor(it)).isEqualTo(onSurface) }
+            assertThat(contentColorFor(surfaceVariant)).isEqualTo(onSurfaceVariant)
+            assertThat(contentColorFor(primary)).isEqualTo(onPrimary)
+            assertThat(contentColorFor(primaryContainer)).isEqualTo(onPrimaryContainer)
+            assertThat(contentColorFor(secondaryContainer)).isEqualTo(onSecondaryContainer)
+            assertThat(contentColorFor(errorContainer)).isEqualTo(onErrorContainer)
+            assertThat(contentColorFor(inverseSurface)).isEqualTo(inverseOnSurface)
         }
     }
 
