@@ -3,7 +3,10 @@
 Release builds are installed with ADB ([ADR 0007](../decisions/0007-distribution-via-adb.md)).
 Menu names below are for Samsung One UI; Portuguese labels are in parentheses.
 
-## 1. Prepare the phone (once)
+## 1. Prepare the phone (before each install)
+
+Debugging is turned off again after every install (step 4), so these steps
+are repeated each time.
 
 1. **Enable developer options:** Settings › About phone › Software information ›
    tap **Build number** seven times
@@ -43,11 +46,24 @@ Builds are split per CPU architecture: phones use the `arm64-v8a` APK, the
 emulator the `x86_64` one. `-r` replaces the installed app and **keeps its data**. If Google Play Protect
 warns about an unknown app, choose *More details › Install anyway*.
 
-## 4. After installing
+**Only release APKs go on the phone.** A debug build is debuggable: anyone
+holding the phone with debugging on can read the app's private data (books,
+progress) through `adb`. It is also signed with the debug key, so replacing
+it with a release later fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE` and
+forces an uninstall, which deletes the library and progress.
+
+## 4. After installing (every time)
 
 - **Battery:** Settings › Apps › R Reader › Battery › **Unrestricted**
   (Bateria › Sem restrições), so long listening sessions are not stopped.
 - Run the device checklist in [testing.md](../testing.md).
+- **Turn debugging off**, so no computer can control the phone or read app
+  data through `adb` until the next install: in Settings › Developer options
+  (Opções do desenvolvedor), turn off **Wireless debugging** (Depuração sem
+  fio) and **USB debugging** (Depuração USB), tap **Revoke USB debugging
+  authorizations** (Revogar autorizações de depuração USB) so no computer
+  stays trusted, then turn **Developer options** off with the switch at the
+  top of that screen. The next install starts again at step 1.
 - Turn Auto Blocker back on.
 
 ## Troubleshooting

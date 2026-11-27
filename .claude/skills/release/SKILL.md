@@ -17,7 +17,11 @@ description: Produce a signed R Reader release and install it on the primary use
    `apksigner verify --print-certs`.
 4. Run the AI-Generated Code Security Auditor and UI Finish-Gate Reviewer
    agents on the changes since the previous release.
-5. Install with `adb install -r` following
+5. Install the release APK (never a debug build: it is debuggable, and
+   replacing it later forces an uninstall that deletes the library) with
+   `adb install -r` following
    [docs/runbooks/install-on-device.md](../../../docs/runbooks/install-on-device.md)
-   and run the device checklist.
+   and run the device checklist. Then, on the phone, turn off Wireless
+   debugging and USB debugging, revoke USB debugging authorizations and turn
+   Developer options off (runbook step 4), every time.
 6. Commit the version bump (`chore(release): vX.Y.Z`) and tag it `vX.Y.Z`.

@@ -70,6 +70,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | Tampering | Supply chain (B5) | Medium | Compromised dependency, wrapper or action | Wrapper validation, pinned Actions, Dependabot, CodeQL, minimal permissions |
 | Info disclosure | Repository (B6) | High | A key or keystore is committed | Pre-commit hook, CI scan, GitHub push protection, `.gitignore`, review |
 | EoP | Update channel | Medium | A malicious APK replaces the app | Release signing key never leaves the maintainer's control; installs only from the maintainer |
+| Info disclosure / Tampering | Phone left in developer mode | Medium | After an install, USB or wireless debugging stays on and the computer stays authorized, so anyone with the phone (or on the same network) can install apps, read logs or, with a debuggable build, the app's private data | Only release builds are installed; after every install the runbook turns wireless and USB debugging off, revokes USB debugging authorizations and turns developer options off ([install runbook](runbooks/install-on-device.md), step 4) |
 
 ## Security requirements
 
