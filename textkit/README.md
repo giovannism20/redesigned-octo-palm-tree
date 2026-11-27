@@ -10,6 +10,7 @@ KDoc.
 | Package | Contents | Status |
 |---------|----------|--------|
 | `com.giovannimartins.rreader.textkit` | `BookFormat` detection from file signatures | implemented |
+| `...textkit.model` | `NormalizedBook`, `Chapter`, `BookMetadata`, `CoverImage`, `TextRange`, `ReadingPosition` | implemented |
 | `...textkit.epub` | EPUB container/OPF/spine/TOC parsing with safe ZIP and XML handling | planned (Phase 1) |
 | `...textkit.text` | Sentence segmentation, speech normalization | planned (Phase 1) |
 | `...textkit.layout` | Cleanup of PDF/OCR layout lines, chapter detection | planned (Phase 2) |

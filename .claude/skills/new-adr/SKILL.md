@@ -11,6 +11,6 @@ description: Record an architecture decision for R Reader. Use whenever a non-tr
    enough that code can be checked against it.
 3. Add a row to the index in `docs/decisions/README.md`.
 4. If it replaces an earlier decision, set the old ADR's status to
-   "Superseded by [NNNN](NNNN-short-title.md)" — never rewrite its content.
+   "Superseded by" plus a link to the new ADR — never rewrite its content.
 5. Update `docs/architecture.md`, `docs/domain.md` or `AGENTS.md` if the
    decision changes them, and commit everything with the code it affects.
