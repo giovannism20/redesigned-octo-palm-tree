@@ -59,4 +59,7 @@ enum class ImportFailure {
 
     /** A PDF that exceeded the extractor's time, text or memory limits (SR-4). */
     TOO_COMPLEX,
+
+    /** On-device text recognition failed on a scanned PDF (ADR 0015). */
+    OCR_FAILED,
 }

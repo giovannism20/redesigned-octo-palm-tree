@@ -29,10 +29,13 @@ data class PdfInfo(
     val language: String? = null,
 )
 
-/** Why a PDF could not be read. Each case maps to one user-facing message. */
+/** Why a PDF could not be read, from its text layer or by text recognition. Each case maps to one message. */
 sealed interface PdfError {
     /** The file is not a readable PDF: damaged, truncated, or without pages. */
     data object Damaged : PdfError
+
+    /** The on-device text recognizer failed on a scanned page; trying again may work. */
+    data object TextRecognitionFailed : PdfError
 
     /** Opening the document needs a password. */
     data object PasswordProtected : PdfError

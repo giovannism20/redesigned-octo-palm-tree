@@ -6,7 +6,7 @@
 |-------|-------|----------------|---------|
 | Pure unit tests | `textkit/src/test` | Parsing, cleanup, segmentation, normalization, estimates | `./gradlew :textkit:test` |
 | App unit tests | `app/src/test` | ViewModels, repositories, mapping, player logic with fakes | `./gradlew :app:testDebugUnitTest` |
-| Instrumented tests | `app/src/androidTest` | Room, import from real URIs, PDF cover rendering (`PdfRenderer`), `SystemTtsEngine`, playback service through `MediaController` | `./gradlew :app:connectedDebugAndroidTest` |
+| Instrumented tests | `app/src/androidTest` | Room, import from real URIs, PDF cover and OCR page rendering (`PdfRenderer`), ML Kit text recognition of generated scans, `SystemTtsEngine`, playback service through `MediaController` | `./gradlew :app:connectedDebugAndroidTest` |
 | Compose UI tests | `app/src/androidTest` | Screens, navigation, accessibility checks | same as above |
 | Static analysis | all modules | Android Lint, detekt, Spotless/ktlint | `./gradlew check` |
 | Security tests | `textkit` + `app` | Malicious EPUB/PDF inputs, secret guard | see below |

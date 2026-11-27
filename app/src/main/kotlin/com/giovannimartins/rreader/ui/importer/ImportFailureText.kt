@@ -19,6 +19,7 @@ fun ImportFailure.messageRes(): Int =
         ImportFailure.PASSWORD_PROTECTED -> R.string.import_failure_password
         ImportFailure.TOO_MANY_PAGES -> R.string.import_failure_too_many_pages
         ImportFailure.TOO_COMPLEX -> R.string.import_failure_too_complex
+        ImportFailure.OCR_FAILED -> R.string.import_failure_ocr
     }
 
 /** Text for a one-off import message. */

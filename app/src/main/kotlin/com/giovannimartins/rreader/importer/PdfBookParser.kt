@@ -65,6 +65,7 @@ internal fun PdfError.toImportFailure(): ImportFailure =
     when (this) {
         PdfError.Damaged -> ImportFailure.CORRUPTED
         PdfError.PasswordProtected -> ImportFailure.PASSWORD_PROTECTED
+        PdfError.TextRecognitionFailed -> ImportFailure.OCR_FAILED
         is PdfError.LimitExceeded -> limit.toImportFailure()
     }
 

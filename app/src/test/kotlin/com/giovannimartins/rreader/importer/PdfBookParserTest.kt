@@ -111,6 +111,7 @@ class PdfBookParserTest {
     fun `maps every PDF and layout error to a user-facing failure`() {
         assertThat(PdfError.Damaged.toImportFailure()).isEqualTo(ImportFailure.CORRUPTED)
         assertThat(PdfError.PasswordProtected.toImportFailure()).isEqualTo(ImportFailure.PASSWORD_PROTECTED)
+        assertThat(PdfError.TextRecognitionFailed.toImportFailure()).isEqualTo(ImportFailure.OCR_FAILED)
         assertThat(PdfError.LimitExceeded(PdfLimit.MAX_PAGES).toImportFailure()).isEqualTo(ImportFailure.TOO_MANY_PAGES)
         listOf(PdfLimit.TIME_BUDGET, PdfLimit.MAX_GLYPHS, PdfLimit.MEMORY).forEach { limit ->
             assertThat(PdfError.LimitExceeded(limit).toImportFailure()).isEqualTo(ImportFailure.TOO_COMPLEX)
