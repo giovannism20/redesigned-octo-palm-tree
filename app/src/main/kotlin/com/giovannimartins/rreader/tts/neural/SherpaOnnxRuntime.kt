@@ -16,9 +16,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * [NeuralRuntime] on the vendored native libraries (ADR 0018, app/libs/README.md): piper-phonemize 1.6.1 with the
- * Portuguese espeak-ng data the app ships, and sherpa-onnx 2.0.3, which takes the phonemes as code points (it no
- * longer phonemizes text itself). Models run on the CPU with up to [MAX_THREADS] threads.
+ * [NeuralRuntime] on the native libraries fetched by the build (ADR 0018, app/libs/README.md): piper-phonemize
+ * 1.6.1 with the Portuguese espeak-ng data the app ships, and sherpa-onnx 2.0.3, which takes the phonemes as code
+ * points (it no longer phonemizes text itself). Models run on the CPU with up to [MAX_THREADS] threads.
  */
 @Singleton
 class SherpaOnnxRuntime
