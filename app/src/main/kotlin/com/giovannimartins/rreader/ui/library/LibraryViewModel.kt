@@ -9,12 +9,15 @@ import com.giovannimartins.rreader.data.library.LibraryRepository
 import com.giovannimartins.rreader.data.settings.AppSettings
 import com.giovannimartins.rreader.data.settings.SettingsRepository
 import com.giovannimartins.rreader.tts.SpeakingRateTracker
+import com.giovannimartins.rreader.tts.SpeakingRates
 import com.giovannimartins.rreader.ui.player.PlaybackControls
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -24,6 +27,9 @@ import kotlin.time.Duration
 /** Library screen state. */
 sealed interface LibraryUiState {
     data object Loading : LibraryUiState
+
+    /** The library could not be read; the listener may try again. */
+    data object Unavailable : LibraryUiState
 
     data class Content(
         /** The most recently listened book that is ready, shown as "Continue listening". */
@@ -50,8 +56,19 @@ class LibraryViewModel
                 emit(AppSettings())
             }
 
+        /** Asks to read the library again after it could not be read. */
+        private val retries = Channel<Unit>(Channel.CONFLATED)
+
+        /**
+         * The library, or [LibraryUiState.Unavailable] when it cannot be read (for example a database row too large
+         * for a cursor), which the screen explains instead of the app closing; [retry] reads it again.
+         */
         val state: StateFlow<LibraryUiState> =
-            combine(repository.books, preferences, rates.rates) { books, prefs, learned ->
+            combine<List<LibraryBook>, AppSettings, SpeakingRates, LibraryUiState>(
+                repository.books,
+                preferences,
+                rates.rates,
+            ) { books, prefs, learned ->
                 LibraryUiState.Content(
                     continueListening = books.firstOrNull { it.status == BookStatus.READY && it.started },
                     books = books,
@@ -60,10 +77,21 @@ class LibraryViewModel
                             .mapNotNull { book -> LibraryTimeLeft.of(book, prefs, learned)?.let { book.id to it } }
                             .toMap(),
                 )
+            }.retryWhen { cause, _ ->
+                Diagnostics.recordHandled("read the library", cause)
+                retries.tryReceive() // A request made before this failure does not count.
+                emit(LibraryUiState.Unavailable)
+                retries.receive()
+                true
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), LibraryUiState.Loading)
 
         /** Starts or resumes listening to a book that is ready. */
         fun play(bookId: String) = playback.play(bookId)
+
+        /** Reads the library again after it was [LibraryUiState.Unavailable]. */
+        fun retry() {
+            retries.trySend(Unit)
+        }
 
         fun remove(bookId: String) {
             viewModelScope.launch { repository.remove(bookId) }

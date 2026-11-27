@@ -10,7 +10,7 @@ KDoc.
 | Package | Contents | Status |
 |---------|----------|--------|
 | `com.giovannimartins.rreader.textkit` | `BookFormat` detection from file signatures | implemented |
-| `...textkit.model` | `NormalizedBook`, `Chapter` (with `Chapter.paragraphRangesOf` for any chapter text), `BookMetadata`, `CoverImage`, `TextRange`, `ReadingPosition` | implemented |
+| `...textkit.model` | `NormalizedBook`, `Chapter` (with `Chapter.paragraphRangesOf` for any chapter text), `BookMetadata`, `CoverImage`, `TextRange`, `ReadingPosition`; `MetadataLimits` bounds titles, authors, languages and descriptions | implemented |
 | `...textkit.epub` | `EpubParser`: EPUB 2/3 container, OPF metadata, spine, chapters from the nav/NCX table of contents (whole files or the anchors its entries point to inside them, nested levels chosen by length, chapter headings in overlong sections, short sections joined), cover and DRM detection, with safe ZIP and XML handling | implemented |
 | `...textkit.text` | `SentenceSegmenter` splits text into pt-BR aware sentence ranges (abbreviations, initials, dialogue dashes; never across paragraphs); `SegmentPlanner` groups them into rendered segments and finds the segment to resume from; `SpeechNormalizer.toSpeech` rewrites a segment or heading for voices at render time | implemented |
 | `...textkit.layout` | `LayoutBookBuilder`: PDF/OCR layout lines → `NormalizedBook` (running headers, footers and page numbers removed, hyphenation joined keeping Portuguese enclisis, paragraphs rebuilt, chapters from outline, headings or page ranges); `OcrPageLayout`: OCR boxes in pixels → layout lines in page units with estimated font sizes; `ScannedDocumentDetector`: pages without a usable text layer, scanned documents; `DocumentInfoCleaner` | implemented |
@@ -43,6 +43,12 @@ when (val result = EpubParser().parse(file, fallbackTitle = file.nameWithoutExte
   zero-width characters are removed and accents are composed (NFC).
 - The cover comes from the EPUB 3 `cover-image` item or EPUB 2
   `<meta name="cover">`, images only.
+- Metadata and chapter titles stay within `MetadataLimits` (SR-13): titles
+  are cut to 300 characters, authors to 20 names of at most 300 characters,
+  descriptions to 4,000 characters, and a language that is not a BCP 47-like
+  tag of at most 35 characters is left out. `Chapter.fromParagraphs`, which
+  every parser uses, cuts chapter titles, and `DocumentInfoCleaner` applies
+  the same limits to a PDF's authors and language.
 - Project Gutenberg's header and license are left out of the chapters (see
   below).
 

@@ -6,8 +6,10 @@ import com.giovannimartins.rreader.data.db.BookDao
 import com.giovannimartins.rreader.data.db.BookEntity
 import com.giovannimartins.rreader.data.db.BookStatus
 import com.giovannimartins.rreader.data.db.ChapterEntity
+import com.giovannimartins.rreader.data.db.LibraryRow
 import com.giovannimartins.rreader.data.db.RReaderDatabase
 import com.giovannimartins.rreader.data.db.ReadingPositionEntity
+import com.giovannimartins.rreader.textkit.model.MetadataLimits
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -47,7 +49,28 @@ class BookDaoTest {
             val row = dao.observeLibrary().first().single()
 
             assertThat(row.charsRead).isEqualTo(160)
-            assertThat(row.positionUpdatedAt).isEqualTo(5)
+        }
+
+    @Test
+    fun `SR-13 the library reads a book whose stored title and description are far too large`() =
+        runTest {
+            val huge = "Memórias ".repeat(400_000)
+            dao.insert(
+                book(BOOK_ID).copy(
+                    title = huge,
+                    authors = List(5_000) { "Autor $it" },
+                    description = huge,
+                    status = BookStatus.READY,
+                ),
+            )
+
+            val row = dao.observeLibrary().first().single()
+
+            assertThat(row.id).isEqualTo(BOOK_ID)
+            assertThat(row.title).hasLength(MetadataLimits.MAX_TITLE_LENGTH)
+            assertThat(huge).startsWith(row.title)
+            assertThat(row.authors.joinToString("|").length).isAtMost(LibraryRow.MAX_AUTHORS_COLUMN_LENGTH)
+            assertThat(row.status).isEqualTo(BookStatus.READY)
         }
 
     @Test
@@ -58,7 +81,7 @@ class BookDaoTest {
             dao.insert(book(ARCHIVED_ID, addedAt = 3, sha = "c").copy(archived = true))
             database.readingPositionDao().save(ReadingPositionEntity(BOOK_ID, 0, 0, updatedAt = 10))
 
-            val ids = dao.observeLibrary().first().map { it.book.id }
+            val ids = dao.observeLibrary().first().map { it.id }
 
             assertThat(ids).containsExactly(BOOK_ID, OTHER_ID).inOrder()
         }

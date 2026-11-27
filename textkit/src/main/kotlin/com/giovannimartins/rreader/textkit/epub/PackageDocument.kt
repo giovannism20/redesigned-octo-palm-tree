@@ -2,6 +2,7 @@ package com.giovannimartins.rreader.textkit.epub
 
 import com.giovannimartins.rreader.textkit.model.BookMetadata
 import com.giovannimartins.rreader.textkit.model.Chapter
+import com.giovannimartins.rreader.textkit.model.MetadataLimits
 import org.jsoup.nodes.Element
 
 /** A manifest resource whose href points into the archive. */
@@ -56,21 +57,34 @@ internal class PackageDocument private constructor(
             return candidates.firstOrNull { it.mediaType.startsWith(IMAGE_MEDIA_TYPE_PREFIX) }
         }
 
-    /** The book's metadata; [fallbackTitle] replaces a missing or blank first `dc:title`. */
+    /**
+     * The book's metadata, within [MetadataLimits]; [fallbackTitle] replaces a missing or blank first `dc:title`. A
+     * language that is not a BCP 47 tag is left out.
+     */
     fun metadata(fallbackTitle: String): BookMetadata {
         val title = metadataElements("title").firstOrNull()?.let(ContentExtractor::inlineText).orEmpty()
         return BookMetadata(
-            title = title.ifEmpty { fallbackTitle },
-            authors = metadataTexts("creator").distinct(),
-            language = metadataTexts("language").firstOrNull()?.replace('_', '-'),
-            description = metadataElements("description").firstOrNull()?.let(::plainDescription)?.ifEmpty { null },
+            title = MetadataLimits.title(title.ifEmpty { fallbackTitle }),
+            authors =
+                metadataTexts("creator")
+                    .distinct()
+                    .take(MetadataLimits.MAX_AUTHORS)
+                    .map(MetadataLimits::author)
+                    .toList(),
+            language = metadataTexts("language").firstOrNull()?.replace('_', '-')?.let(MetadataLimits::language),
+            description =
+                metadataElements("description")
+                    .firstOrNull()
+                    ?.let(::plainDescription)
+                    ?.ifEmpty { null }
+                    ?.let(MetadataLimits::description),
         )
     }
 
     private fun metadataElements(name: String): List<Element> = metadataElement?.elementsNamed(name).orEmpty()
 
-    private fun metadataTexts(name: String): List<String> =
-        metadataElements(name).map(ContentExtractor::inlineText).filter { it.isNotEmpty() }
+    private fun metadataTexts(name: String): Sequence<String> =
+        metadataElements(name).asSequence().map(ContentExtractor::inlineText).filter { it.isNotEmpty() }
 
     /** Descriptions often carry HTML, escaped as text or as child elements; both become plain paragraphs. */
     private fun plainDescription(description: Element): String {

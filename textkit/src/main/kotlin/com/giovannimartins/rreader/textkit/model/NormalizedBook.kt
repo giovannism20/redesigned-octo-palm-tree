@@ -18,7 +18,9 @@ public data class NormalizedBook(
     val totalLength: Long get() = chapters.sumOf { it.text.length.toLong() }
 }
 
-/** Descriptive metadata. Fields are blank or null when the source has none. */
+/**
+ * Descriptive metadata. Fields are blank or null when the source has none; parsers keep them within [MetadataLimits].
+ */
 public data class BookMetadata(
     val title: String,
     val authors: List<String> = emptyList(),
@@ -69,13 +71,17 @@ public data class Chapter(
             return ranges
         }
 
-        /** Builds a chapter from paragraphs, dropping blank ones. */
+        /**
+         * Builds a chapter from paragraphs, dropping blank ones. The title is cut to
+         * [MetadataLimits.MAX_TITLE_LENGTH] characters: every parser builds its chapters here, and titles come from
+         * untrusted tables of contents, outlines and headings.
+         */
         public fun fromParagraphs(
             title: String?,
             paragraphs: List<String>,
         ): Chapter =
             Chapter(
-                title = title,
+                title = title?.let(MetadataLimits::title),
                 text = paragraphs.map(String::trim).filter(String::isNotEmpty).joinToString(PARAGRAPH_SEPARATOR),
             )
     }

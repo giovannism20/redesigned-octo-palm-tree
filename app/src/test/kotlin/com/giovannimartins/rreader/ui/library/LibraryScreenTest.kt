@@ -50,6 +50,7 @@ class LibraryScreenTest {
                     onAddBook = {},
                     onPlay = {},
                     onRemove = {},
+                    onRetry = {},
                 )
             }
         }

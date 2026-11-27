@@ -20,6 +20,8 @@ import com.giovannimartins.rreader.catalog.MutableClock
 import com.giovannimartins.rreader.catalog.NetworkStatus
 import com.giovannimartins.rreader.catalog.SearchFailure
 import com.giovannimartins.rreader.catalog.TestFeeds
+import com.giovannimartins.rreader.data.BrokenLibraryDao
+import com.giovannimartins.rreader.data.db.BookDao
 import com.giovannimartins.rreader.data.db.BookEntity
 import com.giovannimartins.rreader.data.db.BookStatus
 import com.giovannimartins.rreader.data.db.RReaderDatabase
@@ -218,9 +220,20 @@ class ExploreViewModelTest {
                 .isEqualTo(added)
         }
 
-    private fun viewModel() = newViewModel().also { viewModels += it }
+    @Test
+    fun `a library that cannot be read leaves the downloads as they are`() =
+        runTest {
+            val viewModel = viewModel(BrokenLibraryDao(database.bookDao()))
+            val added = DownloadState.InLibrary(BOOK_ID, alreadyThere = false)
+            downloads.states.value = mapOf(DOM_CASMURRO.id to added)
 
-    private fun newViewModel() =
+            assertThat(viewModel.state.first { it.downloads.isNotEmpty() }.downloads)
+                .containsExactly(DOM_CASMURRO.id, added)
+        }
+
+    private fun viewModel(dao: BookDao = database.bookDao()) = newViewModel(dao).also { viewModels += it }
+
+    private fun newViewModel(dao: BookDao) =
         ExploreViewModel(
             catalog =
                 CatalogRepository(
@@ -232,7 +245,7 @@ class ExploreViewModelTest {
             networkStatus = network,
             library =
                 LibraryRepository(
-                    database.bookDao(),
+                    dao,
                     BookFileStore(folder.root),
                     FakeImportJobs(),
                     Dispatchers.Unconfined,

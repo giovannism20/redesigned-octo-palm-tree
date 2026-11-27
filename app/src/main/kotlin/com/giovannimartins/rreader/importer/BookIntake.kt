@@ -13,6 +13,7 @@ import com.giovannimartins.rreader.di.IoDispatcher
 import com.giovannimartins.rreader.textkit.BookFormat
 import com.giovannimartins.rreader.textkit.BookFormatDetector
 import com.giovannimartins.rreader.textkit.FormatDetection
+import com.giovannimartins.rreader.textkit.model.MetadataLimits
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -168,6 +169,10 @@ class BookIntake
             return CopiedFile(digest.digest().joinToString("") { "%02x".format(it) }, total)
         }
 
+        /**
+         * The row of a book just received. Its [title] comes from the file name, which the sharing app or the catalogue
+         * chose, so it is cut like any title (SR-13).
+         */
         private fun newBook(
             bookId: String,
             title: String,
@@ -175,7 +180,7 @@ class BookIntake
             copy: CopiedFile,
         ) = BookEntity(
             id = bookId,
-            title = title,
+            title = MetadataLimits.title(title),
             authors = emptyList(),
             language = null,
             description = null,

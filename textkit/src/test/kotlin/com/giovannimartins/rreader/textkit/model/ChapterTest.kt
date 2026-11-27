@@ -15,6 +15,15 @@ class ChapterTest {
     }
 
     @Test
+    fun `SR-13 cuts a chapter title taken from an untrusted source to the title limit`() {
+        val chapter = Chapter.fromParagraphs("Capítulo ".repeat(100_000), listOf("Texto."))
+
+        assertThat(chapter.title).hasLength(MetadataLimits.MAX_TITLE_LENGTH)
+        assertThat(chapter.title).startsWith("Capítulo Capítulo")
+        assertThat(Chapter.fromParagraphs(null, listOf("Texto.")).title).isNull()
+    }
+
+    @Test
     fun `finds the paragraphs of any chapter text, skipping empty ones`() {
         val text = "\n\nUm.\n\n\n\nDois três.\n\n"
 

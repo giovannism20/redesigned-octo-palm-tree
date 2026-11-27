@@ -14,6 +14,7 @@ import com.giovannimartins.rreader.textkit.layout.LayoutBookBuilder
 import com.giovannimartins.rreader.textkit.layout.LayoutError
 import com.giovannimartins.rreader.textkit.layout.LayoutResult
 import com.giovannimartins.rreader.textkit.model.BookMetadata
+import com.giovannimartins.rreader.textkit.model.MetadataLimits
 import java.io.File
 import javax.inject.Inject
 
@@ -64,7 +65,7 @@ class PdfBookParser internal constructor(
     ): ParseOutcome {
         val metadata =
             BookMetadata(
-                title = DocumentInfoCleaner.title(content.info.title) ?: fallbackTitle,
+                title = MetadataLimits.title(DocumentInfoCleaner.title(content.info.title) ?: fallbackTitle),
                 authors = DocumentInfoCleaner.authors(content.info.author),
                 language = DocumentInfoCleaner.language(content.info.language),
             )

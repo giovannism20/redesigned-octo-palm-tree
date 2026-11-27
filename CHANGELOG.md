@@ -75,6 +75,13 @@ All notable user-visible changes are documented here. The format follows
 - Repository foundation: secret guard (pre-commit hook and CI scan),
   security policy, AI-first documentation and architecture decisions.
 
+### Security
+
+- A book with an enormous title, list of authors or description, or shared
+  under an enormous file name, can no longer make the app close every time it
+  opens: such values are cut to a sensible length when the book is added, and
+  if the library ever cannot be read, it says so and offers "Try again".
+
 ### Changed
 
 - EPUB books that keep many chapters in a few large files, as most Project

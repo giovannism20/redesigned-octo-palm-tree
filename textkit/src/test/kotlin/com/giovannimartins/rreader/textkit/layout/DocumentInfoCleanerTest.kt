@@ -1,5 +1,6 @@
 package com.giovannimartins.rreader.textkit.layout
 
+import com.giovannimartins.rreader.textkit.model.MetadataLimits
 import com.google.common.truth.Truth.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -60,6 +61,22 @@ class DocumentInfoCleanerTest {
         assertThat(
             DocumentInfoCleaner.authors("leitor@example.com; Machado de Assis"),
         ).containsExactly("Machado de Assis")
+    }
+
+    @Test
+    fun `SR-13 keeps at most twenty authors, each cut to the name limit`() {
+        val names = List(10_000) { "Autor Número ${"Longo ".repeat(it % 3 * 100)}" }
+
+        val authors = DocumentInfoCleaner.authors(names.joinToString(";"))
+
+        assertThat(authors).hasSize(MetadataLimits.MAX_AUTHORS)
+        authors.forEach { assertThat(it.length).isAtMost(MetadataLimits.MAX_AUTHOR_LENGTH) }
+        assertThat(authors.first()).isEqualTo("Autor Número")
+    }
+
+    @Test
+    fun `SR-13 refuses a language tag longer than the limit`() {
+        assertThat(DocumentInfoCleaner.language("pt-${"BR-".repeat(100_000)}x")).isNull()
     }
 
     @Test

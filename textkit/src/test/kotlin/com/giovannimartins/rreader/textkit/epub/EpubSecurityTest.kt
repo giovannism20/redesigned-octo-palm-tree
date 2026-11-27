@@ -1,6 +1,7 @@
 package com.giovannimartins.rreader.textkit.epub
 
 import com.giovannimartins.rreader.textkit.model.Chapter
+import com.giovannimartins.rreader.textkit.model.MetadataLimits
 import com.google.common.truth.Truth.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -107,6 +108,37 @@ class EpubSecurityTest {
 
         assertThat(parseError(fixture.writeTo(File(directory, "livro.epub")), parser))
             .isEqualTo(EpubError.LimitExceeded(ArchiveLimit.MAX_ENTRY_BYTES))
+    }
+
+    @Test
+    fun `SR-13 a huge title, author list, language and description are cut to their limits`() {
+        val fixture =
+            EpubFixture().apply {
+                title = "Título ".repeat(500_000)
+                creators.clear()
+                creators += List(1_000) { "Autor $it ${"de Tal ".repeat(100)}" }
+                language = "pt-${"BR-".repeat(100_000)}x"
+                description = "Descrição sem fim. ".repeat(200_000)
+                document("c1.xhtml", "<p>Texto do livro.</p>", tocTitle = "Capítulo ".repeat(200_000))
+            }
+
+        val book = parseBook(fixture.writeTo(File(directory, "livro.epub")))
+
+        val metadata = book.metadata
+        assertThat(metadata.title).hasLength(MetadataLimits.MAX_TITLE_LENGTH)
+        assertThat(metadata.title).startsWith("Título Título")
+        assertThat(metadata.title).endsWith("…")
+        assertThat(metadata.authors).hasSize(MetadataLimits.MAX_AUTHORS)
+        assertThat(metadata.authors.first()).startsWith("Autor 0 de Tal")
+        metadata.authors.forEach { assertThat(it.length).isAtMost(MetadataLimits.MAX_AUTHOR_LENGTH) }
+        assertThat(metadata.language).isNull()
+        assertThat(metadata.description!!.length).isAtMost(MetadataLimits.MAX_DESCRIPTION_LENGTH)
+        assertThat(
+            book.chapters
+                .single()
+                .title!!
+                .length,
+        ).isAtMost(MetadataLimits.MAX_TITLE_LENGTH)
     }
 
     @Test

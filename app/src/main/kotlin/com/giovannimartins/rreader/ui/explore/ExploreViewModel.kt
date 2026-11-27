@@ -2,6 +2,7 @@ package com.giovannimartins.rreader.ui.explore
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.giovannimartins.rreader.Diagnostics
 import com.giovannimartins.rreader.catalog.CatalogDownloads
 import com.giovannimartins.rreader.catalog.CatalogEntry
 import com.giovannimartins.rreader.catalog.CatalogRepository
@@ -10,6 +11,7 @@ import com.giovannimartins.rreader.catalog.NetworkStatus
 import com.giovannimartins.rreader.catalog.SearchFailure
 import com.giovannimartins.rreader.catalog.SearchPage
 import com.giovannimartins.rreader.catalog.SearchResult
+import com.giovannimartins.rreader.data.library.LibraryBook
 import com.giovannimartins.rreader.data.library.LibraryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -17,6 +19,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
@@ -83,10 +86,19 @@ class ExploreViewModel
         private var lastPage: SearchPage? = null
         private var searchJob: Job? = null
 
-        /** The downloads, leaving out books that are no longer in the library. */
+        /** The ids of the books in the library, or null once it cannot be read, which must not close the app. */
+        private val libraryIds: Flow<Set<String>?> =
+            library.books
+                .map<List<LibraryBook>, Set<String>?> { books -> books.mapTo(HashSet()) { it.id } }
+                .catch { e ->
+                    Diagnostics.recordHandled("read the library for Explore", e)
+                    emit(null)
+                }
+
+        /** The downloads, leaving out books that are no longer in the library (all of them kept when unknown). */
         private val downloadStates: Flow<Map<Int, DownloadState>> =
-            combine(downloads.states, library.books.map { books -> books.mapTo(HashSet()) { it.id } }) { states, ids ->
-                states.filterValues { it !is DownloadState.InLibrary || it.bookId in ids }
+            combine(downloads.states, libraryIds) { states, ids ->
+                states.filterValues { it !is DownloadState.InLibrary || ids == null || it.bookId in ids }
             }
 
         val state: StateFlow<ExploreUiState> =

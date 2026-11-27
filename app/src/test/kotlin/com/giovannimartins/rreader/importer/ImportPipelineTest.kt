@@ -18,6 +18,7 @@ import com.giovannimartins.rreader.textkit.layout.LayoutBookBuilder
 import com.giovannimartins.rreader.textkit.model.BookMetadata
 import com.giovannimartins.rreader.textkit.model.Chapter
 import com.giovannimartins.rreader.textkit.model.CoverImage
+import com.giovannimartins.rreader.textkit.model.MetadataLimits
 import com.giovannimartins.rreader.textkit.model.NormalizedBook
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -69,6 +70,16 @@ class ImportPipelineTest {
             assertThat(stored.title).isEqualTo("meu_livro")
             assertThat(files.sourceFile(bookId, BookFormat.EPUB).readBytes()).isEqualTo(EPUB_HEADER)
             assertThat(jobs.enqueued).containsExactly(bookId)
+        }
+
+    @Test
+    fun `SR-13 a file name of any length becomes a title within the title limit`() =
+        runTest {
+            val result = intake().importStream(ByteArrayInputStream(EPUB_HEADER), "livro ".repeat(100_000))
+
+            val stored = database.bookDao().findById((result as IntakeResult.Queued).bookId)!!
+            assertThat(stored.title).hasLength(MetadataLimits.MAX_TITLE_LENGTH)
+            assertThat(stored.title).startsWith("livro livro")
         }
 
     @Test

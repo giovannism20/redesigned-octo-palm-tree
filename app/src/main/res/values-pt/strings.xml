@@ -18,6 +18,8 @@
     <string name="library_remove_title">Remover este livro?</string>
     <string name="library_remove_body">O livro e o seu progresso serão apagados deste celular.</string>
     <string name="library_listen">Ouvir</string>
+    <string name="library_unavailable">Não foi possível mostrar seus livros agora.</string>
+    <string name="library_retry">Tentar de novo</string>
     <plurals name="library_time_left">
         <item quantity="one">Falta %1$s</item>
         <item quantity="many">Faltam %1$s</item>

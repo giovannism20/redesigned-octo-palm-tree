@@ -17,7 +17,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -73,29 +72,32 @@ fun LibraryRoute(
             onOpenPlayer()
         },
         onRemove = viewModel::remove,
+        onRetry = viewModel::retry,
         modifier = modifier,
     )
 }
 
-/** The library: "Continue listening" first, then every book with its progress. Tap a ready book to listen. */
+/**
+ * The library: "Continue listening" first, then every book with its progress. Tap a ready book to listen. When the
+ * library cannot be read, it says so and offers to try again ([onRetry]).
+ */
 @Composable
 fun LibraryScreen(
     state: LibraryUiState,
     onAddBook: () -> Unit,
     onPlay: (String) -> Unit,
     onRemove: (String) -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var pendingRemoval by rememberSaveable { mutableStateOf<String?>(null) }
     when (state) {
         LibraryUiState.Loading -> {
-            Column(
-                modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                CircularProgressIndicator()
-            }
+            LibraryLoading(modifier = modifier.fillMaxSize())
+        }
+
+        LibraryUiState.Unavailable -> {
+            LibraryUnavailable(onRetry = onRetry, modifier = modifier.fillMaxSize())
         }
 
         is LibraryUiState.Content -> {
@@ -372,6 +374,7 @@ private fun LibraryScreenPreview() {
             onAddBook = {},
             onPlay = {},
             onRemove = {},
+            onRetry = {},
         )
     }
 }

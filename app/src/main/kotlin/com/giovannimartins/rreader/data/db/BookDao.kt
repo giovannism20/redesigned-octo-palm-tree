@@ -5,19 +5,26 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import com.giovannimartins.rreader.textkit.model.MetadataLimits
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface BookDao {
-    /** Non-archived books, most recently listened or added first, with characters read so far. */
+    /**
+     * Non-archived books, most recently listened or added first, with characters read so far. Only the columns the
+     * library shows are read, and its text columns are cut to their limits, so that every row fits in a cursor
+     * window (2 MB) even if a book stored before those limits existed has an enormous title or description (SR-13).
+     */
     @Query(
         """
-        SELECT b.*,
+        SELECT b.id,
+            substr(b.title, 1, ${MetadataLimits.MAX_TITLE_LENGTH}) AS title,
+            substr(b.authors, 1, ${LibraryRow.MAX_AUTHORS_COLUMN_LENGTH}) AS authors,
+            b.status, b.failure_reason, b.total_chars, b.has_cover, b.voice_id,
             CASE WHEN p.book_id IS NULL THEN 0 ELSE
                 (SELECT COALESCE(SUM(c.char_count), 0) FROM chapters c
                     WHERE c.book_id = b.id AND c.chapter_index < p.chapter_index) + p.char_offset
-            END AS chars_read,
-            p.updated_at AS position_updated_at
+            END AS chars_read
         FROM books b
         LEFT JOIN reading_positions p ON p.book_id = b.id
         WHERE b.archived = 0

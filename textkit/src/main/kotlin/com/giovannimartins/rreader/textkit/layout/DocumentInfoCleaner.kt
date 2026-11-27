@@ -1,6 +1,7 @@
 package com.giovannimartins.rreader.textkit.layout
 
 import com.giovannimartins.rreader.textkit.TextCleaner
+import com.giovannimartins.rreader.textkit.model.MetadataLimits
 
 /**
  * Keeps only the meaningful parts of the metadata a document declares about itself (the PDF document information
@@ -28,7 +29,6 @@ public object DocumentInfoCleaner {
                 "utilizador do windows|usu[áa]rio do microsoft office|pc|hp|dell|lenovo|asus|acer|samsung|positivo)" +
                 "\\s*\\d*",
         )
-    private val LANGUAGE_TAG = Regex("[A-Za-z]{2,3}(?:-[A-Za-z0-9]{1,8})*")
 
     /**
      * The title, or null when the document has none worth showing: blank, a file name, a placeholder such as
@@ -49,18 +49,25 @@ public object DocumentInfoCleaner {
 
     /**
      * The authors, split on semicolons, leaving out placeholders ("Usuário", "Windows User", computer brands),
-     * e-mail addresses, names with digits and login names (a single word without capitals).
+     * e-mail addresses, names with digits and login names (a single word without capitals). At most
+     * [MetadataLimits.MAX_AUTHORS] are kept, each cut to [MetadataLimits.MAX_AUTHOR_LENGTH] characters.
      */
     public fun authors(raw: String?): List<String> =
         raw
             .orEmpty()
-            .split(';')
+            .splitToSequence(';')
             .map(TextCleaner::clean)
             .filter(::isPersonName)
+            .take(MetadataLimits.MAX_AUTHORS)
+            .map(MetadataLimits::author)
+            .toList()
 
-    /** The BCP 47 tag, such as `pt-BR`, or null when [raw] is not one; underscores become hyphens. */
+    /**
+     * The BCP 47 tag, such as `pt-BR`, or null when [raw] is not one or is longer than
+     * [MetadataLimits.MAX_LANGUAGE_LENGTH] characters; underscores become hyphens.
+     */
     public fun language(raw: String?): String? =
-        TextCleaner.clean(raw.orEmpty()).replace('_', '-').takeIf(LANGUAGE_TAG::matches)
+        MetadataLimits.language(TextCleaner.clean(raw.orEmpty()).replace('_', '-'))
 
     private fun isPersonName(name: String): Boolean =
         name.any(Char::isLetter) &&

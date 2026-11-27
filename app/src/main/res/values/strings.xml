@@ -20,6 +20,8 @@
     <string name="library_remove_title">Remove this book?</string>
     <string name="library_remove_body">The book and your progress will be deleted from this phone.</string>
     <string name="library_listen">Listen</string>
+    <string name="library_unavailable">Your books could not be shown right now.</string>
+    <string name="library_retry">Try again</string>
     <plurals name="library_time_left">
         <item quantity="one">%1$s left</item>
         <item quantity="other">%1$s left</item>

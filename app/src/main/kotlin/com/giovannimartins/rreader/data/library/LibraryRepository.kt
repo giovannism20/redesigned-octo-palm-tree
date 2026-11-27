@@ -28,7 +28,7 @@ class LibraryRepository
         /** Library contents, most recent activity first, with the progress of the books being prepared. */
         val books: Flow<List<LibraryBook>> =
             combine(bookDao.observeLibrary(), importJobs.progress) { rows, progress ->
-                rows.map { row -> toLibraryBook(row, progress[row.book.id]) }
+                rows.map { row -> toLibraryBook(row, progress[row.id]) }
             }
 
         suspend fun rename(
@@ -59,19 +59,18 @@ class LibraryRepository
             row: LibraryRow,
             progress: ImportProgress?,
         ): LibraryBook {
-            val book = row.book
-            val cover = files.coverFile(book.id).takeIf { book.hasCover && book.status == BookStatus.READY }
+            val cover = files.coverFile(row.id).takeIf { row.hasCover && row.status == BookStatus.READY }
             return LibraryBook(
-                id = book.id,
-                title = book.title,
-                authors = book.authors,
-                status = book.status,
-                failure = book.failureReason,
+                id = row.id,
+                title = row.title,
+                authors = row.authors,
+                status = row.status,
+                failure = row.failureReason,
                 coverFile = cover,
                 charsRead = row.charsRead,
-                totalChars = book.totalChars,
-                voiceId = book.voiceId,
-                importProgress = progress.takeIf { book.status == BookStatus.IMPORTING },
+                totalChars = row.totalChars,
+                voiceId = row.voiceId,
+                importProgress = progress.takeIf { row.status == BookStatus.IMPORTING },
             )
         }
     }

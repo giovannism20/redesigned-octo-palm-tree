@@ -47,6 +47,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | Tampering / EoP | EPUB parser (B1) | High | ZIP entry `../../databases/x` overwrites app files (zip slip) | Never write files using archive entry names; read entries in memory by exact name |
 | DoS | EPUB parser (B1) | Medium | Zip bomb or millions of entries exhaust memory/storage | Caps on entry count, per-entry and total uncompressed size; streaming reads |
 | Info disclosure / DoS | XML parsing (B1) | Medium | External entities or DTD expansion (XXE, billion laughs) | DTD and external entities disabled on every XML parser |
+| DoS | Book metadata (B1) | High | An EPUB, PDF or shared file name carries a title, author list, language or description of several megabytes; stored whole, the book's database row no longer fits in a cursor window, and reading the library crashes the app at every launch | Titles of books, chapters and catalogue entries, authors, languages and descriptions are cut where they are read (SR-13); the library reads only the columns it shows, cut again in SQL; the library and Explore screens turn a read failure into a message instead of a crash |
 | DoS | PDF parsing (B1) | Medium | Malformed or gigantic PDF hangs or crashes the app | Parse in a worker with page, time, glyph and buffer limits (SR-4); password-protected files refused; out-of-memory reported as a typed failure so WorkManager does not retry a crash forever |
 | DoS | Cover rendering (B1) | Low | A crafted first page crashes or stalls the platform PDF renderer (native code) | Rendered only after PdfBox read the file, one page downscaled to at most 600 x 900 px, inside the import worker; a failure means no cover |
 | DoS | OCR page rendering and recognition (B1) | Medium | A scan with huge or crafted pages exhausts memory, or stalls the native renderer or the recognizer | Pages are drawn only after PdfBox read the file within its limits, one at a time, into a bitmap capped at 4,096 px a side and 12 million pixels; ML Kit gets one minute per page; allocation failures end in a typed failure (SR-4, ADR 0015) |
@@ -133,6 +134,21 @@ Each requirement is testable; reference its ID in tests and reviews.
 - **SR-11** Dependencies are pinned in the version catalog and monitored by
   Dependabot; CI runs CodeQL and validates the Gradle wrapper.
 - **SR-12** No `WebView`, dynamic code loading or reflection-based plugins.
+- **SR-13** Descriptive text read from untrusted files and feeds is bounded
+  before it is stored or shown. (textkit's `MetadataLimits`, applied by the
+  EPUB package reader, `DocumentInfoCleaner`, every chapter built through
+  `Chapter.fromParagraphs` and, for a title made from a file name, by
+  `BookIntake`: titles of books, chapters and catalogue entries are cut to 300
+  characters, authors to 20 names of at most 300 characters, descriptions to
+  4,000 characters, and a language is kept only as a BCP 47-like tag of at
+  most 35 characters. Values over a limit are cut, never rejected. The library
+  query reads only the columns the library shows, the title and authors cut
+  again in SQL, so even a row stored before these limits fits in a 2 MB cursor
+  window; the library and Explore screens catch a failure to read the library
+  and show a message with "Try again" instead of crashing. Verified by
+  `MetadataLimitsTest`, `EpubSecurityTest`, `DocumentInfoCleanerTest`,
+  `ChapterTest`, `BookDaoTest`, `ImportPipelineTest`, `LibraryViewModelTest`
+  and `ExploreViewModelTest`.)
 
 ## Permissions
 
@@ -189,7 +205,7 @@ Leak response: [runbooks/secrets.md](runbooks/secrets.md).
 ## Review checklist (end of each phase)
 
 - [ ] New inputs or network calls are reflected in this document.
-- [ ] SR-1 … SR-12 still hold; new tests cover new parsing paths.
+- [ ] SR-1 … SR-13 still hold; new tests cover new parsing paths.
 - [ ] Exported components and permissions unchanged or justified.
 - [ ] No secrets, personal data or third-party branding in the diff.
 - [ ] Dependency changes reviewed (Dependabot PRs or manual bumps).
