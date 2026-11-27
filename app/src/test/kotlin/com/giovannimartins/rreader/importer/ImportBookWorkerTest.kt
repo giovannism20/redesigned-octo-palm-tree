@@ -98,6 +98,25 @@ class ImportBookWorkerTest {
     }
 
     @Test
+    fun `goes on when its progress cannot be published`() {
+        val worker =
+            TestListenableWorkerBuilder<ImportBookWorker>(context)
+                .setInputData(ImportBookWorker.inputFor(BOOK_ID))
+                .setWorkerFactory(factory())
+                .setProgressUpdater {
+                    _,
+                    _,
+                    _,
+                    ->
+                    Futures.immediateFailedFuture(IllegalStateException("database closed"))
+                }.setForegroundUpdater { _, _, _ -> Futures.immediateVoidFuture() }
+                .build()
+
+        assertThat(runBlocking { worker.doWork() }).isEqualTo(ListenableWorker.Result.success())
+        assertThat(runBlocking { database.bookDao().findById(BOOK_ID)!!.status }).isEqualTo(BookStatus.READY)
+    }
+
+    @Test
     fun `fails a job without a book`() {
         val worker =
             TestListenableWorkerBuilder<ImportBookWorker>(context)

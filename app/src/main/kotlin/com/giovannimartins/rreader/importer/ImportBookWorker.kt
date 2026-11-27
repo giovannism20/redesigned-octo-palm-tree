@@ -52,24 +52,30 @@ class ImportBookWorker
             bookId: String,
             progress: ImportProgress,
         ) {
-            setProgress(ImportProgressData.write(bookId, progress))
-            if (!foregroundRefused) runInForeground(bookId, progress)
+            attempt("publish import progress") { setProgress(ImportProgressData.write(bookId, progress)) }
+            if (!foregroundRefused) {
+                foregroundRefused =
+                    !attempt("run import in foreground") {
+                        setForeground(notifications.foregroundInfo(bookId, progress))
+                    }
+            }
         }
 
+        /** Runs [block] and tells whether it worked; a failure is recorded instead of stopping the import. */
         @Suppress("TooGenericExceptionCaught") // The platform refuses foreground services in several ways.
-        private suspend fun runInForeground(
-            bookId: String,
-            progress: ImportProgress,
-        ) {
+        private suspend fun attempt(
+            where: String,
+            block: suspend () -> Unit,
+        ): Boolean =
             try {
-                setForeground(notifications.foregroundInfo(bookId, progress))
+                block()
+                true
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                foregroundRefused = true
-                Diagnostics.recordHandled("run import in foreground", e)
+                Diagnostics.recordHandled(where, e)
+                false
             }
-        }
 
         companion object {
             const val KEY_BOOK_ID = "book_id"
