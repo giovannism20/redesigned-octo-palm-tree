@@ -65,13 +65,13 @@ Base package: `com.giovannimartins.rreader`.
 
 | Package | Responsibility | Status |
 |---------|----------------|--------|
-| `data` | Room database (`db`), book file storage (`files`), library repository (`library`); DataStore settings planned | in progress |
+| `data` | Room database (`db`), book file storage (`files`), library repository (`library`), DataStore settings (`settings`) | implemented |
 | `importer` | `BookIntake` (picker/share/view URIs → signature check, size-limited copy, SHA-256 dedupe, book row), `ImportBookWorker` + `BookImportProcessor` (parse and persist), `BookParser` per format | implemented (parsers wired as they land) |
 | `pdf` | PdfBox text extraction, `PdfRenderer` page rendering, ML Kit OCR → layout lines | planned |
-| `tts` | `SpeechEngine` interface, `SystemTtsEngine`, later `SherpaOnnxEngine`; `SegmentRenderer` and audio cache | planned |
+| `tts` | `SpeechEngine` interface and `SystemTtsEngine` (multi-engine Android TTS → WAV), `AudioCache`, `WavInfo`; later `SegmentRenderer` and `SherpaOnnxEngine` | in progress |
 | `playback` | `PlaybackService` (`MediaSessionService`), facade player, progress saving, sleep timer | planned |
 | `catalog` | Public-domain catalogue client and downloads | planned |
-| `ui` | Compose screens, ViewModels, navigation, theme, design system | in progress (shell, library, add book) |
+| `ui` | Compose screens, ViewModels, navigation, theme, design system | in progress (shell, library, add book, voices) |
 | `di` | Hilt modules (dispatchers, application scope, database, WorkManager) | implemented |
 
 ## Layering rules

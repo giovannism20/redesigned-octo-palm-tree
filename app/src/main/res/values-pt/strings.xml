@@ -33,6 +33,22 @@
     <string name="import_failure_no_text">Não encontramos texto para ler neste livro.</string>
     <string name="import_failure_storage">Não foi possível salvar o livro. Verifique o espaço livre e tente de novo.</string>
 
+    <!-- Voices -->
+    <string name="tab_voices">Vozes</string>
+    <string name="voices_title">Vozes</string>
+    <string name="voices_intro">Estas vozes estão instaladas no seu celular e são grátis. Ouça uma amostra e escolha a que preferir.</string>
+    <string name="voices_sample_text">Olá! Esta é a voz que vai ler os seus livros.</string>
+    <string name="voices_voice_name">Voz %1$d · %2$s</string>
+    <string name="voices_offline">%1$s · funciona sem internet</string>
+    <string name="voices_needs_internet">%1$s · precisa de internet</string>
+    <string name="voices_listen">Ouvir</string>
+    <string name="voices_use">Usar esta voz</string>
+    <string name="voices_in_use">Em uso</string>
+    <string name="voices_sample_failed">Não foi possível tocar a amostra. Tente outra voz.</string>
+    <string name="voices_none">Ainda não há nenhuma voz em português instalada neste celular.</string>
+    <string name="voices_install">Instalar vozes</string>
+    <string name="voices_more">Mais vozes nas configurações do celular</string>
+
     <!-- Common -->
     <string name="action_cancel">Cancelar</string>
 </resources>

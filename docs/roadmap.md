@@ -32,14 +32,15 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 - [ ] `textkit`: sentence segmentation (pt-BR abbreviations), speech normalization, estimates
 - [x] Import: picker + share/view intents, signature detection, copy + SHA-256 dedupe, WorkManager job, error messages
 - [x] Data: Room schema, chapter files, library repository
-- [ ] Data: settings (DataStore: default voice, speed, text size)
+- [x] Data: settings (DataStore: default voice, speed, text size)
 - [x] Library screen with "Continue listening", progress, failures and removal
 - [ ] Library: time left (needs `textkit.estimate`) and tap to open the player
 - [ ] Wire the EPUB parser into `ImporterModule`
-- [ ] `SystemTtsEngine` + `SegmentRenderer` + audio cache
+- [x] `SystemTtsEngine` (multi-engine, offline-first voices) + audio cache
+- [ ] `SegmentRenderer` (render-ahead window, speaking-rate updates)
 - [ ] `PlaybackService` with facade player: background, lock screen, headset, ±15 s, speed, chapters, resume
 - [ ] Mini-player and full player screens
-- [ ] Voices screen (installed pt voices, sample, default voice)
+- [x] Voices screen (installed pt voices, sample, default voice)
 - [ ] Device checklist passed; installed on the primary user's phone
 
 ## Phase 2 — PDF with a text layer

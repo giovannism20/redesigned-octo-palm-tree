@@ -50,7 +50,7 @@ Libraries used by the app are declared in `gradle/libs.versions.toml`.
 
 | Component | License |
 |-----------|---------|
-| AndroidX (Compose, Activity, Lifecycle, Room, WorkManager, Hilt integrations) | Apache License 2.0 |
+| AndroidX (Compose, Activity, Lifecycle, Room, WorkManager, Media3, DataStore, Hilt integrations) | Apache License 2.0 |
 | Kotlin standard library and kotlinx.coroutines | Apache License 2.0 |
 | Dagger / Hilt | Apache License 2.0 |
 | Coil | Apache License 2.0 |

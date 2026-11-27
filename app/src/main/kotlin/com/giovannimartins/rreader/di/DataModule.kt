@@ -1,6 +1,10 @@
 package com.giovannimartins.rreader.di
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import androidx.work.WorkManager
 import com.giovannimartins.rreader.data.db.BookDao
@@ -36,4 +40,10 @@ object DataModule {
 
     @Provides
     fun clock(): Clock = Clock.systemUTC()
+
+    @Provides
+    @Singleton
+    fun settingsDataStore(
+        @ApplicationContext context: Context,
+    ): DataStore<Preferences> = PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("settings") }
 }

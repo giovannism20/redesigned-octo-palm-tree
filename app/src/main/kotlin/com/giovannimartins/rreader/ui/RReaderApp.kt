@@ -24,6 +24,7 @@ import com.giovannimartins.rreader.ui.importer.ImportScreen
 import com.giovannimartins.rreader.ui.importer.ImportViewModel
 import com.giovannimartins.rreader.ui.importer.messageRes
 import com.giovannimartins.rreader.ui.library.LibraryRoute
+import com.giovannimartins.rreader.ui.voices.VoicesRoute
 
 /** App shell: bottom navigation, snackbar feedback for imports, and the current destination. */
 @Composable
@@ -72,6 +73,10 @@ fun RReaderApp(
                     onFileSelect = importViewModel::import,
                     modifier = content,
                 )
+            }
+
+            TopDestination.VOICES -> {
+                VoicesRoute(modifier = content)
             }
         }
     }

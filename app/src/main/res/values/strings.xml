@@ -35,6 +35,22 @@
     <string name="import_failure_no_text">No readable text was found in this book.</string>
     <string name="import_failure_storage">The book could not be saved. Check the free space and try again.</string>
 
+    <!-- Voices -->
+    <string name="tab_voices">Voices</string>
+    <string name="voices_title">Voices</string>
+    <string name="voices_intro">These voices are installed on your phone and are free. Listen to a sample and choose the one you like.</string>
+    <string name="voices_sample_text">Hello! This is the voice that will read your books.</string>
+    <string name="voices_voice_name">Voice %1$d · %2$s</string>
+    <string name="voices_offline">%1$s · works without internet</string>
+    <string name="voices_needs_internet">%1$s · needs internet</string>
+    <string name="voices_listen">Listen</string>
+    <string name="voices_use">Use this voice</string>
+    <string name="voices_in_use">In use</string>
+    <string name="voices_sample_failed">The sample could not be played. Try another voice.</string>
+    <string name="voices_none">No Portuguese voice is installed on this phone yet.</string>
+    <string name="voices_install">Install voices</string>
+    <string name="voices_more">More voices in the phone settings</string>
+
     <!-- Common -->
     <string name="action_cancel">Cancel</string>
 </resources>

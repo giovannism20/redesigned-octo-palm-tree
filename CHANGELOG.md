@@ -8,6 +8,8 @@ All notable user-visible changes are documented here. The format follows
 
 ### Added
 
+- Voices screen: the phone's free Portuguese voices, offline first, with a
+  sample and a default choice.
 - Library with "Continue listening", progress, import failures and removal.
 - Add books from the file picker or by sharing/opening them from other apps;
   duplicates are detected and files are verified by their content.
