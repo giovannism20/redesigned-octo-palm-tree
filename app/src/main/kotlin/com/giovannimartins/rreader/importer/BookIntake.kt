@@ -75,6 +75,23 @@ class BookIntake
                 stream.use { importStream(it, displayTitle(uri)) }
             }
 
+        /**
+         * Imports [file], a book the app downloaded itself (the catalogue), with the same checks as a shared file:
+         * signature, size limit and duplicates. The file is copied, so the caller still owns it.
+         */
+        suspend fun importFile(
+            file: File,
+            fallbackTitle: String,
+        ): IntakeResult =
+            withContext(io) {
+                try {
+                    file.inputStream().use { importStream(it, fallbackTitle) }
+                } catch (e: IOException) {
+                    Diagnostics.recordHandled("open downloaded book", e)
+                    IntakeResult.Rejected(ImportFailure.STORAGE_ERROR)
+                }
+            }
+
         /** Imports from an already opened stream; separated from [import] for testing. */
         internal suspend fun importStream(
             input: InputStream,

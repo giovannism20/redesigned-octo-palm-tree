@@ -71,7 +71,7 @@ Base package: `com.giovannimartins.rreader`.
 | `pdf` | PdfBox text extraction (`PdfLayoutExtractor`: positioned lines, outline and document info within `PdfLimits`), `PdfRenderer` page rendering (`FirstPageCoverRenderer`: first page → JPEG cover; `PdfPageRasterizer`: pages → bitmaps for OCR within `OcrLimits`), text recognition behind `PageTextRecognizer` (`MlKitPageTextRecognizer`: bundled ML Kit Latin model → layout lines through textkit's `OcrPageLayout`), `PdfOcr` (recognizes the pictured pages without a usable text layer within `OcrLimits`, one page at a time app-wide through `OcrGate`, resumable through `OcrPageStore`) | in progress (text-layer PDFs; OCR in Phase 4) |
 | `tts` | `SpeechEngine` interface and `SystemTtsEngine` (multi-engine Android TTS → WAV), `AudioCache`, `WavInfo`, `SegmentRenderer` (segment → cached WAV, 300 MB LRU trim), `SpeakingRateTracker` (per-voice rate learned from rendered audio, kept across restarts through `SpeakingRateStore`); later `SherpaOnnxEngine` | implemented (neural voices in Phase 5) |
 | `playback` | `PlaybackService` (`MediaSessionService`, trusted controllers only), `ReaderPlayer` facade (chapter playlist over an internal ExoPlayer), `SegmentFeeder` (render-ahead window), `ChapterPlans`, `SeekTargets`, `PositionSaver`, `PlaybackRepository`, `ListeningStatus` (spoken segment and sleep timer for the UI), `ReaderCommands` (custom session commands), `SleepTimer` | implemented |
-| `catalog` | Free public-domain catalogue (Project Gutenberg, [ADR 0017](decisions/0017-free-catalogue-from-project-gutenberg.md)): `CatalogHttp`, the app's only network client (HTTPS GETs through an `HttpTransport`, `UrlConnectionTransport` on `HttpsURLConnection`; every address and redirect checked by `CatalogHosts`; media type, size and redirect limits), `CatalogUserAgent`; `CuratedCatalog` (curated classics from an asset), `CatalogRepository` (OPDS search through `GutenbergEndpoints`, pages kept in memory by `SearchCache`) | in progress (client, curated list, search) |
+| `catalog` | Free public-domain catalogue (Project Gutenberg, [ADR 0017](decisions/0017-free-catalogue-from-project-gutenberg.md)): `CatalogHttp`, the app's only network client (HTTPS GETs through an `HttpTransport`, `UrlConnectionTransport` on `HttpsURLConnection`; every address and redirect checked by `CatalogHosts`; media type, size and redirect limits), `CatalogUserAgent`; `CuratedCatalog` (curated classics from an asset), `CatalogRepository` (OPDS search through `GutenbergEndpoints`, pages kept in memory by `SearchCache`), `CatalogDownloads` (`WorkManagerCatalogDownloads`: one unique `DownloadBookWorker` job per book, needing a connection) running `CatalogDownloader` (EPUB → temporary file → `BookIntake.importFile`) | in progress (client, curated list, search, downloads) |
 | `ui` | Compose screens, ViewModels, navigation, theme, design system; `ui/player`: `PlaybackConnection` (`MediaController` while the app is visible), mini player, full player with speed, chapters, time left and the sleep timer; `ui/library`: progress and time left (`LibraryTimeLeft`); `ui/reader`: follow-along reader (`ReaderViewModel`, `ReaderChapter`); `ui/components`: `BookCover`, time-left text (`timeLeft`) | in progress (shell, library, add book, voices, player) |
 | `di` | Hilt modules (dispatchers, application scope, database, WorkManager) | implemented |
 
@@ -310,6 +310,37 @@ The Explore tab offers free public-domain books from Project Gutenberg
   `CatalogHosts` accepts it. Pages stay in memory for 15 minutes
   (`SearchCache`, 20 pages). A missing or broken connection is `OFFLINE`; any
   other failure, `UNAVAILABLE`.
+- **Download.** "Download" queues a unique `DownloadBookWorker` job for the
+  ebook (`WorkManagerCatalogDownloads`) that runs only with a connection, so a
+  book asked for offline downloads once the phone is back online.
+  `CatalogDownloader` fetches the EPUB 3 into a temporary file in private
+  storage and hands it to `BookIntake.importFile`, the intake of shared files:
+  signature check, 300 MB limit, SHA-256 duplicate check (an already imported
+  book is reported as such), book row and import job. A lost connection or a
+  busy server (HTTP 429, 5xx) is retried with an exponential backoff from
+  30 seconds, at most four attempts in all. The job publishes its
+  percentage and ends with the book's id or a `DownloadFailure`, read back by
+  ebook number as a `DownloadState`.
+- **License.** The EPUB parser drops Gutenberg's header, credits and license
+  (`GutenbergBoilerplate`), so listening starts with the book itself.
+
+```mermaid
+sequenceDiagram
+    participant U as Listener
+    participant J as Download job (WorkManager)
+    participant H as CatalogHttp
+    participant G as www.gutenberg.org
+    participant I as BookIntake + import job
+    U->>J: Download (queued until there is a connection)
+    J->>H: GET /ebooks/{id}.epub3.images
+    H->>G: HTTPS, allowlisted host
+    G-->>H: 302 to /cache/epub/{id}/pg{id}-images-3.epub
+    H->>G: HTTPS, redirect checked against the allowlist
+    G-->>H: 200 application/epub+zip (at most 100 MB)
+    H-->>J: temporary file in private storage
+    J->>I: importFile: signature, size, SHA-256 dedupe, book row
+    I-->>U: the library shows the book being prepared
+```
 
 ## Persistence
 
@@ -322,6 +353,7 @@ The Explore tab offers free public-domain books from Project Gutenberg
 | Normalized chapters | `filesDir/books/{bookId}/chapters/{index}.txt` | UTF-8 text, immutable after import |
 | Covers | `filesDir/books/{bookId}/cover` | Raw image bytes as extracted or rendered |
 | Recognized pages | `filesDir/books/{bookId}/ocr/{page}.json` | Lines text recognition read on a page and the time it took (versioned JSON); written as each page is read so a stopped import resumes, deleted when the import ends (ADR 0015) |
+| Catalogue download in progress | `filesDir/imports/{uuid}.part` | The EPUB being received; deleted once the intake copied it into the book's folder, or when the download fails |
 | Catalogue search pages | Memory only (`SearchCache`) | At most 20 pages, each for 15 minutes; search words are never written to disk |
 | Rendered audio | `cacheDir/tts/{bookId}/{voiceHash}/{chapter}-{start}-{end}.wav` | Trimmed to 300 MB, least recently used first, keeping the render-ahead window; safe to delete |
 
@@ -343,9 +375,11 @@ The Explore tab offers free public-domain books from Project Gutenberg
 
 - Coroutines with injected dispatchers: `IO` for files and database,
   `Default` for parsing and segmentation, `Main` for UI.
-- Imports, OCR and long pre-rendering (for example of slow neural voices)
-  run in WorkManager so they survive process death. The render-ahead window
-  of the playing book runs inside the playback service instead.
+- Imports, OCR, catalogue downloads and long pre-rendering (for example of
+  slow neural voices) run in WorkManager so they survive process death;
+  downloads also wait for a connection (`NetworkType.CONNECTED`). The
+  render-ahead window of the playing book runs inside the playback service
+  instead.
 - While text recognition runs, the import job asks WorkManager to run it in
   its foreground service with the `dataSync` type and a progress
   notification; if the platform refuses (the job started in the background),
