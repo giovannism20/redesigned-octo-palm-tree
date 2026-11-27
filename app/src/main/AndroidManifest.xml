@@ -25,14 +25,14 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!--
-        Cloud backup is excluded entirely (data_extraction_rules / backup_rules);
-        device-to-device transfer stays allowed. See ADR 0012.
+        The app is left out of Android backup (allowBackup="false"): a cloud backup would upload nothing anyway, but
+        running it stops the app's process, and with it any book being read (ADR 0021). Android 12+ still applies the
+        device-transfer rules in data_extraction_rules where the phone allows it (ADR 0012).
     -->
     <application
         android:name=".RReaderApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:networkSecurityConfig="@xml/network_security_config"

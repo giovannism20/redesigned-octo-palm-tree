@@ -1,6 +1,6 @@
 # 0012. No accounts, local-only data
 
-- **Status:** Accepted
+- **Status:** Accepted; how backup is turned off refined by [0021](0021-leave-the-app-out-of-android-backup.md)
 - **Date:** 2026-11-26
 
 ## Context

@@ -146,3 +146,6 @@ new version:
     alternativo…" when Gutenberg's site is down) and "Cancelar", which stops
     it. A download that cannot finish says why within about two minutes and
     offers "Tentar de novo".
+18. While a book plays, start a backup in the phone's settings (or run
+    `adb shell bmgr backupnow --all`): playback goes on, and R Reader is not
+    in the list of apps being backed up (ADR 0021).

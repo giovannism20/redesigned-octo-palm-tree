@@ -96,6 +96,8 @@ All notable user-visible changes are documented here. The format follows
 
 ### Fixed
 
+- A backup started by the phone (for example at night while charging) no
+  longer stops the book being read: R Reader takes no part in Android backup.
 - The player and the follow-along text showed some text, the times and the
   15-second buttons in black on the dark background, and the player's speed,
   timer, chapters and text buttons were below the edge of the screen. Both

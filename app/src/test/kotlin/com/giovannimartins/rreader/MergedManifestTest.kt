@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.ActivityInfo
+import android.content.pm.ApplicationInfo
 import android.content.pm.ComponentInfo
 import android.content.pm.PackageManager
 import android.content.pm.ProviderInfo
@@ -14,6 +15,10 @@ import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.w3c.dom.Element
+import java.io.File
+import java.util.Properties
+import javax.xml.parsers.DocumentBuilderFactory
 
 /** Checks the manifest merged from the app and its libraries against docs/security.md and ADR 0012. */
 @RunWith(RobolectricTestRunner::class)
@@ -28,6 +33,14 @@ class MergedManifestTest {
 
         assertThat(permissions.orEmpty().toList())
             .containsAtLeast(Manifest.permission.INTERNET, Manifest.permission.ACCESS_NETWORK_STATE)
+    }
+
+    @Test
+    fun `SR-9 the app is out of Android backup, which would stop playback, and keeps its device-transfer rules`() {
+        val info = context.applicationInfo
+
+        assertThat(info.flags and ApplicationInfo.FLAG_ALLOW_BACKUP).isEqualTo(0)
+        assertThat(mergedApplicationAttribute("dataExtractionRules")).isEqualTo("@xml/data_extraction_rules")
     }
 
     @Test
@@ -70,6 +83,25 @@ class MergedManifestTest {
             )
     }
 
+    /**
+     * An attribute of `<application>` in the merged manifest file that the Android Gradle plugin hands to unit
+     * tests, for attributes Robolectric does not copy into [ApplicationInfo].
+     */
+    private fun mergedApplicationAttribute(name: String): String {
+        val config = Properties()
+        javaClass.classLoader!!.getResourceAsStream(TEST_CONFIG)!!.use(config::load)
+        val manifest = File(config.getProperty("android_merged_manifest"))
+        val application =
+            DocumentBuilderFactory
+                .newInstance()
+                .apply { isNamespaceAware = true }
+                .newDocumentBuilder()
+                .parse(manifest)
+                .getElementsByTagName("application")
+                .item(0) as Element
+        return application.getAttributeNS(ANDROID_NAMESPACE, name)
+    }
+
     /** Every exported component of the merged manifest, by class name, with the permission that guards it, if any. */
     private fun exportedComponents(): Map<String, String?> {
         val flags =
@@ -104,6 +136,10 @@ class MergedManifestTest {
                 "androidx.test.core.app.InstrumentationActivityInvoker\$EmptyActivity",
                 "androidx.test.core.app.InstrumentationActivityInvoker\$EmptyFloatingActivity",
             )
+
+        /** Written by the Android Gradle plugin for unit tests; holds the merged manifest's path. */
+        const val TEST_CONFIG = "com/android/tools/test_config.properties"
+        const val ANDROID_NAMESPACE = "http://schemas.android.com/apk/res/android"
 
         /** The permission only the system's job scheduler holds; not in the SDK's `Manifest.permission`. */
         const val BIND_JOB_SERVICE = "android.permission.BIND_JOB_SERVICE"

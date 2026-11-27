@@ -68,7 +68,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | Info disclosure | ML Kit (B5) | Medium | The OCR library logs its usage to Google, or downloads models, and could send data off the phone | Bundled model only, no download path; the `datatransport` upload backend is removed from the merged manifest, so its logs are dropped (ADR 0015, verified by `MergedManifestTest`); the app has `INTERNET` for the catalogue only, and TLS to Google's hosts fails (network security config, ADR 0017) |
 | Info disclosure | Libraries with the network (B5) | Medium | A library uses the `INTERNET` permission the catalogue needs to reach its own servers | The network security config trusts no CA for hosts other than `www.gutenberg.org` and `gutenberg.pglaf.org`, so their TLS connections fail; cleartext is disabled for all |
 | Info disclosure | Logs | Low | Book text, file names or the numbers of the books downloaded in logs (WorkManager logs every job's tags and outcome) | No content/file names in release logs; WorkManager logs errors only in release builds, download jobs carry no tag naming their book, and R8 removes verbose, debug and information logging from the release build (SR-8) |
-| Info disclosure | Backups | Low | Cloud backup copies reading history | Cloud backup disabled; device-to-device transfer allowed |
+| Info disclosure | Backups | Low | Cloud backup copies reading history | App out of Android backup (`allowBackup="false"`, ADR 0021); device-transfer rules kept |
 | Tampering | Supply chain (B5) | Medium | Compromised dependency, wrapper or action | Wrapper validation, pinned Actions, Dependabot, CodeQL, minimal permissions |
 | Info disclosure | Repository (B6) | High | A key or keystore is committed | Pre-commit hook, CI scan, GitHub push protection, `.gitignore`, review |
 | EoP | Update channel | Medium | A malicious APK replaces the app | Release signing key never leaves the maintainer's control; installs only from the maintainer |
@@ -189,7 +189,10 @@ Each requirement is testable; reference its ID in tests and reviews.
   verbose, debug and information logging calls from the release build,
   libraries included (`proguard-rules.pro`); warnings and errors stay.
   Verified by `CatalogDownloadsTest` and `RReaderApplicationTest`.)
-- **SR-9** Cloud backup is disabled; device-to-device transfer is allowed.
+- **SR-9** The app is out of Android backup (`android:allowBackup="false"`), so nothing goes
+  to the cloud and no backup stops playback; device-to-device transfer follows
+  `data_extraction_rules` where the phone applies it (ADR 0021). Checked by
+  `MergedManifestTest`.
 - **SR-10** No secrets in the repository (see the layers below).
 - **SR-11** Dependencies are pinned in the version catalog and monitored by
   Dependabot; CI runs CodeQL and validates the Gradle wrapper. (Known

@@ -15,6 +15,7 @@ No names or personal details.
 | 6 | Download a free classic | It said "waiting for the internet" although the phone was online and the site was down for maintenance, and kept trying for minutes. | Slowed down | Mirror fallback, about two minutes per attempt, honest status, Cancel and Try again ([ADR 0019](../decisions/0019-gutenberg-site-and-mirror-only.md), [ADR 0020](../decisions/0020-bounded-catalogue-downloads.md)). |
 | 7 | Consistency | Cards, the active tab and progress bars used default greys and purples; the owner asked for one standard of colours and type on every screen. | Cosmetic | Every colour role mapped to the brand, one typeface designed for low vision, full type scale, guarded by `ThemeTest`. |
 | 8 | Minimize the player | The owner expected to swipe the player down, besides the minimize button. | Suggestion | Added: swipe down to minimize (springs back when the pull is short and slow). |
+| 9 | Listen (any time) | A backup run by the phone stopped R Reader's process: Android ran the app's (empty) full backup and had to restart the app to do it. | Blocked (would stop a book being read) | Fixed: the app is out of Android backup ([ADR 0021](../decisions/0021-leave-the-app-out-of-android-backup.md)). |
 
 What worked: playback went on with the screen locked (Android 17 background
 audio rules), and the full player opens and resumes where it stopped.
