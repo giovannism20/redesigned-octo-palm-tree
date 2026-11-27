@@ -5,15 +5,10 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.WorkerParameters
-import com.giovannimartins.rreader.Diagnostics
+import com.giovannimartins.rreader.work.reportingProgress
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.SendChannel
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 /**
  * Background job that downloads one catalogue book into the library ([CatalogDownloader]); it survives leaving the
@@ -38,16 +33,8 @@ class DownloadBookWorker
                 DownloadWork.idOf(inputData)
                     ?: return Result.failure(DownloadWork.failed(DownloadFailure.UNAVAILABLE))
             // The download reports from an I/O thread; the latest report is published, and the last one always is.
-            val reports = Channel<Data>(Channel.CONFLATED)
             val outcome =
-                coroutineScope {
-                    launch { for (progress in reports) publish(progress) }
-                    try {
-                        downloadTryingAgain(id, reports)
-                    } finally {
-                        reports.close()
-                    }
-                }
+                reportingProgress({ progress: Data -> progress }) { report -> downloadTryingAgain(id, report) }
             return when (outcome) {
                 is DownloadOutcome.InLibrary -> Result.success(DownloadWork.inLibrary(outcome))
                 is DownloadOutcome.Failed -> Result.failure(DownloadWork.failed(outcome.reason))
@@ -57,43 +44,32 @@ class DownloadBookWorker
         /** Downloads ebook [id], trying again after failures that may pass while the policy's deadline allows. */
         private suspend fun downloadTryingAgain(
             id: Int,
-            reports: SendChannel<Data>,
+            report: (Data) -> Unit,
         ): DownloadOutcome {
             val started = policy.timeSource.markNow()
             val title = DownloadWork.titleOf(inputData)
-            var outcome = downloader.download(id, title, reporter(reports))
+            var outcome = downloader.download(id, title, reporter(report))
             while (outcome is DownloadOutcome.Failed &&
                 outcome.retryable &&
                 started.elapsedNow() + policy.pause < policy.deadline
             ) {
-                reports.trySend(DownloadWork.retrying())
+                report(DownloadWork.retrying())
                 delay(policy.pause)
-                outcome = downloader.download(id, title, reporter(reports))
+                outcome = downloader.download(id, title, reporter(report))
             }
             return outcome
         }
 
         /** Sends where the book comes from and the percentage received, or null while the size is unknown. */
-        private fun reporter(reports: SendChannel<Data>): (DownloadProgress) -> Unit {
+        private fun reporter(report: (Data) -> Unit): (DownloadProgress) -> Unit {
             var last: Pair<Boolean, Int?>? = null
             return { progress ->
                 val percent = if (progress.total > 0) (progress.received * PERCENT / progress.total).toInt() else null
-                val report = progress.fromMirror to percent
-                if (report != last) {
-                    last = report
-                    reports.trySend(DownloadWork.progress(percent, progress.fromMirror))
+                val current = progress.fromMirror to percent
+                if (current != last) {
+                    last = current
+                    report(DownloadWork.progress(percent, progress.fromMirror))
                 }
-            }
-        }
-
-        @Suppress("TooGenericExceptionCaught") // WorkManager fails progress updates in several ways; none must stop it.
-        private suspend fun publish(progress: Data) {
-            try {
-                setProgress(progress)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Diagnostics.recordHandled("publish download progress", e)
             }
         }
 

@@ -40,7 +40,7 @@ enum class FetchFailure(
     /** The server is busy or failing (HTTP 429 or 5xx). */
     SERVER(true),
 
-    /** The server would not continue an interrupted download where it stopped: it must start again from the beginning. */
+    /** The server would not continue an interrupted download where it stopped: it must start over. */
     RESUME_REFUSED(true),
 
     /** The address does not exist (HTTP 404 or 410). */

@@ -50,7 +50,7 @@ class SystemTtsEngine
                             .filterNot { TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED in it.features.orEmpty() }
                             .map { voice ->
                                 Voice(
-                                    id = voiceId(engine.name, voice.name),
+                                    id = VoiceIds.system(engine.name, voice.name),
                                     engine = engine.name,
                                     engineLabel = engine.label,
                                     name = voice.name,
@@ -176,10 +176,5 @@ class SystemTtsEngine
                     .thenBy { it.name }
             private const val DEFAULT_ENGINE = ""
             private val SYNTHESIS_TIMEOUT = 60.seconds
-
-            fun voiceId(
-                enginePackage: String,
-                voiceName: String,
-            ) = "system:$enginePackage:$voiceName"
         }
     }

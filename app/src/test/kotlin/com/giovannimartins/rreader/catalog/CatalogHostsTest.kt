@@ -1,16 +1,12 @@
 package com.giovannimartins.rreader.catalog
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
-import com.giovannimartins.rreader.R
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.xmlpull.v1.XmlPullParser
 import java.net.URI
 
-/** SR-5: the hosts the app may contact, in code and in the network security config. */
+/** SR-5: the hosts the catalogue may contact (the network security config is checked by NetworkSecurityConfigTest). */
 @RunWith(RobolectricTestRunner::class)
 class CatalogHostsTest {
     @Test
@@ -65,47 +61,5 @@ class CatalogHostsTest {
         assertThat(CatalogHosts.resolve(base, "//evil.example/livro.epub")).isNull()
         assertThat(CatalogHosts.resolve(base, "https://evil.example/livro.epub")).isNull()
         assertThat(CatalogHosts.resolve(base, "http://www.gutenberg.org/cache/epub/1/pg1.epub")).isNull()
-    }
-
-    @Test
-    fun `the network security config forbids cleartext and trusts only the allowlisted hosts`() {
-        val tags = networkSecurityConfig()
-
-        assertThat(tags.single { it.name == "base-config" }.attributes["cleartextTrafficPermitted"]).isEqualTo("false")
-        assertThat(tags.filter { it.section == "base-config" }.map { it.name })
-            .containsExactly("base-config", "trust-anchors")
-        assertThat(tags.single { it.name == "domain-config" }.attributes["cleartextTrafficPermitted"])
-            .isEqualTo("false")
-        assertThat(tags.filter { it.name == "domain" }.map { it.text to it.attributes["includeSubdomains"] })
-            .containsExactlyElementsIn(CatalogHosts.HOSTS.map { it to "false" })
-        assertThat(tags.filter { it.name == "certificates" }.map { it.section to it.attributes["src"] })
-            .containsExactly("domain-config" to "system")
-    }
-
-    /** An element of `res/xml/network_security_config.xml`, in the `*-config` section it belongs to. */
-    private data class Tag(
-        val name: String,
-        val section: String,
-        val attributes: Map<String, String?>,
-        val text: String?,
-    )
-
-    private fun networkSecurityConfig(): List<Tag> {
-        val context: Context = ApplicationProvider.getApplicationContext()
-        val parser = context.resources.getXml(R.xml.network_security_config)
-        val tags = mutableListOf<Tag>()
-        var section = ""
-        while (parser.next() != XmlPullParser.END_DOCUMENT) {
-            if (parser.eventType == XmlPullParser.START_TAG) {
-                if (parser.name.endsWith("-config")) section = parser.name
-                val attributes =
-                    (0 until parser.attributeCount).associate { index ->
-                        parser.getAttributeName(index) to parser.getAttributeValue(index)
-                    }
-                val text = if (parser.name == "domain") parser.nextText().trim() else null
-                tags += Tag(parser.name, section, attributes, text)
-            }
-        }
-        return tags
     }
 }

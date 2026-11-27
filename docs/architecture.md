@@ -81,6 +81,8 @@ Base package: `com.giovannimartins.rreader`.
 | `pdf` | PdfBox text extraction (`PdfLayoutExtractor`: positioned lines, outline and document info within `PdfLimits`), `PdfRenderer` page rendering (`FirstPageCoverRenderer`: first page → JPEG cover; `PdfPageRasterizer`: pages → bitmaps for OCR within `OcrLimits`), text recognition behind `PageTextRecognizer` (`MlKitPageTextRecognizer`: bundled ML Kit Latin model → layout lines through textkit's `OcrPageLayout`), `PdfOcr` (recognizes the pictured pages without a usable text layer within `OcrLimits`, one page at a time app-wide through `OcrGate`, resumable through `OcrPageStore`), `NativeCallMarkers` (notes each call into native code while it runs, so a cover or page that crashes the process twice is skipped) | in progress (text-layer PDFs; OCR in Phase 4) |
 | `tts` | `SpeechEngine` interface and `SystemTtsEngine` (multi-engine Android TTS → WAV), `AudioCache`, `WavInfo`, `SegmentRenderer` (segment → cached WAV, 300 MB LRU trim), `SpeakingRateTracker` (per-voice rate learned from rendered audio, kept across restarts through `SpeakingRateStore`); later `SherpaOnnxEngine` | implemented (neural voices in Phase 5) |
 | `playback` | `PlaybackService` (`MediaSessionService`, trusted controllers only), `ReaderPlayer` facade (chapter playlist over an internal ExoPlayer), `SegmentFeeder` (render-ahead window), `ChapterPlans`, `SeekTargets`, `PositionSaver`, `PlaybackRepository`, `ListeningStatus` (spoken segment and sleep timer for the UI), `ReaderCommands` (custom session commands), `SleepTimer` | implemented |
+| `tts/neural` | Offline neural voices ([ADR 0018](decisions/0018-offline-neural-voices.md)): `NeuralVoices` (the nine voices, most recommended first, and their seven `VoicePackage`s pinned by size and SHA-256), `VoiceModelHttp` (the `HttpsClient` for `VoiceModelHosts`), `VoicePackageStore` (`filesDir/voices/{package}`, installed state), `VoicePackageDownloader` (space check, resumable download, SHA-256, `VoicePackageArchive` unpacking), `VoiceDownloads` (`WorkManagerVoiceDownloads`: one `VoiceDownloadWorker` job per package, Wi-Fi unless mobile data was accepted) | in progress |
+| `work` | Helpers shared by WorkManager jobs (`reportingProgress`: conflated progress publishing) | implemented |
 | `net` | `HttpsClient`, the only way to the network: HTTPS GETs through an `HttpTransport` (`UrlConnectionTransport` on `HttpsURLConnection`), every address and redirect checked by the client's `HostAllowlist`, media type, size and redirect limits, and resuming an interrupted download from where it stopped (`Range`, HTTP 206) | implemented |
 | `catalog` | Free public-domain catalogue (Project Gutenberg, [ADR 0017](decisions/0017-free-catalogue-from-project-gutenberg.md)): `CatalogHttp`, the `HttpsClient` for `CatalogHosts` with the `CatalogUserAgent`; `CuratedCatalog` (curated classics from an asset), `CatalogRepository` (OPDS search through `GutenbergEndpoints`, pages kept in memory by `SearchCache`), `CatalogDownloads` (`WorkManagerCatalogDownloads`: one unique `DownloadBookWorker` job per book, needing a connection) running `CatalogDownloader` (EPUB → temporary file → `BookIntake.importFile`), `NetworkStatus` (offline or not, from the system's default network) | implemented |
 | `ui` | Compose screens, ViewModels, navigation, theme, design system; `ui/player`: `PlaybackConnection` (`MediaController` while the app is visible), mini player, full player with speed, chapters, time left and the sleep timer; `ui/library`: progress and time left (`LibraryTimeLeft`); `ui/reader`: follow-along reader (`ReaderViewModel`, `ReaderChapter`); `ui/components`: `BookCover`, time-left text (`timeLeft`); `ui/explore`: Explore tab (`ExploreViewModel`: curated classics, search, downloads, offline state) | in progress (shell, library, explore, add book, voices, player) |
@@ -309,6 +311,50 @@ the volume on Android 17 ([ADR 0014](decisions/0014-target-android-17.md)).
 - It is scheduled with Media3's `Clock`, which the facade receives
   (`Clock.DEFAULT` in the app), so tests drive it with a `FakeClock`.
 
+### Voice packages
+
+The neural voices ([ADR 0018](decisions/0018-offline-neural-voices.md)) are
+downloaded on demand from the official sherpa-onnx releases, one package per
+model: one Kokoro archive (132 MB) holds Dora, Alex and Santa, and each Piper
+voice has its own (67 MB).
+
+```mermaid
+sequenceDiagram
+    participant U as Listener
+    participant J as Voice download job (WorkManager)
+    participant H as VoiceModelHttp
+    participant G as github.com + release asset host
+    participant S as VoicePackageStore
+    U->>J: Download (Wi-Fi, or mobile data once accepted)
+    J->>S: room for the archive and the unpacked files?
+    J->>H: GET the release archive (Range when resuming)
+    H->>G: HTTPS, allowlisted host
+    G-->>H: 302 to release-assets.githubusercontent.com
+    H->>G: HTTPS, redirect checked against the allowlist
+    G-->>H: 200 (or 206 with the rest), at most the pinned size
+    H-->>J: voices/.downloads/{package}.part
+    J->>J: size and SHA-256 must match the pinned values
+    J->>S: unpack the kept files into voices/.staging, move to voices/{package}
+    S-->>U: the voice can be used
+```
+
+- **Catalogue.** `NeuralVoices` lists the voices in the order they are
+  recommended and pins each package: archive name, size, SHA-256 and the
+  files kept (name in the archive, name on the phone, exact size).
+- **Download.** `WorkManagerVoiceDownloads` queues one unique job per package
+  that needs a Wi-Fi (unmetered) connection, or any connection after the
+  listener accepted mobile data; a waiting job is replaced by a new choice, a
+  running one is left alone. `VoicePackageDownloader` checks the free space,
+  then fetches through `VoiceModelHttp`, resuming a partial archive with an
+  HTTP range and starting over once when the server will not resume. A lost
+  connection keeps the partial file and the job tries again with a backoff
+  from 30 seconds, at most six attempts. Cancelling deletes what arrived.
+- **Verification and installation.** The archive must have the pinned size
+  and SHA-256; it is then unpacked by `VoicePackageArchive`, which keeps only
+  the expected entries under the catalogue's names, and the staging folder is
+  moved into place. A package is installed when every kept file is there with
+  its exact size.
+
 ### Catalogue
 
 The Explore tab offers free public-domain books from Project Gutenberg
@@ -391,6 +437,7 @@ sequenceDiagram
 | Native call marker | `filesDir/books/{bookId}/native.inflight` | The call into native code (cover, opening for recognition, a page) the import is making, written before the call and deleted after it; one left behind tells the next run where the process died, and a call it died in twice in a row is skipped (SR-4); deleted when the import ends |
 | Catalogue download in progress | `filesDir/imports/{uuid}.part` | The EPUB being received; deleted once the intake copied it into the book's folder, or when the download fails |
 | Catalogue search pages | Memory only (`SearchCache`) | At most 20 pages, each for 15 minutes; search words are never written to disk |
+| Voice packages | `filesDir/voices/{package}/` (`model.onnx`, `tokens.txt` and, for Kokoro, `voices.bin`) | Only the files the catalogue names, at their pinned sizes; a download in progress is `voices/.downloads/{package}.part` (kept to resume), an installation being unpacked `voices/.staging/{package}/`; deleted from the Voices tab |
 | Rendered audio | `cacheDir/tts/{bookId}/{voiceHash}/{chapter}-{start}-{end}.wav` | Trimmed to 300 MB, least recently used first, keeping the render-ahead window; safe to delete |
 
 ## Invariants

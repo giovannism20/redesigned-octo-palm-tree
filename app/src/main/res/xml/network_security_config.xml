@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    SR-5 (ADR 0017, ADR 0019): no cleartext traffic anywhere, and TLS only to the catalogue's two hosts. The base
-    configuration trusts no certificate authority, so an HTTPS connection to any other host fails at the
-    handshake, whatever code or library makes it; Project Gutenberg's site and its official mirror, exactly these
-    names and no subdomains, trust the system's authorities. Keep these domains in step with CatalogHosts.HOSTS
-    (checked by CatalogHostsTest).
+    SR-5: no cleartext traffic anywhere, and TLS only to the allowlisted hosts. The base configuration
+    trusts no certificate authority, so an HTTPS connection to any other host fails at the handshake,
+    whatever code or library makes it. Only these exact names, without subdomains, trust the system's
+    authorities:
+    - the catalogue: Project Gutenberg's site and its official mirror (ADR 0017, ADR 0019; keep in step with
+      CatalogHosts.HOSTS);
+    - the voice packages: GitHub and the hosts its release downloads redirect to (ADR 0018; keep in step with
+      VoiceModelHosts.HOSTS).
+    NetworkSecurityConfigTest checks both.
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false">
@@ -13,6 +17,14 @@
     <domain-config cleartextTrafficPermitted="false">
         <domain includeSubdomains="false">www.gutenberg.org</domain>
         <domain includeSubdomains="false">gutenberg.pglaf.org</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="false">github.com</domain>
+        <domain includeSubdomains="false">release-assets.githubusercontent.com</domain>
+        <domain includeSubdomains="false">objects.githubusercontent.com</domain>
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>

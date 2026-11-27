@@ -8,14 +8,16 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 
 - **Architecture:** single Android app, no backend, no accounts.
 - **Stack:** Kotlin, Jetpack Compose, Media3, Room, WorkManager, PdfBox-Android,
-  ML Kit text recognition (on-device), Android TTS; later sherpa-onnx.
+  ML Kit text recognition (on-device), Android TTS, sherpa-onnx with
+  piper-phonemize (offline neural voices, ADR 0018).
 - **Data handled:** books the user imports (may be copyrighted or personal),
   reading positions and settings. No credentials, no contact data, no
   location, no identifiers are collected.
 - **Network:** only on explicit user action, over HTTPS — catalogue searches
   and public-domain book downloads from Project Gutenberg
-  ([ADR 0017](decisions/0017-free-catalogue-from-project-gutenberg.md)); later,
-  voice model downloads.
+  ([ADR 0017](decisions/0017-free-catalogue-from-project-gutenberg.md)), and
+  voice package downloads from the official sherpa-onnx releases on GitHub
+  ([ADR 0018](decisions/0018-offline-neural-voices.md)).
 - **Distribution:** release APK signed by the maintainer, installed via ADB.
 
 ## Assets
@@ -25,6 +27,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | Imported books and extracted text | Private to the user | App-private storage |
 | Reading positions, settings, per-book voice | Low (reveals reading habits) | Room / DataStore |
 | Catalogue searches and downloaded book numbers | Low (reveal reading interests) | Search pages in memory for 15 minutes; download jobs in WorkManager; sent to Project Gutenberg |
+| Downloaded voice packages | Integrity: their code-like models run on the phone | `filesDir/voices/{package}/`, verified by SHA-256 before use |
 | App integrity (code that runs on the phone) | High | Signed APK |
 | Release signing key | Critical (controls updates) | Maintainer machine, outside the repo, backed up |
 | Repository and CI integrity | High | GitHub |
@@ -35,7 +38,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 |---|----------|-----------|----------|
 | B1 | File intake | Any file chosen/shared by the user → importer | Signature-based type detection, size limits, parsing limits, typed failures |
 | B2 | Inter-app intents and media controllers | Other apps → exported activity / media session service | Minimal exported components, accept only `content://` URIs with read grants, validate MIME and content; the media session accepts only trusted controllers and book-id requests, ignores media buttons and notification actions that other apps send as start intents, and grants the app's own commands to the app's own controllers only |
-| B3 | Network | Internet → catalogue client (search feeds, book downloads); later the model downloader | Every request goes through `HttpsClient` (`CatalogHttp` for the catalogue): HTTPS only, host allowlist (`CatalogHosts`: exactly `www.gutenberg.org` and its official mirror `gutenberg.pglaf.org`, [ADR 0019](decisions/0019-gutenberg-site-and-mirror-only.md)) checked for every address and redirect, at most 5 redirects, expected media type, size limits, timeouts; the network security config disables cleartext and trusts no CA for other hosts; downloaded books then cross B1 like any file; SHA-256 pinning for models |
+| B3 | Network | Internet → catalogue client (search feeds, book downloads) and voice package downloader | Every request goes through `HttpsClient` with one host allowlist per kind of request: `CatalogHttp` with `CatalogHosts` (exactly `www.gutenberg.org` and its official mirror `gutenberg.pglaf.org`, [ADR 0019](decisions/0019-gutenberg-site-and-mirror-only.md)) and `VoiceModelHttp` with `VoiceModelHosts` (exactly `github.com`, `release-assets.githubusercontent.com` and `objects.githubusercontent.com`); every address and redirect checked, at most 5 redirects, expected media type, size limits, timeouts; the network security config disables cleartext and trusts no CA for other hosts; downloaded books then cross B1 like any file; voice packages must match their pinned size and SHA-256 (SR-6) before they are unpacked, keeping only expected files (SR-1, SR-2) |
 | B4 | TTS engine | App → third-party TTS engine process | Prefer offline voices; flag voices that need the network (their text leaves the device) |
 | B5 | Build supply chain | Dependencies, Gradle wrapper, Actions → build | Version catalog, Dependabot, wrapper validation, Actions pinned by SHA, CodeQL; the AARs published only on GitHub are downloaded by the build from their releases and refused unless they match pinned SHA-256 values |
 | B6 | Public repository | Developer machines → GitHub | Secret guard layers, no personal data, reviewed third-party content |
@@ -56,7 +59,9 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | DoS | OCR page rendering and recognition (B1) | Medium | A scan with huge or crafted pages exhausts memory, or stalls or crashes the native renderer or the recognizer, the crash repeating at every run of the import | Pages are drawn only after PdfBox read the file within its limits, one at a time, into a bitmap capped at 4,096 px a side and 12 million pixels; ML Kit gets one minute per page; allocation failures end in a typed failure; a page in which the process died twice in a row is kept without text, a file whose opening did so fails as "too complex", and an import started ten times without ending is given up (SR-4, ADR 0015) |
 | Tampering | Intents (B2) | Medium | Another app sends a crafted `file://` URI or huge stream | Accept `content://` only, copy with size limit, re-detect type |
 | DoS | Intents (B2) | Low | The sharing app's provider throws an exception the app does not expect (security, argument, state) when its file is opened or its name is read, or the same file is shared twice at once and both copies race to the unique index of file hashes, so the app closes | `BookIntake` turns anything a provider or the storage throws into a rejection; books are registered one at a time (a mutex around the duplicate check and the new row), and a row refused by the unique index makes the copy a duplicate, its file deleted (SR-7) |
-| Spoofing / Tampering | Downloads (B3) | Medium | Network attacker swaps a voice model or book | HTTPS only, system CAs for the two allowlisted hosts only; pinned SHA-256 for models; books validated like any import (signature, size, EPUB limits) |
+| Spoofing / Tampering | Downloads (B3) | Medium | Network attacker swaps a voice model or book | HTTPS only, system CAs for the allowlisted hosts only; voice packages refused unless their size and SHA-256 match the values pinned in `NeuralVoices` (SR-6); books validated like any import (signature, size, EPUB limits) |
+| Tampering / EoP / DoS | Voice package archive (B3) | Medium | A package archive (bzip2 tar) with `../` or absolute entries, links, a huge or endless body, or thousands of entries writes outside the app's folders or fills the storage | Unpacked only after its SHA-256 matched; entry names are only compared with the catalogue's and never used as paths, files are written under fixed names; traversal and absolute names, links, wrong sizes, duplicates and missing files refuse the archive; at most 2,000 entries and 512 MiB unpacked; unpacked into a staging folder moved into place at the end (SR-1, SR-2; `VoicePackageArchiveTest`) |
+| DoS | Voice package download (B3) | Low | A 67–132 MB download fills the phone or never ends | Free space checked first (archive, unpacked files and 50 MB to spare); the body may not exceed the pinned size; 15 s connect and 30 s read timeouts; a lost connection resumes where it stopped (HTTP range), at most 6 attempts; Wi-Fi unless the listener accepts mobile data; cancelling deletes what arrived |
 | Spoofing / Tampering | Redirects (B3) | Medium | A redirect (or a feed's next-page link) sends the app to another host or to cleartext | Each hop checked against the allowlist and HTTPS before any connection, at most 5 redirects; TLS to other hosts fails anyway (network security config) |
 | Tampering / DoS | Catalogue feed (B3) | Medium | A hostile or broken feed carries XXE, a billion laughs, a huge body or thousands of entries, or a title too large for a download job's 10 KB of data | Same safe XML parser as EPUBs (SR-3), 1 MiB per page, at most 100 books per page, only ebook numbers kept from links; titles and authors cut to 300 characters by the feed parser and again before they enter a job's data (SR-13) |
 | DoS | Book download (B3) | Low | A huge or endless answer fills storage or a stalled one hangs, or a site that is down keeps a download "waiting" for minutes | 100 MB limit announced or counted, 15 s connect and 30 s read timeouts, temporary file always deleted; no new try starts two minutes after the first, then the download fails and says why; the listener sees what it does and can cancel it ([ADR 0020](decisions/0020-bounded-catalogue-downloads.md)) |
@@ -66,7 +71,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | Info disclosure / Tampering | Media session (B2) | Low | Another app connects to the exported playback service to see what is being listened to, or to control playback | Untrusted controllers are rejected; media ids must be book UUIDs (optionally with a chapter); the notification's content intent is explicit and immutable; no media button receiver, so playback never starts from the background |
 | Tampering | Media session start intents (B2) | Medium | Another app sends the exported service a media button (`ACTION_MEDIA_BUTTON`) or a custom notification action as a start intent: Media3 finds the session by the URI of Media3's default session id, or asks for a session on behalf of an unknown caller, and the media notification's controller, which runs as the app, relays the action, so the app's reader commands (read from a position, sleep timer) and media keys could be triggered from outside | The session has a random id, so its URI is known only to the notification's own pending intents; the service gives its session to trusted controllers only, so the unknown caller of a start intent gets none; the media notification's controller does not get the reader commands (its −15 s and +15 s buttons are player commands); `ReaderSessionCallback` refuses reader commands from any other controller (SR-7) |
 | Info disclosure | ML Kit (B5) | Medium | The OCR library logs its usage to Google, or downloads models, and could send data off the phone | Bundled model only, no download path; the `datatransport` upload backend is removed from the merged manifest, so its logs are dropped (ADR 0015, verified by `MergedManifestTest`); the app has `INTERNET` for the catalogue only, and TLS to Google's hosts fails (network security config, ADR 0017) |
-| Info disclosure | Libraries with the network (B5) | Medium | A library uses the `INTERNET` permission the catalogue needs to reach its own servers | The network security config trusts no CA for hosts other than `www.gutenberg.org` and `gutenberg.pglaf.org`, so their TLS connections fail; cleartext is disabled for all |
+| Info disclosure | Libraries with the network (B5) | Medium | A library uses the `INTERNET` permission the catalogue needs to reach its own servers | The network security config trusts no CA for hosts other than the catalogue's (`www.gutenberg.org`, `gutenberg.pglaf.org`) and the voice packages' GitHub hosts, so their TLS connections fail; cleartext is disabled for all |
 | Info disclosure | Logs | Low | Book text, file names or the numbers of the books downloaded in logs (WorkManager logs every job's tags and outcome) | No content/file names in release logs; WorkManager logs errors only in release builds, download jobs carry no tag naming their book, and R8 removes verbose, debug and information logging from the release build (SR-8) |
 | Info disclosure | Backups | Low | Cloud backup copies reading history | App out of Android backup (`allowBackup="false"`, ADR 0021); device-transfer rules kept |
 | Tampering | Supply chain (B5) | Medium | Compromised dependency, wrapper or action | Wrapper validation, pinned Actions, Dependabot, CodeQL, minimal permissions |
@@ -79,7 +84,9 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 Each requirement is testable; reference its ID in tests and reviews.
 
 - **SR-1** Archive entry names are never used to build file-system paths
-  (verified by `EpubSecurityTest`).
+  (verified by `EpubSecurityTest`; for voice packages, whose kept files are
+  written under the catalogue's names and whose traversal or absolute entries
+  refuse the archive, by `VoicePackageArchiveTest`).
 - **SR-2** EPUB reading enforces limits: entry count, per-entry and total
   uncompressed size, the text extracted, and time; violations yield a typed
   `ImportError` (verified by `EpubSecurityTest`). (Defaults: 10,000 entries,
@@ -103,7 +110,10 @@ Each requirement is testable; reference its ID in tests and reviews.
   into a failure; `ImportBookWorker` gives up an import started ten times
   without ending as "too complex", which also ends a loop of crashes in
   native code. Verified by `EpubBookParserTest`, `ImportPipelineTest` and
-  `ImportBookWorkerTest`.)
+  `ImportBookWorkerTest`.) Voice package archives are unpacked within limits
+  too: at most 2,000 entries and 512 MiB unpacked, kept files of exactly their
+  pinned sizes, once each (`VoicePackageArchive`, verified by
+  `VoicePackageArchiveTest`).
 - **SR-3** Every XML parser disables DTDs and external entities (verified by
   `EpubSecurityTest`, and for catalogue feeds by `GutenbergFeedParserTest`).
 - **SR-4** PDF extraction and OCR run with page, time and memory limits.
@@ -149,13 +159,26 @@ Each requirement is testable; reference its ID in tests and reviews.
   1 MiB for a feed page and 100 MB for a book. A download asks the mirror when
   the site answers 5xx or 429 or cannot be reached. The network security
   config disables cleartext and trusts the system CAs for these two names
-  only, no subdomains, so TLS to any other host fails. `INTERNET` and `ACCESS_NETWORK_STATE` are declared; ML Kit's
+  only, no subdomains, so TLS to any other host fails. ADR 0018: voice
+  packages are downloaded only when the listener taps "Download" on a voice,
+  by `VoiceModelHttp` from `github.com` (the official sherpa-onnx release),
+  following its redirect to `release-assets.githubusercontent.com` (or
+  `objects.githubusercontent.com`, its former asset host): exact names, HTTPS
+  on the default port, also trusted by the network security config with the
+  system CAs only. `INTERNET` and `ACCESS_NETWORK_STATE` are declared; ML Kit's
   `datatransport` upload backend stays removed. Verified by `CatalogHostsTest`,
-  `CatalogHttpTest` and `MergedManifestTest`.)
+  `CatalogHttpTest`, `HttpsClientTest`, `NetworkSecurityConfigTest`,
+  `VoicePackageDownloaderTest` and `MergedManifestTest`.)
 - **SR-6** Downloaded voice models are verified against SHA-256 values pinned
-  in code before use. (Catalogue books are not pinned: Gutenberg rebuilds its
-  EPUBs every month. They rely on HTTPS to an allowlisted host and are
-  validated like any imported file, SR-1 to SR-3 and SR-7.)
+  in code before use. (`NeuralVoices` pins each package archive's size and
+  SHA-256, the digests GitHub publishes for the release assets, checked against
+  downloads; `VoicePackageDownloader` refuses a body larger than the pinned
+  size, checks size and SHA-256 of the whole archive, also after a resumed
+  download, deletes an archive that does not match and only then unpacks it.
+  Verified by `VoicePackageDownloaderTest`. Catalogue books are not pinned:
+  Gutenberg rebuilds its EPUBs every month. They rely on HTTPS to an
+  allowlisted host and are validated like any imported file, SR-1 to SR-3 and
+  SR-7.)
 - **SR-7** Exported components are limited to the launcher/intake activity and
   the media session service; intake accepts only `content://` URIs. (`BookIntake`; content is re-detected by signature and copied with a
   300 MB limit. Whatever the sharing app's provider throws when its file is
@@ -227,7 +250,7 @@ Each requirement is testable; reference its ID in tests and reviews.
 | `FOREGROUND_SERVICE_DATA_SYNC` | Text recognition of a scanned book runs in WorkManager's foreground service with the `dataSync` type, the type for importing and processing local files ([ADR 0015](decisions/0015-on-device-ocr-with-bundled-ml-kit.md)). |
 | `POST_NOTIFICATIONS` | Lets that service show its progress on Android 13+ once the user allows notifications in the system settings. Never requested: the library shows the progress and the work runs the same without the notification (ADR 0015). |
 | `WAKE_LOCK` | The player keeps the CPU awake while reading with the screen off. |
-| `INTERNET` | Catalogue searches and book downloads from Project Gutenberg, after a user action, over HTTPS to allowlisted hosts only ([ADR 0017](decisions/0017-free-catalogue-from-project-gutenberg.md)). |
+| `INTERNET` | Catalogue searches and book downloads from Project Gutenberg, and voice package downloads from GitHub, after a user action, over HTTPS to allowlisted hosts only ([ADR 0017](decisions/0017-free-catalogue-from-project-gutenberg.md), [ADR 0018](decisions/0018-offline-neural-voices.md)). |
 | `ACCESS_NETWORK_STATE` | The Explore tab says when the phone is offline, and WorkManager waits for a connection before a download (ADR 0017); ExoPlayer and ML Kit's `datatransport` declare it too. |
 | `RECEIVE_BOOT_COMPLETED` | Merged from WorkManager, which reschedules pending import jobs after a restart. |
 | `…DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` | Signature permission defined by AndroidX Core to keep runtime receivers private. |
@@ -280,13 +303,17 @@ Leak response: [runbooks/secrets.md](runbooks/secrets.md).
 ## Privacy
 
 - Data stays on the device. There is no account, server, analytics or ads.
-- Network calls: catalogue searches and book downloads, each started by the
-  user (later also voice model downloads). Project Gutenberg sees the phone's
+- Network calls: catalogue searches, book downloads and voice package
+  downloads, each started by the user. Project Gutenberg sees the phone's
   IP address, the search words, the numbers of the books downloaded and the
   app's User-Agent (name, version and, when the build sets one, the
   maintainer's contact); its official mirror sees the same for a download the
   site could not serve; no cookies, identifiers or device data are sent.
   Showing the Explore tab, including its curated list, makes no request.
+  GitHub sees the phone's IP address, which voice packages are downloaded and
+  the app's name and version (no contact address); showing the Voices tab and
+  playing the bundled samples makes no request. The neural voices then run
+  entirely on the phone: book text never leaves it.
 - The system TTS engine is a separate app chosen by the user; offline voices
   are preferred so book text does not leave the phone.
 
