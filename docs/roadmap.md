@@ -72,7 +72,8 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 
 ## Phase 5 — Offline neural voices
 
-- [ ] Voice comparison samples (Kokoro, Piper, system voice) for the user to choose
+- [x] Voice comparison samples (Kokoro, Piper) for the user to choose ([evaluation](design/voices-evaluation.md))
+- [ ] Owner decisions: chosen voices and acceptance of the GPL-3.0 phonemizer (then an ADR)
 - [ ] `SherpaOnnxEngine`, model download over Wi-Fi with size shown and SHA-256 verification
 - [ ] Pre-rendering while charging when a voice is slower than real time
 
