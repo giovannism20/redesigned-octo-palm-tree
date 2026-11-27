@@ -28,6 +28,9 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 - [x] Chosen logo → adaptive icon (foreground/background), monochrome themed icon, splash screen, in-app logo
 - [x] Palette, large type scale and core components → Compose theme ([brand.md](design/brand.md))
 - [x] Short usability test script for the primary user ([docs/design/usability-test.md](design/usability-test.md))
+- [x] First device test with the owner (2026-11-27); findings and fixes in [usability-findings.md](design/usability-findings.md)
+- [x] One design system on every screen (owner request 2026-11-27): every Material colour role mapped to the brand, one typeface for low vision (Atkinson Hyperlegible Next), full type scale, `ScreenSurface` for screens outside the tab scaffold, guarded by `ThemeTest`
+- [ ] Design pass on the remaining screens with the UI Finish-Gate Reviewer: our own layouts (library item order, a book menu instead of an inline "Remove"), consistent headers and spacing
 
 ## Phase 1 — EPUB MVP (first version on the phone)
 
@@ -45,6 +48,7 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 - [x] `SegmentRenderer` (render-ahead window, speaking-rate updates)
 - [x] `PlaybackService` with facade player: background, lock screen, headset, ±15 s, speed, chapters, resume
 - [x] Mini-player and full player screens
+- [x] Full player fits one screen (cover shrinks first, scrolls only with very large text); swipe down to minimize
 - [x] Voices screen (installed pt voices, sample, default voice)
 - [ ] Device checklist passed; installed on the primary user's phone
 
@@ -84,8 +88,13 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 
 - [x] Explore tab: curated public-domain classics in Portuguese + search
 - [x] Download into the library; strip license boilerplate from the spoken text
+- [x] Exactly Gutenberg's site and its official mirror; downloads fall back to the mirror when the site is down, bounded to about two minutes, with status, Cancel and Try again ([ADR 0019](decisions/0019-gutenberg-site-and-mirror-only.md), [ADR 0020](decisions/0020-bounded-catalogue-downloads.md)); verified on the phone while the site was down
 - [ ] Verify the live Gutenberg search with `l.pt` once the site is back (it was down during development)
 - [ ] Owner decision: optional contact address for the catalogue User-Agent (`CATALOG_CONTACT` in `secrets.properties`)
+
+## Security review
+
+- [x] Application security review of phases 0–6; its ten findings fixed (bounded metadata, trusted session callers, linear-time Gutenberg markers, EPUB parse budget, failed-import end states, native crash markers, intake errors, no book ids in release logs, catalogue title caps, exact hosts) — see [security.md](security.md)
 
 ## Release (every phase)
 
