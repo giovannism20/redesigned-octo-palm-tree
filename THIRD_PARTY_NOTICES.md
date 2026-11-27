@@ -64,7 +64,7 @@ Libraries used by the app are declared in `gradle/libs.versions.toml`.
 | Firebase components and encoders, and Google datatransport, which come with ML Kit | Apache License 2.0 |
 | sherpa-onnx (on-device neural speech, AAR downloaded by the build, see `app/libs/README.md`) | Apache License 2.0 |
 | ONNX Runtime (linked statically into sherpa-onnx's native library) | MIT License (full text below) |
-| piper-phonemize with espeak-ng and its Portuguese data (pronunciation for the neural voices, AAR downloaded by the build, data in `app/src/main/assets/espeak-pt/`) | GNU General Public License v3.0 or later (see below) |
+| piper-phonemize with espeak-ng and its Portuguese data plus the English, German, French and Polish dictionaries (pronunciation for the neural voices, AAR downloaded by the build, data in `app/src/main/assets/espeak-pt/`) | GNU General Public License v3.0 or later (see below) |
 | Apache Commons Compress, with Commons IO, Lang and Codec (unpacking downloaded voice packages) | Apache License 2.0 (NOTICE below) |
 
 ### jsoup
@@ -223,7 +223,7 @@ so the APK that includes them is distributed under the GPL-3.0; the source
 code in this repository stays MIT. The app shows the full license texts in
 its "About and licences" screen with a link to this repository. The release
 files, their checksums and the tags of their source code are listed in
-[app/libs/README.md](app/libs/README.md); the Portuguese espeak-ng files in
+[app/libs/README.md](app/libs/README.md); the espeak-ng files in
 `app/src/main/assets/espeak-pt/` are copied unmodified from the
 piper-phonemize AAR.
 

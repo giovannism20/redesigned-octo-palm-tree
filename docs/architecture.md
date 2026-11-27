@@ -62,7 +62,8 @@ that can be pure Kotlin goes to `:textkit` so it is fast to test
   releases into `app/libs/` (not kept in git) and refuses any file that does
   not match its pinned SHA-256 (`fetchVendoredLibraries`,
   [app/libs/README.md](../app/libs/README.md)).
-  Only the Portuguese espeak-ng data ships (`assets/espeak-pt/`); the
+  Only the Portuguese espeak-ng data ships (`assets/espeak-pt/`), with the
+  English, German, French and Polish dictionaries it can switch to; the
   library's data for every language is left out by `ignoreAssetsPattern`.
 - The Gradle daemon runs on a provisioned Temurin JDK 21
   (`gradle/gradle-daemon-jvm.properties`).
@@ -437,8 +438,10 @@ cache as the phone's voices, so playback does not change (ADR 0003):
    `SherpaOnnxRuntime` asks piper-phonemize (espeak-ng, voice `pt-br`, for
    every voice: Kokoro's default is English) for one array of IPA code points
    per sentence. espeak-ng reads the Portuguese data shipped in
-   `assets/espeak-pt`, copied once to `noBackupFilesDir/espeak-ng-data/`
-   (`EspeakData`). For Kokoro, `KokoroPhonemes` merges `tʃ dʒ aɪ eɪ` into
+   `assets/espeak-pt` (with the English, German, French and Polish
+   dictionaries it can switch to), copied once to `noBackupFilesDir/espeak-ng-data/`
+   (`EspeakData`). `PhonemizerText` first turns letters of other alphabets
+   into spaces, since their dictionaries are not shipped. For Kokoro, `KokoroPhonemes` merges `tʃ dʒ aɪ eɪ` into
    Kokoro's single symbols `ʧ ʤ I A`, as its reference front end does.
 3. **Model.** The voice's model speaks the phonemes as its speaker (Kokoro:
    Dora 42, Alex 43, Santa 44; Piper: 0) on up to four CPU threads, with the

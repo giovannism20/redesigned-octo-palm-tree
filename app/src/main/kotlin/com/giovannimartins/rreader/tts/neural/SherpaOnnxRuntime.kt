@@ -31,8 +31,10 @@ class SherpaOnnxRuntime
 
         @Synchronized
         override fun phonemize(text: String): List<IntArray> {
+            val safeText = PhonemizerText.clean(text)
+            if (safeText.isBlank()) return emptyList()
             startPhonemizer()
-            val result = piperPhonemizeText(text, ESPEAK_VOICE) ?: throw NeuralRuntimeException("No phonemes")
+            val result = piperPhonemizeText(safeText, ESPEAK_VOICE) ?: throw NeuralRuntimeException("No phonemes")
             try {
                 return (0 until result.numSentences).map(result::getPhonemes)
             } finally {
@@ -162,9 +164,34 @@ internal class GenerationCallback(
  */
 internal object EspeakData {
     private const val ASSETS = "espeak-pt"
-    private const val VERSION = "piper-phonemize-1.6.1"
+
+    // A new value copies the data again on phones that have an older copy.
+    private const val VERSION = "piper-phonemize-1.6.1-pt-en-de-fr-pl"
     private const val COMPLETE = ".complete"
-    val FILES = listOf("phontab", "phonindex", "phondata", "intonations", "pt_dict", "lang/roa/pt", "lang/roa/pt-BR")
+
+    /**
+     * Portuguese, plus every dictionary espeak-ng can switch to from it: English, its fallback for letters it cannot
+     * name, German and French for a few Portuguese words, and Polish for a German one. A missing one crashed
+     * espeak-ng's native code; EspeakDictionariesTest checks that the switches stay covered.
+     */
+    val FILES =
+        listOf(
+            "phontab",
+            "phonindex",
+            "phondata",
+            "intonations",
+            "pt_dict",
+            "lang/roa/pt",
+            "lang/roa/pt-BR",
+            "en_dict",
+            "lang/gmw/en",
+            "de_dict",
+            "lang/gmw/de",
+            "fr_dict",
+            "lang/roa/fr",
+            "pl_dict",
+            "lang/zlw/pl",
+        )
 
     /** The folder holding the data, copying it first when needed. */
     fun install(context: Context): File {

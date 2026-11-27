@@ -28,7 +28,13 @@ The first build therefore needs access to github.com.
   repository. Its own copy of the espeak-ng data, for every language
   (19 MB), is left out of the APK (`ignoreAssetsPattern` in
   `app/build.gradle.kts`); the app ships only the Portuguese part in
-  `app/src/main/assets/espeak-pt/`, unmodified files copied from this AAR.
+  `app/src/main/assets/espeak-pt/`, unmodified files copied from this AAR,
+  plus the English, German, French and Polish dictionaries (about 380 KB):
+  espeak-ng switches to them from Portuguese (English to name letters it
+  cannot name in Portuguese, German and French for a few words, Polish for a
+  German one), and without them its native code crashed the app on ordinary
+  book text (`EspeakPhonemizerTest`). `EspeakDictionariesTest` fails when a
+  shipped dictionary switches to one that is not shipped.
 
 Corresponding source code: sherpa-onnx at tag
 [`v2.0.3`](https://github.com/k2-fsa/sherpa-onnx/tree/v2.0.3),
@@ -44,7 +50,9 @@ builds espeak-ng from [rhasspy/espeak-ng](https://github.com/rhasspy/espeak-ng))
    the names and release URLs in `vendoredLibraryUrls` and the dependencies in
    `app/build.gradle.kts`. Delete the old files here; the build downloads the
    new ones.
-3. If piper-phonemize changed, copy the Portuguese espeak-ng files again
-   (see `app/src/main/assets/espeak-pt/`) and check that the phonemes of a
-   test sentence did not change.
-4. Run the full gate and the instrumented `SherpaOnnxEngineTest` on a phone.
+3. If piper-phonemize changed, copy the espeak-ng files listed in
+   `EspeakData.FILES` again (see `app/src/main/assets/espeak-pt/`), change
+   `EspeakData.VERSION` so phones copy them again, and check that the phonemes
+   of a test sentence did not change.
+4. Run the full gate and the instrumented `SherpaOnnxEngineTest` and
+   `EspeakPhonemizerTest` on a phone.

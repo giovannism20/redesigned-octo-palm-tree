@@ -112,7 +112,7 @@ android {
 
     androidResources {
         // aapt's default patterns, plus the espeak-ng data of piper-phonemize for every language (19 MB): the app
-        // ships only the Portuguese part, in assets/espeak-pt (app/libs/README.md).
+        // ships only the Portuguese part and the dictionaries it switches to, in assets/espeak-pt (app/libs/README.md).
         ignoreAssetsPattern =
             "!.svn:!.git:!.ds_store:!*.scc:.*:<dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~:!<dir>espeak-ng-data"
     }

@@ -46,7 +46,13 @@ package downloads use the fake `HttpTransport` and archives built in the tests
 the allowlist, free space, and hostile archives (traversal and absolute names,
 links, wrong sizes, too many entries or bytes). On a phone, the instrumented
 `SherpaOnnxEngineTest` speaks a sentence with a real Piper voice, downloading
-Faber (67 MB) when no Piper voice is installed.
+Faber (67 MB) when no Piper voice is installed, and `EspeakPhonemizerTest`
+feeds espeak-ng text that makes it name letters, switch language or meet other
+alphabets (such text crashed it in native code before the English, German,
+French and Polish dictionaries shipped); the JVM test `EspeakDictionariesTest`
+checks that every dictionary a shipped one switches to is shipped too. Run instrumented tests on the owner's phone with
+`adb install -r` and `adb shell am instrument`, not `connectedDebugAndroidTest`,
+which uninstalls the app and deletes its books and voices.
 
 The catalogue is tested without the network: a fake `HttpTransport` answers
 from a script (redirects, statuses, media types, broken, truncated and
