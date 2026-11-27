@@ -26,6 +26,10 @@ listening test. Samples are not committed (they are generated artifacts).
 | miro-high | Piper | M | 67 MB | non-commercial (CC BY-NC-ND) | 0.078 | 0.030 | quiet, background noise |
 | edresson-low | Piper (16 kHz) | M | 67 MB | CC BY 4.0, base non-commercial | 0.064 | 0.024 | lower quality |
 
+Dii and Miro: the README in their sherpa-onnx packages gives CC BY-NC-SA 4.0,
+while the author's current model cards give CC BY-NC-ND 4.0 (both checked on
+2026-11-27); the app names both.
+
 Kokoro fp32 (350 MB) reached RTF 0.63 (1 thread) / 0.22 (4 threads); on this
 CPU int8 was slower than fp32 for both engines. The phone trade-off must be
 measured on the device.

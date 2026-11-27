@@ -80,10 +80,12 @@ object AboutContent {
                     licence = "CC0 1.0",
                     url = "https://creativecommons.org/publicdomain/zero/1.0/",
                 ),
+            // The README in the package the app downloads gives CC BY-NC-SA 4.0; the author's model card gives
+            // CC BY-NC-ND 4.0 today. Both are named, and the stricter, current one is linked.
             R.string.about_terms_piper_nc to
                 AboutComponent(
                     name = "Dii, Miro",
-                    licence = "CC BY-NC-ND 4.0",
+                    licence = "CC BY-NC-SA 4.0, CC BY-NC-ND 4.0",
                     url = "https://creativecommons.org/licenses/by-nc-nd/4.0/",
                 ),
             R.string.about_terms_edresson to

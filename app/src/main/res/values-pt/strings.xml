@@ -236,7 +236,7 @@
     <string name="about_voices_intro">As vozes que você baixa vêm do projeto sherpa-onnx. Os termos de cada uma:</string>
     <string name="about_terms_kokoro">Dora, Alex e Santa (Kokoro v1.0): Licença Apache 2.0.</string>
     <string name="about_terms_piper_cc0">Cadu, Faber e Jeff (Piper): gravações liberadas como CC0 pela Nabu Casa; treinadas a partir de uma voz Piper em inglês cujas gravações só podem ser usadas em pesquisa.</string>
-    <string name="about_terms_piper_nc">Dii e Miro (Piper): vozes de pessoas reais, de propriedade da TigreGotico, apenas para uso não comercial (CC BY-NC-SA 4.0 e CC BY-NC-ND 4.0).</string>
+    <string name="about_terms_piper_nc">Dii e Miro (Piper): vozes de pessoas reais, de propriedade da TigreGotico, apenas para uso não comercial: CC BY-NC-SA 4.0 no pacote que o app baixa e CC BY-NC-ND 4.0 na página atual do autor.</string>
     <string name="about_terms_edresson">Edresson (Piper): TTS-Portuguese Corpus de Edresson Casanova e outros, CC BY 4.0; treinada a partir de uma voz Piper em inglês sob CC BY-NC-SA 4.0 (não comercial).</string>
     <string name="about_terms_note">O R Reader é gratuito e não comercial, o que esses termos permitem.</string>
     <string name="about_licence_failed">Não foi possível abrir o texto desta licença.</string>

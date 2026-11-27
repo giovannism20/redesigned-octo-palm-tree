@@ -80,6 +80,19 @@ class AboutScreenTest {
     }
 
     @Test
+    fun `the card of Dii and Miro names both of their licences and where each is given`() {
+        show()
+
+        val terms =
+            "Dii and Miro (Piper): voices of real people, owned by TigreGotico, for non-commercial use only: " +
+                "CC BY-NC-SA 4.0 in the package the app downloads, CC BY-NC-ND 4.0 on the current page of their author."
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText(terms))
+        compose.onNodeWithText("CC BY-NC-SA 4.0, CC BY-NC-ND 4.0").assertExists()
+        compose.onNodeWithContentDescription("Open the terms of Dii, Miro").performClick()
+        assertThat(links).containsExactly("https://creativecommons.org/licenses/by-nc-nd/4.0/")
+    }
+
+    @Test
     fun `all text is readable on the dark background`() {
         show()
 
