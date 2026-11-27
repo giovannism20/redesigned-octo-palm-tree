@@ -63,7 +63,8 @@ class SherpaOnnxRuntime
                 when (pkg.family) {
                     ModelFamily.KOKORO -> {
                         val voices = File(directory, "voices.bin").path
-                        // Kokoro's default language is English: Portuguese must be named.
+                        // sherpa-onnx 2.0.3 reads lang only when it phonemizes text itself; the app passes the
+                        // phonemes (espeak-ng, ESPEAK_VOICE), so lang has no effect and only documents the language.
                         OfflineTtsModelConfig(
                             kokoro =
                                 OfflineTtsKokoroModelConfig(
@@ -116,6 +117,8 @@ class SherpaOnnxRuntime
         private companion object {
             /** espeak-ng's Brazilian Portuguese, for every voice (Kokoro's own default is English). */
             const val ESPEAK_VOICE = "pt-br"
+
+            /** Kokoro's language setting; unused by sherpa-onnx when it is given phonemes, as here. */
             const val LANGUAGE = "pt-br"
             const val CPU = "cpu"
             const val MAX_THREADS = 4
