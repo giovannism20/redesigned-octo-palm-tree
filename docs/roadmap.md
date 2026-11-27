@@ -18,6 +18,7 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 - [x] Enable private vulnerability reporting on GitHub
 - [x] Emulator tooling: command-line tools, emulator, Android 16/17 Play images, `rreader-api36` AVD (needs KVM: enable SVM in firmware)
 - [x] `rreader-api37` AVD (Android 17 reference image)
+- [x] First real-device run (Galaxy S24+, Android 17 / One UI 9, 2026-11-27): instrumented tests for the playback service, PDF cover renderer and ML Kit OCR pass (two fixture-size failures fixed)
 - [ ] Feasibility spike on a real phone: `synthesizeToFile` speed/quality with the Google pt-BR voice
 - [ ] Feasibility spike on a real phone: sequential sentence playback for 30+ minutes with the screen locked
 
