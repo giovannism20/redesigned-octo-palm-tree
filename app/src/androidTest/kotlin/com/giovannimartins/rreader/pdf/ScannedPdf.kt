@@ -20,6 +20,8 @@ import java.io.File
  * Lines are drawn in a 12-point serif font from x = [LEFT] points, the first baseline at [FIRST_BASELINE] points.
  */
 internal object ScannedPdf {
+    // Whole points: PdfRenderer reports page sizes in integer points, so an A5 page
+    // (419.53 x 595.28) would read as 419 x 595.
     const val PAGE_WIDTH = 420f
     const val PAGE_HEIGHT = 595f
     const val LEFT = 50f
@@ -43,7 +45,7 @@ internal object ScannedPdf {
         PDFBoxResourceLoader.init(InstrumentationRegistry.getInstrumentation().targetContext)
         PDDocument().use { document ->
             pages.forEach { lines ->
-                val page = PDPage(PDRectangle.A5)
+                val page = PDPage(PDRectangle(PAGE_WIDTH, PAGE_HEIGHT))
                 document.addPage(page)
                 val picture = picture(lines)
                 val image = LosslessFactory.createFromImage(document, picture)
