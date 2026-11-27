@@ -10,7 +10,7 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 - [x] Secret guard: `.gitignore`, pre-commit hook with gitleaks, self-test, CI full-history scan
 - [x] License (MIT) and security policy
 - [x] AI-first docs: `AGENTS.md`, product, architecture, domain, roadmap, testing, security, ADRs 0001–0013, runbooks
-- [ ] Project agents vendored in `.claude/agents/` with third-party notices
+- [x] Project agents vendored in `.claude/agents/` with third-party notices
 - [ ] Gradle project: wrapper, version catalog, `:app` + `:textkit`, Compose theme placeholder, Hilt
 - [ ] Quality gates: Spotless + ktlint, detekt, Android Lint, hooks installed by Gradle
 - [ ] `secrets.properties` pattern wired into Gradle (`BuildConfig`), release signing from properties outside the repo
