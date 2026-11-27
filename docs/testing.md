@@ -44,8 +44,11 @@ documentation link check.
   XML with external entities or DTDs, missing/garbled container or OPF.
   Expected: a typed failure and a friendly message, never a crash, never a
   file written outside the book directory.
-- **Corrupted and huge PDFs:** truncated file, encrypted file, 1,000+ pages.
-  Expected: a typed failure or bounded processing time and memory.
+- **Corrupted and huge PDFs** (built in test code with PdfBox-Android,
+  `PdfSecurityTest`): truncated, garbage and password-protected files,
+  documents over the page, time, glyph and buffer limits, a looping outline
+  and a page that cannot be decoded. Expected: a typed failure or bounded
+  processing time and memory.
 
 ## Stress tests
 

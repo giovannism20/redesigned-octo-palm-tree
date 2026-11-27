@@ -44,7 +44,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | Tampering / EoP | EPUB parser (B1) | High | ZIP entry `../../databases/x` overwrites app files (zip slip) | Never write files using archive entry names; read entries in memory by exact name |
 | DoS | EPUB parser (B1) | Medium | Zip bomb or millions of entries exhaust memory/storage | Caps on entry count, per-entry and total uncompressed size; streaming reads |
 | Info disclosure / DoS | XML parsing (B1) | Medium | External entities or DTD expansion (XXE, billion laughs) | DTD and external entities disabled on every XML parser |
-| DoS | PDF parsing (B1) | Medium | Malformed or gigantic PDF hangs or crashes the app | Parse in a worker with page/time/memory limits; typed failure |
+| DoS | PDF parsing (B1) | Medium | Malformed or gigantic PDF hangs or crashes the app | Parse in a worker with page, time, glyph and buffer limits (SR-4); password-protected files refused; out-of-memory reported as a typed failure so WorkManager does not retry a crash forever |
 | Tampering | Intents (B2) | Medium | Another app sends a crafted `file://` URI or huge stream | Accept `content://` only, copy with size limit, re-detect type |
 | Spoofing / Tampering | Downloads (B3) | Medium | Network attacker swaps a voice model or book | HTTPS only; pinned SHA-256 for models; validate books like any import |
 | Info disclosure | TTS engine (B4) | Low/Medium | Network-backed voices send book text to a vendor | Default to offline voices; label network voices in the UI |
@@ -67,6 +67,14 @@ Each requirement is testable; reference its ID in tests and reviews.
 - **SR-3** Every XML parser disables DTDs and external entities (verified by
   `EpubSecurityTest`).
 - **SR-4** PDF extraction and OCR run with page, time and memory limits.
+  (`PdfLayoutExtractor` with `PdfLimits`: documents over 3,000 pages are
+  refused before any text is read; extraction stops after 5 minutes, checked
+  before every page and every 1,024 glyphs, and as soon as its import is
+  cancelled; at most 20 million glyphs are read per document and 100,000 per
+  page; PdfBox buffers at most 16 MiB in memory and 512 MiB in all, the rest
+  in a temporary file in the app cache; the outline reader visits at most
+  5,000 entries, 32 levels deep, and stops at loops; running out of memory or
+  stack ends in a typed failure. Verified by `PdfSecurityTest`.)
 - **SR-5** Cleartext traffic is disabled (`network_security_config`); only
   allowlisted HTTPS hosts are contacted, and only after a user action.
 - **SR-6** Downloaded voice models are verified against SHA-256 values pinned
