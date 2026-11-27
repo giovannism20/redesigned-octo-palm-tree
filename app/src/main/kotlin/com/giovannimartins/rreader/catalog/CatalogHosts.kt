@@ -6,14 +6,20 @@ import java.net.URISyntaxException
 import java.util.Locale
 
 /**
- * The hosts the app may contact, the code half of SR-5: Project Gutenberg's site, [DOMAIN] and its subdomains, over
- * HTTPS on the default port, without user information in the address. The other half is the network security config
- * (`res/xml/network_security_config.xml`), which forbids cleartext and trusts certificates for [DOMAIN] only, so a
- * connection to any other host also fails at the TLS handshake (ADR 0017).
+ * The hosts the app may contact, the code half of SR-5: exactly Project Gutenberg's site, [SITE], and its official
+ * mirror, [MIRROR], over HTTPS on the default port, without user information in the address. The other half is the
+ * network security config (`res/xml/network_security_config.xml`), which forbids cleartext and trusts certificates for
+ * these two hosts only, so a connection to any other host also fails at the TLS handshake (ADR 0017, ADR 0019).
  */
 object CatalogHosts {
-    /** The allowlisted domain; its subdomains, such as `www.gutenberg.org`, are allowed too. */
-    const val DOMAIN: String = "gutenberg.org"
+    /** Project Gutenberg's site: searches, and the first place a book is downloaded from. */
+    const val SITE: String = "www.gutenberg.org"
+
+    /** Project Gutenberg's official mirror, run by its foundation: books come from it when the site is down. */
+    const val MIRROR: String = "gutenberg.pglaf.org"
+
+    /** Every host the app may contact; exact names, without subdomains. */
+    val HOSTS: Set<String> = setOf(SITE, MIRROR)
 
     private const val HTTPS_PORT = 443
     private const val DEFAULT_PORT = -1
@@ -32,8 +38,7 @@ object CatalogHosts {
 
     /** Whether the app may contact [address]. */
     fun isAllowed(address: URI): Boolean {
-        val host = address.host?.lowercase(Locale.ROOT)
-        val known = host != null && (host == DOMAIN || host.endsWith(".$DOMAIN"))
+        val known = address.host?.lowercase(Locale.ROOT) in HOSTS
         val secure = address.scheme.equals("https", ignoreCase = true) && address.rawUserInfo == null
         val defaultPort = address.port == DEFAULT_PORT || address.port == HTTPS_PORT
         return known && secure && defaultPort

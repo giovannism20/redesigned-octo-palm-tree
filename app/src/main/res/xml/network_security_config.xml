@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    SR-5 (ADR 0017): no cleartext traffic anywhere, and TLS only to the catalogue's host. The base
+    SR-5 (ADR 0017, ADR 0019): no cleartext traffic anywhere, and TLS only to the catalogue's two hosts. The base
     configuration trusts no certificate authority, so an HTTPS connection to any other host fails at the
-    handshake, whatever code or library makes it; gutenberg.org and its subdomains trust the system's
-    authorities. Keep this domain in step with CatalogHosts.DOMAIN (checked by CatalogHostsTest).
+    handshake, whatever code or library makes it; Project Gutenberg's site and its official mirror, exactly these
+    names and no subdomains, trust the system's authorities. Keep these domains in step with CatalogHosts.HOSTS
+    (checked by CatalogHostsTest).
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors />
     </base-config>
     <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">gutenberg.org</domain>
+        <domain includeSubdomains="false">www.gutenberg.org</domain>
+        <domain includeSubdomains="false">gutenberg.pglaf.org</domain>
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>

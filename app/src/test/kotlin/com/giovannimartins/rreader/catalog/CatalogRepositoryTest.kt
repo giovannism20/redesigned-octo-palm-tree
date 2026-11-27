@@ -94,9 +94,19 @@ class CatalogRepositoryTest {
     }
 
     @Test
+    fun `a site down for maintenance or too busy is said so`() {
+        listOf(503, 500, 429).forEach { code ->
+            transport.answer(SEARCH) { status(code) }
+
+            assertThat(runBlocking { repository.search("machado") })
+                .isEqualTo(SearchResult.Failed(SearchFailure.SITE_DOWN))
+        }
+    }
+
+    @Test
     fun `an answer that is not a page of results makes the search unavailable`() {
         listOf(
-            { status(503) },
+            { status(403) },
             { ok("<html>Down for maintenance</html>".toByteArray(), "text/html") },
             { ok("Service Unavailable".toByteArray(), ATOM) },
         ).forEach { answer ->

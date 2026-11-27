@@ -185,6 +185,25 @@ class ExploreScreenTest {
         assertThat(events).containsExactly("retry")
     }
 
+    @Test
+    fun `says when the free books site is down, for searches and downloads`() {
+        show(ExploreUiState(search = SearchUiState.Failed("machado", SearchFailure.SITE_DOWN)))
+
+        compose.onNodeWithText(SITE_DOWN).assertExists()
+    }
+
+    @Test
+    fun `a download that failed because the site is down says so`() {
+        show(
+            ExploreUiState(
+                curated = listOf(DOM_CASMURRO),
+                downloads = mapOf(DOM_CASMURRO.id to DownloadState.Failed(DownloadFailure.SITE_DOWN)),
+            ),
+        )
+
+        scrollTo(hasText(SITE_DOWN))
+    }
+
     private fun scrollTo(matcher: SemanticsMatcher) {
         compose.onNode(hasScrollToNodeAction()).performScrollToNode(matcher)
         compose.onNode(matcher).assertExists()
@@ -209,5 +228,9 @@ class ExploreScreenTest {
                 )
             }
         }
+    }
+
+    private companion object {
+        const val SITE_DOWN = "The free books site is under maintenance. Try again later."
     }
 }

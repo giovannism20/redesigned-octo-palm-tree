@@ -55,6 +55,18 @@ class CatalogHttpTest {
     }
 
     @Test
+    fun `follows a redirect to the official mirror but not to another Gutenberg host`() {
+        val mirror = "https://gutenberg.pglaf.org/cache/epub/55752/pg55752-images-3.epub"
+        transport.answer(BOOK) { redirect(mirror) }
+        transport.answer(mirror) { ok(BYTES, EPUB) }
+
+        assertThat(fetch(BOOK)).isEqualTo(FetchResult.Received(BYTES.size.toLong()))
+
+        transport.answer(BOOK) { redirect("https://aleph.gutenberg.org/cache/epub/55752/pg55752-images-3.epub") }
+        assertThat(fetch(BOOK)).isEqualTo(FetchResult.Failed(FetchFailure.BLOCKED))
+    }
+
+    @Test
     fun `refuses a redirect off the allowlist without contacting it`() {
         transport.answer(BOOK) { redirect("https://mirror.example/pg55752.epub") }
 

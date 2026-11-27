@@ -24,6 +24,9 @@ enum class SearchFailure {
 
     /** Gutenberg did not answer with a page of results. */
     UNAVAILABLE,
+
+    /** Gutenberg's site answered that it is down for maintenance or too busy (HTTP 5xx or 429). */
+    SITE_DOWN,
 }
 
 /** Outcome of a catalogue search. */
@@ -107,7 +110,11 @@ class CatalogRepository
         ): String? = CatalogHosts.check(address)?.let { CatalogHosts.resolve(it, link) }?.toString()
 
         private fun failureOf(failure: FetchFailure): SearchFailure =
-            if (failure == FetchFailure.NETWORK) SearchFailure.OFFLINE else SearchFailure.UNAVAILABLE
+            when (failure) {
+                FetchFailure.NETWORK -> SearchFailure.OFFLINE
+                FetchFailure.SERVER -> SearchFailure.SITE_DOWN
+                else -> SearchFailure.UNAVAILABLE
+            }
 
         private companion object {
             val FEED_TYPES = setOf("application/atom+xml")

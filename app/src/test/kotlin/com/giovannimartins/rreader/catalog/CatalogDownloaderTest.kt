@@ -27,6 +27,7 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.File
+import java.net.SocketTimeoutException
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -147,15 +148,59 @@ class CatalogDownloaderTest {
     }
 
     @Test
-    fun `network trouble and a busy server may pass, a missing book will not`() {
+    fun `network trouble and a site that is down may pass, a missing book will not`() {
         assertThat(download()).isEqualTo(DownloadOutcome.Failed(DownloadFailure.NETWORK, retryable = true))
 
         transport.answer(BOOK) { status(503) }
-        assertThat(download()).isEqualTo(DownloadOutcome.Failed(DownloadFailure.UNAVAILABLE, retryable = true))
+        assertThat(download()).isEqualTo(DownloadOutcome.Failed(DownloadFailure.SITE_DOWN, retryable = true))
 
         transport.answer(BOOK) { status(404) }
         assertThat(download()).isEqualTo(DownloadOutcome.Failed(DownloadFailure.NOT_FOUND, retryable = false))
         assertThat(temporaryFiles()).isEmpty()
+    }
+
+    @Test
+    fun `downloads from the official mirror when the site is down, busy or out of reach`() {
+        transport.answer(MIRROR) { ok(MinimalEpub.bytes(), OCTET_STREAM) }
+        val siteTroubles: List<() -> HttpResponse> =
+            listOf({ status(503) }, { status(429) }, { throw SocketTimeoutException("connect timed out") })
+
+        siteTroubles.forEach { trouble ->
+            transport.requests.clear()
+            transport.answer(BOOK, trouble)
+
+            assertThat(download()).isInstanceOf(DownloadOutcome.InLibrary::class.java)
+            assertThat(transport.requests.map { it.address }).containsExactly(BOOK, MIRROR).inOrder()
+        }
+        assertThat(jobs.enqueued).hasSize(1)
+        assertThat(temporaryFiles()).isEmpty()
+    }
+
+    @Test
+    fun `does not try the mirror when the site answered for the book`() {
+        transport.answer(MIRROR) { ok(MinimalEpub.bytes(), OCTET_STREAM) }
+        transport.answer(BOOK) { status(404) }
+
+        assertThat(download()).isEqualTo(DownloadOutcome.Failed(DownloadFailure.NOT_FOUND, retryable = false))
+        assertThat(transport.requests.map { it.address }).containsExactly(BOOK)
+    }
+
+    @Test
+    fun `reports the site down when neither the site nor the mirror delivers the book`() {
+        transport.answer(BOOK) { status(503) }
+        transport.answer(MIRROR) { status(404) }
+
+        assertThat(download()).isEqualTo(DownloadOutcome.Failed(DownloadFailure.SITE_DOWN, retryable = true))
+        assertThat(temporaryFiles()).isEmpty()
+    }
+
+    @Test
+    fun `accepts an EPUB served as a generic binary file, which the intake still checks`() {
+        transport.answer(BOOK) { ok(MinimalEpub.bytes(), OCTET_STREAM) }
+        assertThat(download()).isInstanceOf(DownloadOutcome.InLibrary::class.java)
+
+        transport.answer(BOOK) { ok("<html>Down for maintenance</html>".toByteArray(), OCTET_STREAM) }
+        assertThat(download()).isEqualTo(DownloadOutcome.Failed(DownloadFailure.NOT_A_BOOK, retryable = false))
     }
 
     @Test
@@ -196,5 +241,7 @@ class CatalogDownloaderTest {
     private companion object {
         const val BOOK = "https://www.gutenberg.org/ebooks/55752.epub3.images"
         const val FILE = "https://www.gutenberg.org/cache/epub/55752/pg55752-images-3.epub"
+        const val MIRROR = "https://gutenberg.pglaf.org/cache/epub/55752/pg55752-images-3.epub"
+        const val OCTET_STREAM = "application/octet-stream"
     }
 }

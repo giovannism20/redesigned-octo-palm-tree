@@ -16,8 +16,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!--
         The free catalogue searches and downloads public-domain books when the user asks, over HTTPS to
-        Project Gutenberg only: the network security config forbids cleartext and trusts no other host
-        (SR-5, ADR 0017). ML Kit asks for INTERNET too, for usage logs; their upload backend stays removed
+        Project Gutenberg's site and its official mirror only: the network security config forbids cleartext
+        and trusts no other host (SR-5, ADR 0017, ADR 0019). ML Kit asks for INTERNET too, for usage logs; their upload backend stays removed
         below, so they never leave the phone (ADR 0012, ADR 0015).
     -->
     <uses-permission android:name="android.permission.INTERNET" />

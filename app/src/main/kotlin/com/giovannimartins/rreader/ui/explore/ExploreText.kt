@@ -11,6 +11,7 @@ fun SearchFailure.messageRes(): Int =
     when (this) {
         SearchFailure.OFFLINE -> R.string.explore_search_offline
         SearchFailure.UNAVAILABLE -> R.string.explore_search_unavailable
+        SearchFailure.SITE_DOWN -> R.string.explore_site_down
     }
 
 /** What the listener is told when a book could not be downloaded. */
@@ -19,6 +20,7 @@ fun DownloadFailure.messageRes(): Int =
     when (this) {
         DownloadFailure.NETWORK -> R.string.explore_failure_network
         DownloadFailure.UNAVAILABLE -> R.string.explore_failure_unavailable
+        DownloadFailure.SITE_DOWN -> R.string.explore_site_down
         DownloadFailure.NOT_FOUND -> R.string.explore_failure_not_found
         DownloadFailure.TOO_LARGE -> R.string.explore_failure_too_large
         DownloadFailure.NOT_A_BOOK -> R.string.explore_failure_not_a_book

@@ -1,6 +1,8 @@
 # 0017. Free catalogue from Project Gutenberg through an allowlisted HTTPS client
 
-- **Status:** Accepted
+- **Status:** Accepted; the allowlisted hosts of decision 5 are replaced by
+  [ADR 0019](0019-gutenberg-site-and-mirror-only.md) (exactly the site and its
+  official mirror)
 - **Date:** 2026-11-27
 
 ## Context

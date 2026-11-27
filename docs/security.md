@@ -35,7 +35,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 |---|----------|-----------|----------|
 | B1 | File intake | Any file chosen/shared by the user → importer | Signature-based type detection, size limits, parsing limits, typed failures |
 | B2 | Inter-app intents and media controllers | Other apps → exported activity / media session service | Minimal exported components, accept only `content://` URIs with read grants, validate MIME and content; the media session accepts only trusted controllers and book-id requests, ignores media buttons and notification actions that other apps send as start intents, and grants the app's own commands to the app's own controllers only |
-| B3 | Network | Internet → catalogue client (search feeds, book downloads); later the model downloader | `CatalogHttp` is the only client: HTTPS only, host allowlist (`CatalogHosts`: `gutenberg.org` and subdomains) checked for every address and redirect, at most 5 redirects, expected media type, size limits, timeouts; the network security config disables cleartext and trusts no CA for other hosts; downloaded books then cross B1 like any file; SHA-256 pinning for models |
+| B3 | Network | Internet → catalogue client (search feeds, book downloads); later the model downloader | `CatalogHttp` is the only client: HTTPS only, host allowlist (`CatalogHosts`: exactly `www.gutenberg.org` and its official mirror `gutenberg.pglaf.org`, [ADR 0019](decisions/0019-gutenberg-site-and-mirror-only.md)) checked for every address and redirect, at most 5 redirects, expected media type, size limits, timeouts; the network security config disables cleartext and trusts no CA for other hosts; downloaded books then cross B1 like any file; SHA-256 pinning for models |
 | B4 | TTS engine | App → third-party TTS engine process | Prefer offline voices; flag voices that need the network (their text leaves the device) |
 | B5 | Build supply chain | Dependencies, Gradle wrapper, Actions → build | Version catalog, Dependabot, wrapper validation, Actions pinned by SHA, CodeQL |
 | B6 | Public repository | Developer machines → GitHub | Secret guard layers, no personal data, reviewed third-party content |
@@ -56,16 +56,16 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | DoS | OCR page rendering and recognition (B1) | Medium | A scan with huge or crafted pages exhausts memory, or stalls or crashes the native renderer or the recognizer, the crash repeating at every run of the import | Pages are drawn only after PdfBox read the file within its limits, one at a time, into a bitmap capped at 4,096 px a side and 12 million pixels; ML Kit gets one minute per page; allocation failures end in a typed failure; a page in which the process died twice in a row is kept without text, a file whose opening did so fails as "too complex", and an import started ten times without ending is given up (SR-4, ADR 0015) |
 | Tampering | Intents (B2) | Medium | Another app sends a crafted `file://` URI or huge stream | Accept `content://` only, copy with size limit, re-detect type |
 | DoS | Intents (B2) | Low | The sharing app's provider throws an exception the app does not expect (security, argument, state) when its file is opened or its name is read, or the same file is shared twice at once and both copies race to the unique index of file hashes, so the app closes | `BookIntake` turns anything a provider or the storage throws into a rejection; books are registered one at a time (a mutex around the duplicate check and the new row), and a row refused by the unique index makes the copy a duplicate, its file deleted (SR-7) |
-| Spoofing / Tampering | Downloads (B3) | Medium | Network attacker swaps a voice model or book | HTTPS only, system CAs for `gutenberg.org` only; pinned SHA-256 for models; books validated like any import (signature, size, EPUB limits) |
+| Spoofing / Tampering | Downloads (B3) | Medium | Network attacker swaps a voice model or book | HTTPS only, system CAs for the two allowlisted hosts only; pinned SHA-256 for models; books validated like any import (signature, size, EPUB limits) |
 | Spoofing / Tampering | Redirects (B3) | Medium | A redirect (or a feed's next-page link) sends the app to another host or to cleartext | Each hop checked against the allowlist and HTTPS before any connection, at most 5 redirects; TLS to other hosts fails anyway (network security config) |
 | Tampering / DoS | Catalogue feed (B3) | Medium | A hostile or broken feed carries XXE, a billion laughs, a huge body or thousands of entries, or a title too large for a download job's 10 KB of data | Same safe XML parser as EPUBs (SR-3), 1 MiB per page, at most 100 books per page, only ebook numbers kept from links; titles and authors cut to 300 characters by the feed parser and again before they enter a job's data (SR-13) |
 | DoS | Book download (B3) | Low | A huge or endless answer fills storage or a stalled one hangs | 100 MB limit announced or counted, 15 s connect and 30 s read timeouts, temporary file always deleted, at most 4 attempts |
-| Info disclosure | Searches and downloads (B3) | Low | Search words and book choices leak to logs or to third parties | Sent only to Gutenberg over HTTPS after the listener acts; never logged (SR-8); no cookies, identifiers or device data; search pages kept only in memory |
+| Info disclosure | Searches and downloads (B3) | Low | Search words and book choices leak to logs or to third parties | Sent only to Gutenberg (its site, or its official mirror for a download the site cannot serve) over HTTPS after the listener acts; never logged (SR-8); no cookies, identifiers or device data; search pages kept only in memory |
 | Info disclosure | TTS engine (B4) | Low/Medium | Network-backed voices send book text to a vendor | Default to offline voices; label network voices in the UI |
 | Info disclosure / Tampering | Media session (B2) | Low | Another app connects to the exported playback service to see what is being listened to, or to control playback | Untrusted controllers are rejected; media ids must be book UUIDs (optionally with a chapter); the notification's content intent is explicit and immutable; no media button receiver, so playback never starts from the background |
 | Tampering | Media session start intents (B2) | Medium | Another app sends the exported service a media button (`ACTION_MEDIA_BUTTON`) or a custom notification action as a start intent: Media3 finds the session by the URI of Media3's default session id, or asks for a session on behalf of an unknown caller, and the media notification's controller, which runs as the app, relays the action, so the app's reader commands (read from a position, sleep timer) and media keys could be triggered from outside | The session has a random id, so its URI is known only to the notification's own pending intents; the service gives its session to trusted controllers only, so the unknown caller of a start intent gets none; the media notification's controller does not get the reader commands (its −15 s and +15 s buttons are player commands); `ReaderSessionCallback` refuses reader commands from any other controller (SR-7) |
 | Info disclosure | ML Kit (B5) | Medium | The OCR library logs its usage to Google, or downloads models, and could send data off the phone | Bundled model only, no download path; the `datatransport` upload backend is removed from the merged manifest, so its logs are dropped (ADR 0015, verified by `MergedManifestTest`); the app has `INTERNET` for the catalogue only, and TLS to Google's hosts fails (network security config, ADR 0017) |
-| Info disclosure | Libraries with the network (B5) | Medium | A library uses the `INTERNET` permission the catalogue needs to reach its own servers | The network security config trusts no CA for hosts other than `gutenberg.org`, so their TLS connections fail; cleartext is disabled for all |
+| Info disclosure | Libraries with the network (B5) | Medium | A library uses the `INTERNET` permission the catalogue needs to reach its own servers | The network security config trusts no CA for hosts other than `www.gutenberg.org` and `gutenberg.pglaf.org`, so their TLS connections fail; cleartext is disabled for all |
 | Info disclosure | Logs | Low | Book text, file names or the numbers of the books downloaded in logs (WorkManager logs every job's tags and outcome) | No content/file names in release logs; WorkManager logs errors only in release builds, download jobs carry no tag naming their book, and R8 removes verbose, debug and information logging from the release build (SR-8) |
 | Info disclosure | Backups | Low | Cloud backup copies reading history | Cloud backup disabled; device-to-device transfer allowed |
 | Tampering | Supply chain (B5) | Medium | Compromised dependency, wrapper or action | Wrapper validation, pinned Actions, Dependabot, CodeQL, minimal permissions |
@@ -139,12 +139,15 @@ Each requirement is testable; reference its ID in tests and reviews.
   only when the listener searches, asks for more results or downloads a book;
   a queued download waits for a connection and retries a lost connection or
   a busy server, at most 4 attempts in all. Every address and every redirect
-  must be HTTPS on the default port, without user information, on
-  `gutenberg.org` or a subdomain (`CatalogHosts`); at most 5 redirects; only
-  a 200 answer of the expected media type is read, within 1 MiB for a feed
-  page and 100 MB for a book. The network security config disables cleartext
-  and trusts the system CAs for `gutenberg.org` only, so TLS to any other host
-  fails. `INTERNET` and `ACCESS_NETWORK_STATE` are declared; ML Kit's
+  must be HTTPS on the default port, without user information, on exactly
+  `www.gutenberg.org` or Gutenberg's official mirror `gutenberg.pglaf.org`
+  (`CatalogHosts`, ADR 0019); at most 5 redirects; only a 200 answer of the
+  expected media type is read (an EPUB may come as `application/epub+zip` or
+  `application/octet-stream`, and the intake checks its signature), within
+  1 MiB for a feed page and 100 MB for a book. A download asks the mirror when
+  the site answers 5xx or 429 or cannot be reached. The network security
+  config disables cleartext and trusts the system CAs for these two names
+  only, no subdomains, so TLS to any other host fails. `INTERNET` and `ACCESS_NETWORK_STATE` are declared; ML Kit's
   `datatransport` upload backend stays removed. Verified by `CatalogHostsTest`,
   `CatalogHttpTest` and `MergedManifestTest`.)
 - **SR-6** Downloaded voice models are verified against SHA-256 values pinned
@@ -252,7 +255,8 @@ Leak response: [runbooks/secrets.md](runbooks/secrets.md).
   user (later also voice model downloads). Project Gutenberg sees the phone's
   IP address, the search words, the numbers of the books downloaded and the
   app's User-Agent (name, version and, when the build sets one, the
-  maintainer's contact); no cookies, identifiers or device data are sent.
+  maintainer's contact); its official mirror sees the same for a download the
+  site could not serve; no cookies, identifiers or device data are sent.
   Showing the Explore tab, including its curated list, makes no request.
 - The system TTS engine is a separate app chosen by the user; offline voices
   are preferred so book text does not leave the phone.

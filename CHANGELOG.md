@@ -102,6 +102,9 @@ All notable user-visible changes are documented here. The format follows
   says the book could not be saved. The same book shared twice at the same
   time is added once.
 - A catalogue book with an extremely long title can be downloaded.
+- While Project Gutenberg's site is down for maintenance, catalogue books
+  are downloaded from its official mirror, and a search says that the free
+  books site is under maintenance instead of only "not working".
 
 ### Security
 
@@ -115,3 +118,5 @@ All notable user-visible changes are documented here. The format follows
   still can.
 - An EPUB built to keep its preparation busy for hours now stops after two
   minutes with a clear message.
+- The catalogue contacts exactly two hosts, Project Gutenberg's site and its
+  official mirror, instead of any address under gutenberg.org.

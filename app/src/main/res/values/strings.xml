@@ -68,6 +68,7 @@
     <string name="explore_old_spelling">Many of these books keep the spelling of the time they were written in.</string>
     <string name="explore_search_offline">No internet connection. Connect and try again.</string>
     <string name="explore_search_unavailable">The search is not working right now. Try again later.</string>
+    <string name="explore_site_down">The free books site is under maintenance. Try again later.</string>
     <string name="explore_try_again">Try again</string>
     <string name="explore_download">Download</string>
     <string name="explore_download_book">Download %1$s</string>

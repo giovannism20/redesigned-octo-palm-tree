@@ -12,6 +12,7 @@ import androidx.work.testing.TestListenableWorkerBuilder
 import com.giovannimartins.rreader.catalog.FakeTransport.Companion.EPUB
 import com.giovannimartins.rreader.catalog.FakeTransport.Companion.ok
 import com.giovannimartins.rreader.catalog.FakeTransport.Companion.redirect
+import com.giovannimartins.rreader.catalog.FakeTransport.Companion.status
 import com.giovannimartins.rreader.data.db.RReaderDatabase
 import com.giovannimartins.rreader.data.files.BookFileStore
 import com.giovannimartins.rreader.importer.BookIntake
@@ -88,6 +89,16 @@ class DownloadBookWorkerTest {
         val last = run(attempt = DownloadBookWorker.MAX_ATTEMPTS - 1)
 
         assertThat(stateAfter(last, WorkInfo.State.FAILED)).isEqualTo(DownloadState.Failed(DownloadFailure.NETWORK))
+    }
+
+    @Test
+    fun `retries while the site is down, then says so`() {
+        transport.answer(BOOK) { status(503) }
+
+        assertThat(run(attempt = 0)).isEqualTo(ListenableWorker.Result.retry())
+        val last = run(attempt = DownloadBookWorker.MAX_ATTEMPTS - 1)
+
+        assertThat(stateAfter(last, WorkInfo.State.FAILED)).isEqualTo(DownloadState.Failed(DownloadFailure.SITE_DOWN))
     }
 
     @Test

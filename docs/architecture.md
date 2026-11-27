@@ -347,6 +347,7 @@ sequenceDiagram
     participant J as Download job (WorkManager)
     participant H as CatalogHttp
     participant G as www.gutenberg.org
+    participant M as gutenberg.pglaf.org (mirror)
     participant I as BookIntake + import job
     U->>J: Download (queued until there is a connection)
     J->>H: GET /ebooks/{id}.epub3.images
@@ -354,6 +355,11 @@ sequenceDiagram
     G-->>H: 302 to /cache/epub/{id}/pg{id}-images-3.epub
     H->>G: HTTPS, redirect checked against the allowlist
     G-->>H: 200 application/epub+zip (at most 100 MB)
+    opt the site answers 5xx or 429, or cannot be reached
+        J->>H: GET /cache/epub/{id}/pg{id}-images-3.epub
+        H->>M: HTTPS, allowlisted host
+        M-->>H: 200 application/octet-stream
+    end
     H-->>J: temporary file in private storage
     J->>I: importFile: signature, size, SHA-256 dedupe, book row
     I-->>U: the library shows the book being prepared
