@@ -8,7 +8,8 @@ import java.io.ByteArrayInputStream
 import java.io.IOException
 
 /**
- * The only way EPUB documents are parsed: container, package, NCX, navigation and content documents (SR-3).
+ * The only way EPUB content is parsed (SR-3): container, package, NCX, navigation and content documents, plus the
+ * HTML fragments some books put in their metadata.
  *
  * Jsoup's XML parser keeps a DOCTYPE as an inert node. It never loads external DTDs or entities and never expands
  * entities declared in an internal subset, so XXE and "billion laughs" payloads stay literal text; only the fixed set
@@ -26,6 +27,12 @@ internal object SafeXml {
         } catch (e: IOException) {
             abortParse(EpubError.MalformedDocument(path), e)
         }
+
+    /**
+     * Parses an HTML fragment, such as markup inside `dc:description`, and returns its body. Jsoup's HTML parser has
+     * no DTD or entity processing either: it only knows the fixed HTML named character references.
+     */
+    fun parseHtmlFragment(markup: String): Element = Jsoup.parseBodyFragment(markup).body()
 }
 
 private val WHITESPACE = Regex("\\s+")

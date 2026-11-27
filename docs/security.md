@@ -58,10 +58,13 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 
 Each requirement is testable; reference its ID in tests and reviews.
 
-- **SR-1** Archive entry names are never used to build file-system paths.
+- **SR-1** Archive entry names are never used to build file-system paths
+  (verified by `EpubSecurityTest`).
 - **SR-2** EPUB reading enforces limits: entry count, per-entry and total
-  uncompressed size; violations yield a typed `ImportError`.
-- **SR-3** Every XML parser disables DTDs and external entities.
+  uncompressed size; violations yield a typed `ImportError` (verified by
+  `EpubSecurityTest`).
+- **SR-3** Every XML parser disables DTDs and external entities (verified by
+  `EpubSecurityTest`).
 - **SR-4** PDF extraction and OCR run with page, time and memory limits.
 - **SR-5** Cleartext traffic is disabled (`network_security_config`); only
   allowlisted HTTPS hosts are contacted, and only after a user action.
