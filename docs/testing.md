@@ -72,7 +72,9 @@ Faber (67 MB) when no Piper voice is installed, and `EspeakPhonemizerTest`
 feeds espeak-ng text that makes it name letters, switch language or meet other
 alphabets (such text crashed it in native code before the English, German,
 French and Polish dictionaries shipped); the JVM test `EspeakDictionariesTest`
-checks that every dictionary a shipped one switches to is shipped too. Run instrumented tests on the owner's phone with
+checks that every dictionary a shipped one switches to is shipped too, and
+`EspeakDataTest` that the data is copied whole, and copied again when its copy
+was never marked complete. Run instrumented tests on the owner's phone with
 `adb install -r` and `adb shell am instrument`, not `connectedDebugAndroidTest`,
 which uninstalls the app and deletes its books and voices.
 

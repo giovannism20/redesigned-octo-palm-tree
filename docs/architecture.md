@@ -478,7 +478,9 @@ cache as the phone's voices, so playback does not change (ADR 0003):
    per sentence. espeak-ng reads the Portuguese data shipped in
    `assets/espeak-pt` (with the English, German, French and Polish
    dictionaries it can switch to), copied once to `noBackupFilesDir/espeak-ng-data/`
-   (`EspeakData`). `PhonemizerText` first turns letters of other alphabets
+   (`EspeakData`), each file synced to disk before a `.complete` marker is
+   written, so a crash or power cut never leaves a marked copy with a file
+   cut short. `PhonemizerText` first turns letters of other alphabets
    into spaces, since their dictionaries are not shipped. For Kokoro, `KokoroPhonemes` merges `tʃ dʒ aɪ eɪ` into
    Kokoro's single symbols `ʧ ʤ I A`, as its reference front end does.
 3. **Model.** The voice's model speaks the phonemes as its speaker (Kokoro:

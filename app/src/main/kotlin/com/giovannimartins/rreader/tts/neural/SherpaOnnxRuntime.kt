@@ -11,6 +11,7 @@ import com.k2fsa.sherpa.onnx.OfflineTtsModelConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsVitsModelConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -161,7 +162,9 @@ internal class GenerationCallback(
 
 /**
  * The Portuguese espeak-ng data shipped in `assets/espeak-pt` (unmodified files of piper-phonemize 1.6.1), copied
- * once to private storage, because espeak-ng reads files from a folder. A new data version gets a new folder.
+ * once to private storage, because espeak-ng reads files from a folder. A new data version gets a new folder. Each
+ * file is synced to disk before a marker says the copy is complete, so a power cut or a crash cannot leave a marked
+ * copy with a file cut short, which espeak-ng's native code would then read.
  */
 internal object EspeakData {
     private const val ASSETS = "espeak-pt"
@@ -202,9 +205,14 @@ internal object EspeakData {
         root.deleteRecursively()
         FILES.forEach { name ->
             val target = File(folder, name).apply { parentFile?.mkdirs() }
-            context.assets.open("$ASSETS/$name").use { input -> target.outputStream().use { input.copyTo(it) } }
+            context.assets.open("$ASSETS/$name").use { input ->
+                FileOutputStream(target).use { output ->
+                    input.copyTo(output)
+                    output.fd.sync()
+                }
+            }
         }
-        File(folder, COMPLETE).createNewFile()
+        FileOutputStream(File(folder, COMPLETE)).use { it.fd.sync() }
         return folder
     }
 }
