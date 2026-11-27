@@ -42,6 +42,7 @@ import com.giovannimartins.rreader.R
 import com.giovannimartins.rreader.data.db.BookStatus
 import com.giovannimartins.rreader.data.db.ImportFailure
 import com.giovannimartins.rreader.data.library.LibraryBook
+import com.giovannimartins.rreader.importer.ImportProgress
 import com.giovannimartins.rreader.ui.components.BookCover
 import com.giovannimartins.rreader.ui.components.timeLeft
 import com.giovannimartins.rreader.ui.importer.messageRes
@@ -237,7 +238,7 @@ private fun LibraryBookRow(
             )
             when (book.status) {
                 BookStatus.IMPORTING -> {
-                    Text(text = stringResource(R.string.library_preparing), style = MaterialTheme.typography.bodyMedium)
+                    PreparingLine(book.importProgress)
                 }
 
                 BookStatus.READY -> {
@@ -285,6 +286,36 @@ private fun ProgressLine(
                 text = left,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/** "Preparing the book…", or the page text recognition is reading, with a progress bar. */
+@Composable
+private fun PreparingLine(
+    progress: ImportProgress?,
+    modifier: Modifier = Modifier,
+) {
+    when (progress) {
+        is ImportProgress.RecognizingText -> {
+            Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                LinearProgressIndicator(
+                    progress = { progress.page.toFloat() / progress.pageCount },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    text = stringResource(R.string.import_recognizing_text, progress.page, progress.pageCount),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
+
+        null -> {
+            Text(
+                text = stringResource(R.string.library_preparing),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = modifier,
             )
         }
     }

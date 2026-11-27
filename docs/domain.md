@@ -8,6 +8,7 @@ Names used in code and docs. Add a term here when you introduce it.
 | **Source file** | The original PDF/EPUB copied into private app storage at import time. |
 | **Book format** | `EPUB` or `PDF`. Detected from the file signature, never from the file name alone. |
 | **Import** | Turning a source file into a normalized book. Runs as a background job and ends `READY` or `FAILED` with a user-facing reason. |
+| **Import progress** | How far a running import got, when a long stage reports it (`ImportProgress`): today, text recognition reading page X of Y. Published through WorkManager and shown on the book's row and in the import notification; not stored. |
 | **Intake** | The synchronous first half of an import (`BookIntake`): verify the signature, copy with a size limit while hashing, reject duplicates, create the book row and queue the import job. |
 | **Normalized book** | The cleaned, speakable text of a book split into chapters and paragraphs. Immutable after import. |
 | **Chapter** | An ordered section of a book with a title and normalized text. From the EPUB table of contents, the PDF outline, detected headings, or page ranges as a fallback. |

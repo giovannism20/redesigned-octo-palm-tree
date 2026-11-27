@@ -6,9 +6,11 @@ import com.giovannimartins.rreader.data.db.Converters
 import com.giovannimartins.rreader.data.db.LibraryRow
 import com.giovannimartins.rreader.data.files.BookFileStore
 import com.giovannimartins.rreader.di.IoDispatcher
+import com.giovannimartins.rreader.importer.ImportJobs
+import com.giovannimartins.rreader.importer.ImportProgress
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -20,10 +22,14 @@ class LibraryRepository
     constructor(
         private val bookDao: BookDao,
         private val files: BookFileStore,
+        private val importJobs: ImportJobs,
         @IoDispatcher private val io: CoroutineDispatcher,
     ) {
-        /** Library contents, most recent activity first. */
-        val books: Flow<List<LibraryBook>> = bookDao.observeLibrary().map { rows -> rows.map(::toLibraryBook) }
+        /** Library contents, most recent activity first, with the progress of the books being prepared. */
+        val books: Flow<List<LibraryBook>> =
+            combine(bookDao.observeLibrary(), importJobs.progress) { rows, progress ->
+                rows.map { row -> toLibraryBook(row, progress[row.book.id]) }
+            }
 
         suspend fun rename(
             bookId: String,
@@ -45,7 +51,10 @@ class LibraryRepository
                 files.delete(bookId)
             }
 
-        private fun toLibraryBook(row: LibraryRow): LibraryBook {
+        private fun toLibraryBook(
+            row: LibraryRow,
+            progress: ImportProgress?,
+        ): LibraryBook {
             val book = row.book
             val cover = files.coverFile(book.id).takeIf { book.hasCover && book.status == BookStatus.READY }
             return LibraryBook(
@@ -58,6 +67,7 @@ class LibraryRepository
                 charsRead = row.charsRead,
                 totalChars = book.totalChars,
                 voiceId = book.voiceId,
+                importProgress = progress.takeIf { book.status == BookStatus.IMPORTING },
             )
         }
     }

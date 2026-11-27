@@ -47,6 +47,11 @@ All notable user-visible changes are documented here. The format follows
   scanned pages keep their page order, and blank pages are left alone. When
   nothing readable can be recognized, or a scan is too long, a clear message
   says so.
+- While a scanned book is being prepared, the library shows "Recognizing
+  text: page X of Y" with a progress bar, and so does a notification when
+  notifications are allowed. Preparation keeps going with the screen locked
+  and, if the app is closed, continues later from the page where it
+  stopped.
 - Voices screen: the phone's free Portuguese voices, offline first, with a
   sample and a default choice.
 - EPUB 2 and 3 books are imported with their chapters, titles, authors and
