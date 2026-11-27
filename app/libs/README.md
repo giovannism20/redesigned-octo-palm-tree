@@ -42,10 +42,24 @@ in this folder).
   shipped dictionary switches to one that is not shipped.
 
 Corresponding source code: sherpa-onnx at tag
-[`v2.0.3`](https://github.com/k2-fsa/sherpa-onnx/tree/v2.0.3),
+[`v2.0.3`](https://github.com/k2-fsa/sherpa-onnx/tree/v2.0.3);
 piper-phonemize at tag
-[`v1.6.1`](https://github.com/csukuangfj/piper-phonemize/tree/v1.6.1) (it
-builds espeak-ng from [rhasspy/espeak-ng](https://github.com/rhasspy/espeak-ng)).
+[`v1.6.1`](https://github.com/csukuangfj/piper-phonemize/tree/v1.6.1)
+(commit `5f92f0be450da6d26bf0321f814411b1369f1e49`), whose `CMakeLists.txt`
+builds espeak-ng from
+[csukuangfj/espeak-ng at commit `ed530aa113046142eb5115cf2fc9157854d0ffe1`](https://github.com/csukuangfj/espeak-ng/tree/ed530aa113046142eb5115cf2fc9157854d0ffe1)
+(the archive of that commit, pinned there by SHA-256
+`e4e262cbe34f7fe21f91f1ba3397f2728e1f30eafbae7853f2b753a9ed13f0dd`). That
+repository is a fork of [rhasspy/espeak-ng](https://github.com/rhasspy/espeak-ng),
+itself a fork of [espeak-ng](https://github.com/espeak-ng/espeak-ng); the AAR's
+espeak-ng data comes from `swift-api-examples/espeak-ng-data` in the
+piper-phonemize repository at the same tag, and the AAR is built by its
+`.github/workflows/android.yaml`.
+
+The espeak-ng in this AAR branched from espeak-ng on 2023-05-20 and lacks the
+memory-safety fixes released in espeak-ng 1.52.0 (CVE-2023-49990 to
+CVE-2023-49994); see
+[Known vulnerabilities in dependencies](../../docs/security.md#known-vulnerabilities-in-dependencies).
 
 ## Updating
 

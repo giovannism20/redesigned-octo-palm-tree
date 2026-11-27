@@ -216,14 +216,15 @@ run on the phone with [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)
 [ONNX Runtime](https://github.com/microsoft/onnxruntime) linked in (MIT
 License, below). Text is turned into phonemes by
 [piper-phonemize](https://github.com/csukuangfj/piper-phonemize) 1.6.1, which
-contains [espeak-ng](https://github.com/espeak-ng/espeak-ng) and its
+contains [espeak-ng](https://github.com/espeak-ng/espeak-ng), built from a fork
+at the commit given in [app/libs/README.md](app/libs/README.md), and its
 pronunciation data. Both are licensed under the
 [GNU General Public License v3.0 or later](https://www.gnu.org/licenses/gpl-3.0.html),
 so the APK that includes them is distributed under the GPL-3.0; the source
 code in this repository stays MIT. The app shows the full license texts in
 its "About and licences" screen with a link to this repository. The release
-files, their checksums and the tags of their source code are listed in
-[app/libs/README.md](app/libs/README.md); the espeak-ng files in
+files, their checksums and the tags and commits of their source code are
+listed in [app/libs/README.md](app/libs/README.md); the espeak-ng files in
 `app/src/main/assets/espeak-pt/` are copied unmodified from the
 piper-phonemize AAR.
 

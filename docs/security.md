@@ -27,7 +27,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | Imported books and extracted text | Private to the user | App-private storage |
 | Reading positions, settings, per-book voice | Low (reveals reading habits) | Room / DataStore |
 | Catalogue searches and downloaded book numbers | Low (reveal reading interests) | Search pages in memory for 15 minutes; download jobs in WorkManager; sent to Project Gutenberg |
-| Downloaded voice packages | Integrity: their code-like models run on the phone | `filesDir/voices/{package}/`, verified by SHA-256 before use |
+| Downloaded voice packages | Integrity: their code-like models run on the phone | `filesDir/voices/{package}/`; the archive is verified by size and SHA-256 before it is unpacked and installed, and at use only each installed file's size is checked |
 | App integrity (code that runs on the phone) | High | Signed APK |
 | Release signing key | Critical (controls updates) | Maintainer machine, outside the repo, backed up |
 | Repository and CI integrity | High | GitHub |
@@ -67,6 +67,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | DoS | Book download (B3) | Low | A huge or endless answer fills storage or a stalled one hangs, or a site that is down keeps a download "waiting" for minutes | 100 MB limit announced or counted, 15 s connect and 30 s read timeouts, temporary file always deleted; no new try starts two minutes after the first, then the download fails and says why; the listener sees what it does and can cancel it ([ADR 0020](decisions/0020-bounded-catalogue-downloads.md)) |
 | Info disclosure | Searches and downloads (B3) | Low | Search words and book choices leak to logs or to third parties | Sent only to Gutenberg (its site, or its official mirror for a download the site cannot serve) over HTTPS after the listener acts; never logged (SR-8); no cookies, identifiers or device data; search pages kept only in memory |
 | Info disclosure | TTS engine (B4) | Low/Medium | Network-backed voices send book text to a vendor | Default to offline voices; label network voices in the UI |
+| Tampering / EoP / DoS | Book text into the native phonemizer and ONNX Runtime (B1, B3) | Medium | A crafted EPUB or PDF, or a Gutenberg book, carries text that the native espeak-ng in piper-phonemize turns into memory corruption or a crash in the app's process: this espeak-ng lacks the fixes of espeak-ng 1.52.0, among them a stack buffer overflow in `RemoveEnding` reached with crafted text (CVE-2023-49992); its phonemes then go to sherpa-onnx, which turns them into the token ids of an ONNX Runtime model | Text is spoken only after the book passed the import limits (SR-2, SR-4, SR-13); `PhonemizerText` turns letters of other scripts into spaces, so espeak-ng only switches to the dictionaries the app ships (`EspeakDictionariesTest`); the models are pinned by SHA-256 (SR-6). Known vulnerability, listed below with its fix (rebuild piper-phonemize against espeak-ng 1.52.0 or later); running the native engine in a process of its own, so a crash there does not stop the app, is in progress |
 | Spoofing | Settings intents (B2) | Low | An app that declares the text-to-speech settings action answers the Voices screen's "install voices" button and imitates the system settings | The intent, and its fallback to the system settings, are addressed to the system Settings app (`com.android.settings`) only; when neither opens, nothing happens (`SystemSettingsTest`) |
 | Info disclosure / Tampering | Media session (B2) | Low | Another app connects to the exported playback service to see what is being listened to, or to control playback | Untrusted controllers are rejected; media ids must be book UUIDs (optionally with a chapter); the notification's content intent is explicit and immutable; no media button receiver, so playback never starts from the background |
 | Tampering | Media session start intents (B2) | Medium | Another app sends the exported service a media button (`ACTION_MEDIA_BUTTON`) or a custom notification action as a start intent: Media3 finds the session by the URI of Media3's default session id, or asks for a session on behalf of an unknown caller, and the media notification's controller, which runs as the app, relays the action, so the app's reader commands (read from a position, sleep timer) and media keys could be triggered from outside | The session has a random id, so its URI is known only to the notification's own pending intents; the service gives its session to trusted controllers only, so the unknown caller of a start intent gets none; the media notification's controller does not get the reader commands (its −15 s and +15 s buttons are player commands); `ReaderSessionCallback` refuses reader commands from any other controller (SR-7) |
@@ -171,7 +172,8 @@ Each requirement is testable; reference its ID in tests and reviews.
   `CatalogHttpTest`, `HttpsClientTest`, `NetworkSecurityConfigTest`,
   `VoicePackageDownloaderTest` and `MergedManifestTest`.)
 - **SR-6** Downloaded voice models are verified against SHA-256 values pinned
-  in code before use. (`NeuralVoices` pins each package archive's size and
+  in code before they are installed; at use, only the sizes of the installed
+  files are checked. (`NeuralVoices` pins each package archive's size and
   SHA-256, the digests GitHub publishes for the release assets, checked against
   downloads; `VoicePackageDownloader` refuses a body larger than the pinned
   size, checks size and SHA-256 of the whole archive, also after a resumed
@@ -228,8 +230,9 @@ Each requirement is testable; reference its ID in tests and reviews.
   by the build from their GitHub releases into `app/libs/` (not kept in git),
   and `fetchVendoredLibraries` refuses any file that does not match its
   SHA-256 in `app/libs/SHA256SUMS` ([app/libs/README.md](../app/libs/README.md)). (Known
-  vulnerabilities that cannot be reached in a dependency are listed, with the
-  reason, under [Known vulnerabilities in dependencies](#known-vulnerabilities-in-dependencies).)
+  vulnerabilities in a dependency are listed under
+  [Known vulnerabilities in dependencies](#known-vulnerabilities-in-dependencies),
+  with whether and how they can be reached and what is done about them.)
 - **SR-12** No `WebView`, dynamic code loading or reflection-based plugins.
 - **SR-13** Descriptive text read from untrusted files and feeds is bounded
   before it is stored or shown. (textkit's `MetadataLimits`, applied by the
@@ -274,6 +277,35 @@ stays removed, and the network security config lets TLS reach Gutenberg only.
 
 ## Known vulnerabilities in dependencies
 
+- **espeak-ng in piper-phonemize 1.6.1** (the native library of the vendored
+  AAR, [app/libs/README.md](../app/libs/README.md)). piper-phonemize 1.6.1
+  builds espeak-ng from `csukuangfj/espeak-ng` at commit `ed530aa1`
+  (2026-06-25), a fork
+  of rhasspy/espeak-ng that branched from espeak-ng at commit `2f2831d9` of
+  2023-05-20; its own commits since then change the build and add an API for
+  clause terminators. It therefore lacks espeak-ng's fixes of 2023-12-17
+  (commit `58f1e0b6`, pull request 1846, first released in espeak-ng 1.52.0
+  on 2024-12-12) for CVE-2023-49990 (buffer overflow in `SetUpPhonemeTable`),
+  CVE-2023-49991 (stack buffer underflow in `CountVowelPosition`),
+  CVE-2023-49992 (stack buffer overflow in `RemoveEnding`, reached with
+  crafted text, espeak-ng issue 1827), CVE-2023-49993 (buffer overflow in
+  `ReadClause`) and CVE-2023-49994 (floating point exception in
+  `PeaksToHarmspect`); the fork's `RemoveEnding` still copies a word without
+  bounding its length. Reachable: the text of every sentence read with a
+  neural voice, from imported EPUB and PDF files and from Project Gutenberg
+  downloads, goes through espeak-ng's clause and word translation, where
+  `RemoveEnding` runs, in the app's own process. Mitigations today:
+  `PhonemizerText` keeps only Latin, common and inherited characters (other
+  scripts become spaces), so espeak-ng only switches to the dictionaries the
+  app ships; the import limits bound what text reaches it (SR-2, SR-4,
+  SR-13); running the native voice engine in a process of its own, so a crash
+  there does not stop the app, is in progress. Fix: rebuild piper-phonemize
+  1.6.1 against espeak-ng 1.52.0 or later (1.52.0 lacks the clause-terminator
+  API piper-phonemize calls, which espeak-ng added in pull request 2127 of
+  2025-03-03 and which its main branch, at version 1.53.0 since 2026-07-22,
+  has), publish the AAR on a release of the maintainer's own fork with its
+  SHA-256 in `app/libs/SHA256SUMS`, and keep that fork's exact sources public
+  (GPL-3.0). Review again with every update of piper-phonemize.
 - **Bouncy Castle 1.72** (`bcprov`, `bcpkix` and `bcutil`, `-jdk15to18`),
   which PdfBox-Android 2.0.27.0 brings. Scanners report vulnerabilities fixed
   in later releases (1.73 to 1.78): an LDAP injection in its LDAP certificate
