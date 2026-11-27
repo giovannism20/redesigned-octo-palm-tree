@@ -12,7 +12,7 @@ Names used in code and docs. Add a term here when you introduce it.
 | **Normalized book** | The cleaned, speakable text of a book split into chapters and paragraphs. Immutable after import. |
 | **Chapter** | An ordered section of a book with a title and normalized text. From the EPUB table of contents, the PDF outline, detected headings, or page ranges as a fallback. |
 | **Paragraph** | A block of chapter text separated by a blank line in normalized form. |
-| **Sentence** | A unit produced by the sentence segmenter (pt-BR aware abbreviations). Long sentences are split at punctuation. |
+| **Sentence** | A unit produced by the sentence segmenter: pt-BR aware (abbreviations, initials, decimals, dialogue dashes) and never across a line break or paragraph. Sentences longer than 280 characters are split at punctuation. |
 | **Segment** | One or more consecutive sentences rendered as a single audio clip. The unit of rendering, playback items and highlighting. |
 | **Layout line** | A line of text with its page, bounding box and font size, produced by PDF extraction or OCR and consumed by the cleanup step. |
 | **Cleanup** | Removing repeated headers/footers and page numbers, joining hyphenated words (keeping Portuguese enclisis such as "fazê-lo"), and rebuilding paragraphs from layout lines. |
