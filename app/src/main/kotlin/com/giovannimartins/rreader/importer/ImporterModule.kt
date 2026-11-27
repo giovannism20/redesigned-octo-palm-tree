@@ -19,17 +19,13 @@ object ImporterModule {
     ): ContentResolver = context.contentResolver
 
     /**
-     * Parser per format. EPUB and PDF parsers are wired in as they land
-     * (roadmap Phases 1 and 2); until then the import fails with a clear reason.
+     * Parser per format. The PDF parser arrives in roadmap Phase 2; until then a
+     * PDF import fails with a clear "not supported yet" reason.
      */
     @Provides
-    fun parsers(): Map<BookFormat, @JvmSuppressWildcards BookParser> =
-        BookFormat.entries.associateWith {
-            BookParser {
-                _,
-                _,
-                ->
-                ParseOutcome.Failed(ImportFailure.FORMAT_NOT_YET_SUPPORTED)
-            }
-        }
+    fun parsers(epub: EpubBookParser): Map<BookFormat, @JvmSuppressWildcards BookParser> =
+        mapOf(
+            BookFormat.EPUB to epub,
+            BookFormat.PDF to BookParser { _, _ -> ParseOutcome.Failed(ImportFailure.FORMAT_NOT_YET_SUPPORTED) },
+        )
 }

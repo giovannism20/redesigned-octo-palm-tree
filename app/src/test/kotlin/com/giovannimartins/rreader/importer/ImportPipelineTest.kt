@@ -114,6 +114,27 @@ class ImportPipelineTest {
             assertThat(stored.failureReason).isEqualTo(ImportFailure.DRM_PROTECTED)
         }
 
+    @Test
+    fun `imports a real EPUB end to end`() =
+        runTest {
+            val bookId =
+                (
+                    intake().importStream(
+                        ByteArrayInputStream(MinimalEpub.bytes()),
+                        "iracema",
+                    ) as IntakeResult.Queued
+                ).bookId
+
+            processor(EpubBookParser()).process(bookId)
+
+            val stored = database.bookDao().findById(bookId)!!
+            assertThat(stored.status).isEqualTo(BookStatus.READY)
+            assertThat(stored.title).isEqualTo("Iracema")
+            assertThat(stored.language).isEqualTo("pt-BR")
+            assertThat(database.bookDao().chapters(bookId).map { it.title }).containsExactly("I", "II").inOrder()
+            assertThat(files.readChapterText(bookId, 0)).contains("Verdes mares bravios")
+        }
+
     private fun kotlinx.coroutines.test.TestScope.intake() =
         BookIntake(
             contentResolver = context.contentResolver,

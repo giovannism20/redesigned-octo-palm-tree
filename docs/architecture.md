@@ -40,7 +40,7 @@ See [ADR 0003](decisions/0003-sentence-audio-rendering-with-media3.md).
 
 | Module | Kind | Responsibility | Status |
 |--------|------|----------------|--------|
-| `:textkit` | Pure Kotlin/JVM library | Book model, EPUB parsing, PDF/OCR text cleanup, chapter detection, sentence segmentation, speech normalization, progress and time estimates | in progress (format detection) |
+| `:textkit` | Pure Kotlin/JVM library | Book model, EPUB parsing, PDF/OCR text cleanup, chapter detection, sentence segmentation, speech normalization, progress and time estimates | in progress (format detection, model, EPUB) |
 | `:app` | Android application | UI, import, PDF/OCR adapters, TTS engines, rendering, playback service, persistence | in progress (app shell) |
 
 `:app` depends on `:textkit`; `:textkit` never depends on Android. Anything
@@ -67,7 +67,7 @@ Base package: `com.giovannimartins.rreader`.
 | Package | Responsibility | Status |
 |---------|----------------|--------|
 | `data` | Room database (`db`), book file storage (`files`), library repository (`library`), DataStore settings (`settings`) | implemented |
-| `importer` | `BookIntake` (picker/share/view URIs → signature check, size-limited copy, SHA-256 dedupe, book row), `ImportBookWorker` + `BookImportProcessor` (parse and persist), `BookParser` per format | implemented (parsers wired as they land) |
+| `importer` | `BookIntake` (picker/share/view URIs → signature check, size-limited copy, SHA-256 dedupe, book row), `ImportBookWorker` + `BookImportProcessor` (parse and persist), `BookParser` per format (`EpubBookParser`; PDF in Phase 2) | implemented |
 | `pdf` | PdfBox text extraction, `PdfRenderer` page rendering, ML Kit OCR → layout lines | planned |
 | `tts` | `SpeechEngine` interface and `SystemTtsEngine` (multi-engine Android TTS → WAV), `AudioCache`, `WavInfo`; later `SegmentRenderer` and `SherpaOnnxEngine` | in progress |
 | `playback` | `PlaybackService` (`MediaSessionService`), facade player, progress saving, sleep timer | planned |

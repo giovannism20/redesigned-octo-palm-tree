@@ -30,14 +30,15 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 
 ## Phase 1 — EPUB MVP (first version on the phone)
 
-- [ ] `textkit`: book model, EPUB 2/3 parser (container, OPF, spine, nav/NCX, cover, DRM detection), safe ZIP/XML handling
+- [x] `textkit`: book model, EPUB 2/3 parser (container, OPF, spine, nav/NCX, cover, DRM detection), safe ZIP/XML handling
 - [ ] `textkit`: sentence segmentation (pt-BR abbreviations), speech normalization, estimates
 - [x] Import: picker + share/view intents, signature detection, copy + SHA-256 dedupe, WorkManager job, error messages
 - [x] Data: Room schema, chapter files, library repository
 - [x] Data: settings (DataStore: default voice, speed, text size)
 - [x] Library screen with "Continue listening", progress, failures and removal
 - [ ] Library: time left (needs `textkit.estimate`) and tap to open the player
-- [ ] Wire the EPUB parser into `ImporterModule`
+- [x] Wire the EPUB parser into `ImporterModule`
+- [ ] EPUB: split chapters at TOC fragment anchors inside a single file (books shipped as one big XHTML)
 - [x] `SystemTtsEngine` (multi-engine, offline-first voices) + audio cache
 - [ ] `SegmentRenderer` (render-ahead window, speaking-rate updates)
 - [ ] `PlaybackService` with facade player: background, lock screen, headset, ±15 s, speed, chapters, resume
