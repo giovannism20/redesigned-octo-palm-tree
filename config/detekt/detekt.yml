@@ -17,6 +17,9 @@ complexity:
   TooManyFunctions:
     # Room DAOs are declarative lists of queries; splitting them hurts readability.
     ignoreAnnotated: ['Dao']
+    # Overrides implement framework contracts (Media3 players and sessions, listeners), so only a class's own
+    # functions count towards the limit.
+    ignoreOverridden: true
   LongParameterList:
     ignoreDefaultParameters: true
     ignoreAnnotated: ['Composable']
