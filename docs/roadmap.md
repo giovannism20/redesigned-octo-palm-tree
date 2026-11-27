@@ -65,8 +65,10 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 
 ## Phase 4 — Scanned PDFs (OCR)
 
-- [ ] ML Kit OCR per page, resumable, with progress
-- [ ] Mixed PDFs (pages with and without text)
+- [x] ML Kit OCR per page, resumable, with progress
+- [x] Mixed PDFs (pages with and without text)
+- [ ] Release APK size: build arm64-only (or ABI splits) for the phone — ML Kit native code makes the universal APK ~52 MB
+- [ ] Keep ML Kit's telemetry upload backend removed when the INTERNET permission arrives with the catalogue
 
 ## Phase 5 — Offline neural voices
 
