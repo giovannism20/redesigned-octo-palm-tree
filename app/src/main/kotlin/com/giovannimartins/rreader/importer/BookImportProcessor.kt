@@ -12,6 +12,7 @@ import com.giovannimartins.rreader.di.IoDispatcher
 import com.giovannimartins.rreader.textkit.BookFormat
 import com.giovannimartins.rreader.textkit.model.NormalizedBook
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -22,7 +23,8 @@ import javax.inject.Inject
  * normalized chapters, cover and metadata. Runs inside [ImportBookWorker] and
  * is safe to repeat for the same book: a run stopped by the system resumes
  * from the pages text recognition stored, which are deleted once the import
- * is over, ready or failed.
+ * is over, ready or failed. When the book was removed meanwhile, whatever the
+ * import wrote is deleted as it ends, also when it is cancelled.
  */
 class BookImportProcessor
     @Inject
@@ -40,6 +42,18 @@ class BookImportProcessor
         suspend fun process(
             bookId: String,
             progress: ImportProgressListener = ImportProgressListener.NONE,
+        ) {
+            try {
+                import(bookId, progress)
+            } finally {
+                // The book may have been removed while its files were being written, which recreates its folder.
+                withContext(NonCancellable + io) { if (bookDao.findById(bookId) == null) files.delete(bookId) }
+            }
+        }
+
+        private suspend fun import(
+            bookId: String,
+            progress: ImportProgressListener,
         ) {
             val book = withContext(io) { bookDao.findById(bookId) }
             if (book == null || book.status == BookStatus.READY) return

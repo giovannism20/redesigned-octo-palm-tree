@@ -44,9 +44,13 @@ class LibraryRepository
             archived: Boolean,
         ) = withContext(io) { bookDao.setArchived(bookId, archived) }
 
-        /** Deletes the book's row (chapters and position cascade) and then its files. */
+        /**
+         * Stops the book's import if it is being prepared, then deletes its row (chapters and position cascade) and
+         * its files. An import that writes after this cleans up after itself (see `BookImportProcessor`).
+         */
         suspend fun remove(bookId: String) =
             withContext(io) {
+                importJobs.cancel(bookId)
                 bookDao.delete(bookId)
                 files.delete(bookId)
             }

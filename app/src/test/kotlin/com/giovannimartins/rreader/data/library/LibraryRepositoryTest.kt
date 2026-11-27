@@ -6,10 +6,9 @@ import com.giovannimartins.rreader.data.db.BookEntity
 import com.giovannimartins.rreader.data.db.BookStatus
 import com.giovannimartins.rreader.data.db.RReaderDatabase
 import com.giovannimartins.rreader.data.files.BookFileStore
-import com.giovannimartins.rreader.importer.ImportJobs
+import com.giovannimartins.rreader.importer.FakeImportJobs
 import com.giovannimartins.rreader.importer.ImportProgress
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -60,6 +59,21 @@ class LibraryRepositoryTest {
         }
 
     @Test
+    fun `removing a book cancels its import, then deletes its row and files`() =
+        runTest {
+            val repository = repository()
+            database.bookDao().insert(book(IMPORTING_ID, BookStatus.IMPORTING, sha = "a"))
+            val cover = BookFileStore(folder.root).coverFile(IMPORTING_ID).apply { parentFile!!.mkdirs() }
+            cover.writeText("capa")
+
+            repository.remove(IMPORTING_ID)
+
+            assertThat(jobs.cancelled).containsExactly(IMPORTING_ID)
+            assertThat(database.bookDao().findById(IMPORTING_ID)).isNull()
+            assertThat(cover.parentFile!!.exists()).isFalse()
+        }
+
+    @Test
     fun `books being prepared without a report have no progress`() =
         runTest {
             val repository = repository()
@@ -104,21 +118,6 @@ class LibraryRepositoryTest {
         archived = false,
         voiceId = null,
     )
-
-    /** Import jobs whose progress the test sets, and which remember what was cancelled. */
-    class FakeImportJobs : ImportJobs {
-        val enqueued = mutableListOf<String>()
-        val cancelled = mutableListOf<String>()
-        override val progress = MutableStateFlow<Map<String, ImportProgress>>(emptyMap())
-
-        override fun enqueue(bookId: String) {
-            enqueued += bookId
-        }
-
-        override fun cancel(bookId: String) {
-            cancelled += bookId
-        }
-    }
 
     private companion object {
         const val IMPORTING_ID = "00000000-0000-4000-8000-000000000001"

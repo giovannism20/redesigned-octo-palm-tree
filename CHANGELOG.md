@@ -51,7 +51,7 @@ All notable user-visible changes are documented here. The format follows
   text: page X of Y" with a progress bar, and so does a notification when
   notifications are allowed. Preparation keeps going with the screen locked
   and, if the app is closed, continues later from the page where it
-  stopped.
+  stopped. Removing a book that is being prepared stops its preparation.
 - Voices screen: the phone's free Portuguese voices, offline first, with a
   sample and a default choice.
 - EPUB 2 and 3 books are imported with their chapters, titles, authors and
