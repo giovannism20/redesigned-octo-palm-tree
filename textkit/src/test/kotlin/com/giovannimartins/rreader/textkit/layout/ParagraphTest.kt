@@ -116,6 +116,25 @@ class ParagraphTest {
     }
 
     @Test
+    fun `does not take an indented first line of ragged text for a centered line`() {
+        val ragged =
+            page(0) {
+                line("Primeiro parágrafo de um texto sem justificação", left = 65f, right = 330f)
+                line("que continua na linha de baixo sem recuo nenhum", right = 338f)
+                line("e termina aqui.", right = 125f)
+                line("Outro parágrafo, também recuado, que segue", left = 65f, right = 322f)
+                line("até o fim.", right = 100f)
+            }
+
+        assertThat(paragraphsOf(ragged))
+            .containsExactly(
+                "Primeiro parágrafo de um texto sem justificação que continua na linha de baixo sem recuo nenhum e " +
+                    "termina aqui.",
+                "Outro parágrafo, também recuado, que segue até o fim.",
+            ).inOrder()
+    }
+
+    @Test
     fun `starts a paragraph where the font size changes`() {
         val quoted =
             page(0) {

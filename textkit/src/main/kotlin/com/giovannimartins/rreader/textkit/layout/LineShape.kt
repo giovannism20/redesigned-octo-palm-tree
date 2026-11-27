@@ -27,15 +27,19 @@ internal class LineShape(
     /** [line] starts at least [INDENT_EM] of the body font size right of the column's left edge. */
     fun isIndented(line: TextLine): Boolean = line.box.left - metrics.column(line.pageIndex).left >= indentOf(line)
 
-    /** [line] stops short of both column edges by about the same amount. */
+    /**
+     * [line] keeps away from both column edges by at least [CENTERED_MIN_GAP_SHARE] of the column width and by the
+     * same amount, within one em or [CENTERED_TOLERANCE_SHARE] of the width. The wide gaps keep an indented first line
+     * of ragged text, which may end about as far from the edge as its indent, from looking centered.
+     */
     fun isCentered(line: TextLine): Boolean {
         val column = metrics.column(line.pageIndex)
         val leftGap = line.box.left - column.left
         val rightGap = column.right - line.box.right
-        val indent = indentOf(line)
-        return leftGap >= indent &&
-            rightGap >= indent &&
-            abs(leftGap - rightGap) <= max(indent, column.width * CENTERED_TOLERANCE_SHARE)
+        val minimumGap = column.width * CENTERED_MIN_GAP_SHARE
+        return leftGap >= minimumGap &&
+            rightGap >= minimumGap &&
+            abs(leftGap - rightGap) <= max(emOf(line), column.width * CENTERED_TOLERANCE_SHARE)
     }
 
     /**
@@ -61,8 +65,10 @@ internal class LineShape(
         return if (smaller > 0f) max(first.box.fontSize, second.box.fontSize) / smaller else 1f
     }
 
-    private fun indentOf(line: TextLine): Float =
-        INDENT_EM * (metrics.bodyFontSize.takeIf { it > 0f } ?: line.box.fontSize).coerceAtLeast(MIN_EM)
+    private fun indentOf(line: TextLine): Float = INDENT_EM * emOf(line)
+
+    private fun emOf(line: TextLine): Float =
+        (metrics.bodyFontSize.takeIf { it > 0f } ?: line.box.fontSize).coerceAtLeast(MIN_EM)
 
     companion object {
         const val GAP_RATIO: Float = 1.3f
@@ -73,7 +79,8 @@ internal class LineShape(
 
         /** Font size, relative to the body text, from which a short line is a heading whatever its wording. */
         const val LARGE_FONT_RATIO: Float = 1.4f
-        private const val CENTERED_TOLERANCE_SHARE = 0.1f
+        private const val CENTERED_MIN_GAP_SHARE = 0.1f
+        private const val CENTERED_TOLERANCE_SHARE = 0.05f
         private const val MIN_EM = 1f
     }
 }
