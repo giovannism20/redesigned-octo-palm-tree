@@ -37,7 +37,7 @@ are left unsigned and cannot be installed.
 ```bash
 ./gradlew :app:assembleRelease
 $ANDROID_HOME/build-tools/<version>/apksigner verify --print-certs \
-  app/build/outputs/apk/release/app-release.apk
+  app/build/outputs/apk/release/app-arm64-v8a-release.apk
 ```
 
 Check that the certificate digest matches the previous release before

@@ -55,6 +55,8 @@ that can be pure Kotlin goes to `:textkit` so it is fast to test
 - `compileSdk` 37.2 (required by current AndroidX), `targetSdk` 37
   ([ADR 0014](decisions/0014-target-android-17.md)), `minSdk` 26;
   Java/Kotlin bytecode target 17.
+- APKs are split per ABI (`arm64-v8a` for phones, `x86_64` for the emulator)
+  because ML Kit ships native code.
 - The Gradle daemon runs on a provisioned Temurin JDK 21
   (`gradle/gradle-daemon-jvm.properties`).
 - Quality gates in `./gradlew check`: unit tests, Android Lint (warnings

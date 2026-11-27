@@ -67,7 +67,7 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 
 - [x] ML Kit OCR per page, resumable, with progress
 - [x] Mixed PDFs (pages with and without text)
-- [ ] Release APK size: build arm64-only (or ABI splits) for the phone — ML Kit native code makes the universal APK ~52 MB
+- [x] Release APK size: ABI splits (arm64-v8a for phones ≈ 21 MB, x86_64 for the emulator) instead of a ~52 MB universal APK
 - [x] Keep ML Kit's telemetry upload backend removed when the INTERNET permission arrives with the catalogue
 
 ## Phase 5 — Offline neural voices

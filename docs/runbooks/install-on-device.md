@@ -36,10 +36,11 @@ adb devices
 
 ```bash
 ./gradlew :app:assembleRelease                         # see release-signing.md
-adb install -r app/build/outputs/apk/release/app-release.apk
+adb install -r app/build/outputs/apk/release/app-arm64-v8a-release.apk   # phones (arm64)
 ```
 
-`-r` replaces the installed app and **keeps its data**. If Google Play Protect
+Builds are split per CPU architecture: phones use the `arm64-v8a` APK, the
+emulator the `x86_64` one. `-r` replaces the installed app and **keeps its data**. If Google Play Protect
 warns about an unknown app, choose *More details › Install anyway*.
 
 ## 4. After installing
