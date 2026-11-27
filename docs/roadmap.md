@@ -39,7 +39,7 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 - [x] Library: tap a book to play it and open the player
 - [x] Library and player: time left from `ReadingEstimates` and persisted speaking rates
 - [x] Wire the EPUB parser into `ImporterModule`
-- [ ] EPUB: split chapters at TOC fragment anchors inside a single file (books shipped as one big XHTML)
+- [ ] EPUB: split chapters at TOC fragment anchors inside a single file (books shipped as one big XHTML) — **priority**: Gutenberg EPUBs come as 2–4 large files
 - [x] `SystemTtsEngine` (multi-engine, offline-first voices) + audio cache
 - [x] `SegmentRenderer` (render-ahead window, speaking-rate updates)
 - [x] `PlaybackService` with facade player: background, lock screen, headset, ±15 s, speed, chapters, resume
@@ -68,7 +68,7 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 - [x] ML Kit OCR per page, resumable, with progress
 - [x] Mixed PDFs (pages with and without text)
 - [ ] Release APK size: build arm64-only (or ABI splits) for the phone — ML Kit native code makes the universal APK ~52 MB
-- [ ] Keep ML Kit's telemetry upload backend removed when the INTERNET permission arrives with the catalogue
+- [x] Keep ML Kit's telemetry upload backend removed when the INTERNET permission arrives with the catalogue
 
 ## Phase 5 — Offline neural voices
 
@@ -78,8 +78,10 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 
 ## Phase 6 — Free catalogue
 
-- [ ] Explore tab: curated public-domain classics in Portuguese + search
-- [ ] Download into the library; strip license boilerplate from the spoken text
+- [x] Explore tab: curated public-domain classics in Portuguese + search
+- [x] Download into the library; strip license boilerplate from the spoken text
+- [ ] Verify the live Gutenberg search with `l.pt` once the site is back (it was down during development)
+- [ ] Owner decision: optional contact address for the catalogue User-Agent (`CATALOG_CONTACT` in `secrets.properties`)
 
 ## Release (every phase)
 
