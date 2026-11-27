@@ -11,9 +11,12 @@ import com.giovannimartins.rreader.data.db.BookStatus
 import com.giovannimartins.rreader.data.db.ImportFailure
 import com.giovannimartins.rreader.data.db.RReaderDatabase
 import com.giovannimartins.rreader.data.files.BookFileStore
-import com.giovannimartins.rreader.pdf.PdfCoverRenderer
+import com.giovannimartins.rreader.pdf.PageTextRecognizer
 import com.giovannimartins.rreader.pdf.PdfFixture
 import com.giovannimartins.rreader.pdf.PdfLayoutExtractor
+import com.giovannimartins.rreader.pdf.ScriptedRecognizer
+import com.giovannimartins.rreader.pdf.pdfOcr
+import com.giovannimartins.rreader.pdf.scannedPage
 import com.giovannimartins.rreader.textkit.BookFormat
 import com.giovannimartins.rreader.textkit.layout.LayoutBookBuilder
 import com.giovannimartins.rreader.textkit.model.BookMetadata
@@ -80,7 +83,7 @@ class ImportPipelineTest {
     fun `importing a file that failed before prepares it again`() =
         runTest {
             val bookId = (intake().importStream(ByteArrayInputStream(EPUB_HEADER), "x") as IntakeResult.Queued).bookId
-            val unsupported = BookParser { _, _ -> ParseOutcome.Failed(ImportFailure.FORMAT_NOT_YET_SUPPORTED) }
+            val unsupported = BookParser { ParseOutcome.Failed(ImportFailure.FORMAT_NOT_YET_SUPPORTED) }
             processor(unsupported).process(bookId)
 
             val again = intake().importStream(ByteArrayInputStream(EPUB_HEADER), "x")
@@ -110,7 +113,7 @@ class ImportPipelineTest {
                     CoverImage("image/jpeg", byteArrayOf(1, 2, 3)),
                 )
 
-            processor(BookParser { _, _ -> ParseOutcome.Parsed(parsed) }).process(bookId)
+            processor(BookParser { ParseOutcome.Parsed(parsed) }).process(bookId)
 
             val stored = database.bookDao().findById(bookId)!!
             assertThat(stored.status).isEqualTo(BookStatus.READY)
@@ -126,7 +129,7 @@ class ImportPipelineTest {
         runTest {
             val bookId = (intake().importStream(ByteArrayInputStream(EPUB_HEADER), "x") as IntakeResult.Queued).bookId
 
-            processor(BookParser { _, _ -> ParseOutcome.Failed(ImportFailure.DRM_PROTECTED) }).process(bookId)
+            processor(BookParser { ParseOutcome.Failed(ImportFailure.DRM_PROTECTED) }).process(bookId)
 
             val stored = database.bookDao().findById(bookId)!!
             assertThat(stored.status).isEqualTo(BookStatus.FAILED)
@@ -172,9 +175,7 @@ class ImportPipelineTest {
                         "iracema",
                     ) as IntakeResult.Queued
                 ).bookId
-            val parser = PdfBookParser(PdfLayoutExtractor(context), PdfCoverRenderer { null }, LayoutBookBuilder())
-
-            processor(parser, BookFormat.PDF).process(bookId)
+            processor(pdfParser(), BookFormat.PDF).process(bookId)
 
             val stored = database.bookDao().findById(bookId)!!
             assertThat(stored.format).isEqualTo(BookFormat.PDF.name)
@@ -183,6 +184,55 @@ class ImportPipelineTest {
             assertThat(files.readChapterText(bookId, 0))
                 .isEqualTo("Verdes mares bravios de minha terra natal, onde canta a jandaia nas frondes da carnaúba.")
         }
+
+    @Test
+    fun `imports a scanned PDF end to end, reporting progress, then drops the recognized pages`() =
+        runTest {
+            val scan = PdfFixture(context).apply { repeat(2) { picturePage() } }
+            val bookId = (intake().importStream(ByteArrayInputStream(scan.bytes()), "x") as IntakeResult.Queued).bookId
+            val recognizer =
+                ScriptedRecognizer(
+                    listOf(
+                        scannedPage(0) {
+                            paragraph("Verdes mares bravios de minha terra natal,", "onde canta a jandaia")
+                        },
+                        scannedPage(1) {
+                            paragraph("nas frondes da carnaúba, verdes mares que brilhais.", continued = true)
+                        },
+                    ),
+                )
+            val progress = mutableListOf<ImportProgress>()
+
+            processor(pdfParser(recognizer), BookFormat.PDF).process(bookId, progress::add)
+
+            assertThat(database.bookDao().findById(bookId)!!.status).isEqualTo(BookStatus.READY)
+            assertThat(files.readChapterText(bookId, 0))
+                .isEqualTo(
+                    "Verdes mares bravios de minha terra natal, onde canta a jandaia nas frondes da carnaúba, " +
+                        "verdes mares que brilhais.",
+                )
+            assertThat(progress)
+                .containsExactly(ImportProgress.RecognizingText(1, 2), ImportProgress.RecognizingText(2, 2))
+                .inOrder()
+            assertThat(files.ocrPageFile(bookId, 0).parentFile!!.exists()).isFalse()
+        }
+
+    @Test
+    fun `a scanned PDF where nothing readable is recognized fails clearly and drops its pages`() =
+        runTest {
+            val scan = PdfFixture(context).apply { repeat(2) { picturePage() } }
+            val bookId = (intake().importStream(ByteArrayInputStream(scan.bytes()), "x") as IntakeResult.Queued).bookId
+
+            processor(pdfParser(ScriptedRecognizer()), BookFormat.PDF).process(bookId)
+
+            val stored = database.bookDao().findById(bookId)!!
+            assertThat(stored.status).isEqualTo(BookStatus.FAILED)
+            assertThat(stored.failureReason).isEqualTo(ImportFailure.SCANNED_PDF)
+            assertThat(files.ocrPageFile(bookId, 0).parentFile!!.exists()).isFalse()
+        }
+
+    private fun pdfParser(recognizer: PageTextRecognizer = ScriptedRecognizer()) =
+        PdfBookParser(PdfLayoutExtractor(context), pdfOcr(recognizer, folder.root), { null }, LayoutBookBuilder())
 
     private fun kotlinx.coroutines.test.TestScope.intake() =
         BookIntake(

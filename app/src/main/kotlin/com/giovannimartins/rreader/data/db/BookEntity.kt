@@ -48,7 +48,7 @@ enum class ImportFailure {
     NO_READABLE_TEXT,
     STORAGE_ERROR,
 
-    /** A PDF whose pages are pictures of text, which needs OCR (roadmap Phase 4). */
+    /** A scanned PDF in which text recognition found no readable text on most pages. */
     SCANNED_PDF,
 
     /** A PDF that needs a password to open. */

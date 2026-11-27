@@ -4,7 +4,6 @@ import com.giovannimartins.rreader.data.db.ImportFailure
 import com.giovannimartins.rreader.textkit.epub.EpubError
 import com.giovannimartins.rreader.textkit.epub.EpubParser
 import com.giovannimartins.rreader.textkit.epub.EpubResult
-import java.io.File
 import javax.inject.Inject
 
 /** Adapts the `:textkit` EPUB parser to the importer, translating its errors into user-facing failures. */
@@ -14,11 +13,8 @@ class EpubBookParser internal constructor(
     @Inject
     constructor() : this(EpubParser())
 
-    override fun parse(
-        source: File,
-        fallbackTitle: String,
-    ): ParseOutcome =
-        when (val result = parser.parse(source, fallbackTitle)) {
+    override fun parse(request: ParseRequest): ParseOutcome =
+        when (val result = parser.parse(request.source, request.fallbackTitle)) {
             is EpubResult.Success -> ParseOutcome.Parsed(result.book)
             is EpubResult.Failure -> ParseOutcome.Failed(result.error.toImportFailure())
         }

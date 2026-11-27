@@ -3,6 +3,8 @@ package com.giovannimartins.rreader.importer
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.giovannimartins.rreader.data.db.ImportFailure
+import com.giovannimartins.rreader.pdf.OcrLimits
+import com.giovannimartins.rreader.pdf.PageTextRecognizer
 import com.giovannimartins.rreader.pdf.PdfCoverRenderer
 import com.giovannimartins.rreader.pdf.PdfError
 import com.giovannimartins.rreader.pdf.PdfFixture
@@ -11,6 +13,10 @@ import com.giovannimartins.rreader.pdf.PdfFixture.Companion.HEADER_BASELINE
 import com.giovannimartins.rreader.pdf.PdfFixture.Companion.INDENT
 import com.giovannimartins.rreader.pdf.PdfLayoutExtractor
 import com.giovannimartins.rreader.pdf.PdfLimit
+import com.giovannimartins.rreader.pdf.PdfOcr
+import com.giovannimartins.rreader.pdf.ScriptedRecognizer
+import com.giovannimartins.rreader.pdf.pdfOcr
+import com.giovannimartins.rreader.pdf.scannedPage
 import com.giovannimartins.rreader.textkit.layout.LayoutBookBuilder
 import com.giovannimartins.rreader.textkit.layout.LayoutError
 import com.giovannimartins.rreader.textkit.model.BookMetadata
@@ -81,7 +87,88 @@ class PdfBookParserTest {
     }
 
     @Test
-    fun `explains scanned, password-protected and damaged PDFs`() {
+    fun `imports a scanned PDF from what text recognition reads, with chapters, paragraphs and its progress`() {
+        val scan =
+            PdfFixture(context).apply {
+                title = "Dom Casmurro"
+                repeat(3) { picturePage() }
+            }
+        val progress = mutableListOf<ImportProgress>()
+
+        val outcome = parse(scan, recognizer = ScriptedRecognizer(scannedBook()), progress = progress::add)
+
+        assertThat(outcome)
+            .isEqualTo(
+                ParseOutcome.Parsed(
+                    NormalizedBook(
+                        BookMetadata("Dom Casmurro"),
+                        listOf(
+                            Chapter.fromParagraphs(
+                                "CAPÍTULO I",
+                                listOf(
+                                    "CAPÍTULO I",
+                                    "Uma noite destas, vindo da cidade para o Engenho Novo, encontrei no trem um " +
+                                        "rapaz que me cumprimentou e quis fazê-lo de novo na estação seguinte.",
+                                    "No dia seguinte voltei a vê-lo na plataforma, e ele continuou a falar sem " +
+                                        "parar, de modo que a viagem pareceu curta.",
+                                ),
+                            ),
+                            Chapter.fromParagraphs("CAPÍTULO II", listOf("CAPÍTULO II", "— Boa noite — disse ele.")),
+                        ),
+                        cover,
+                    ),
+                ),
+            )
+        assertThat(progress)
+            .containsExactly(
+                ImportProgress.RecognizingText(1, 3),
+                ImportProgress.RecognizingText(2, 3),
+                ImportProgress.RecognizingText(3, 3),
+            ).inOrder()
+    }
+
+    @Test
+    fun `imports a mixed PDF in page order, recognizing only its scanned page`() {
+        val mixed =
+            PdfFixture(context).apply {
+                page {
+                    line("Uma noite destas, vindo da cidade para o", x = INDENT)
+                    line("Engenho Novo, encontrei no trem um rapaz")
+                    line("aqui do bairro, que eu conheço de vista e")
+                }
+                picturePage()
+                page {
+                    line("No dia seguinte voltei a vê-lo na plataforma.", x = INDENT)
+                    line("Ele falava sem parar, de modo que a viagem")
+                    line("pareceu curta.")
+                }
+            }
+        val recognizer =
+            ScriptedRecognizer(
+                listOf(
+                    scannedPage(1) {
+                        paragraph("de chapéu, que me cumprimentou e quis fazê-", "lo de novo.", continued = true)
+                    },
+                ),
+            )
+
+        val book = (parse(mixed, recognizer = recognizer) as ParseOutcome.Parsed).book
+
+        assertThat(recognizer.requested).containsExactly(1)
+        assertThat(
+            book.chapters
+                .single()
+                .text
+                .split("\n\n"),
+        ).containsExactly(
+            "Uma noite destas, vindo da cidade para o Engenho Novo, encontrei no trem um rapaz aqui do bairro, " +
+                "que eu conheço de vista e de chapéu, que me cumprimentou e quis fazê-lo de novo.",
+            "No dia seguinte voltei a vê-lo na plataforma. Ele falava sem parar, de modo que a viagem pareceu curta.",
+        ).inOrder()
+    }
+
+    @Test
+    fun `explains scanned PDFs where nothing readable is recognized, password-protected and damaged PDFs`() {
         val scanned = PdfFixture(context).apply { repeat(3) { picturePage() } }
         val locked =
             PdfFixture(context).apply {
@@ -92,16 +179,32 @@ class PdfBookParserTest {
 
         assertThat(parse(scanned)).isEqualTo(ParseOutcome.Failed(ImportFailure.SCANNED_PDF))
         assertThat(parse(locked)).isEqualTo(ParseOutcome.Failed(ImportFailure.PASSWORD_PROTECTED))
-        assertThat(parser().parse(damaged, "x")).isEqualTo(ParseOutcome.Failed(ImportFailure.CORRUPTED))
+        assertThat(parser().parse(ParseRequest(BOOK_ID, damaged, "x")))
+            .isEqualTo(ParseOutcome.Failed(ImportFailure.CORRUPTED))
+    }
+
+    @Test
+    fun `explains scanned PDFs with more pages to recognize than the limit`() {
+        val scanned = PdfFixture(context).apply { repeat(3) { picturePage() } }
+        val recognizer = ScriptedRecognizer()
+
+        val outcome =
+            parser(ocr = pdfOcr(recognizer, folder.root, OcrLimits(maxPages = 2)))
+                .parse(ParseRequest(BOOK_ID, scanned.writeTo(folder.newFile()), "x"))
+
+        assertThat(outcome).isEqualTo(ParseOutcome.Failed(ImportFailure.TOO_MANY_SCANNED_PAGES))
+        assertThat(recognizer.requested).isEmpty()
     }
 
     @Test
     fun `imports the book without a cover when the first page cannot be drawn`() {
+        val source = typesetBook().writeTo(folder.newFile())
+
         val book =
             (
-                parser(coverRenderer = {
-                    null
-                }).parse(typesetBook().writeTo(folder.newFile()), "x") as ParseOutcome.Parsed
+                parser(
+                    coverRenderer = { null },
+                ).parse(ParseRequest(BOOK_ID, source, "x")) as ParseOutcome.Parsed
             ).book
 
         assertThat(book.cover).isNull()
@@ -159,11 +262,52 @@ class PdfBookParserTest {
             bookmark("Do livro", 1)
         }
 
+    /** What text recognition reads on the three scanned pages of the book [typesetBook] prints. */
+    private fun scannedBook() =
+        listOf(
+            scannedPage(0) {
+                header("DOM CASMURRO")
+                heading("CAPÍTULO I")
+                paragraph(
+                    "Uma noite destas, vindo da cidade para o",
+                    "Engenho Novo, encontrei no trem um rapaz",
+                    "que me cumprimentou e quis fazê-",
+                    "lo de novo na estação seguinte.",
+                )
+                pageNumber("1")
+            },
+            scannedPage(1) {
+                header("DOM CASMURRO")
+                paragraph(
+                    "No dia seguinte voltei a vê-lo na plataforma,",
+                    "e ele continuou a falar sem parar, de modo",
+                    "que a viagem pareceu curta.",
+                )
+                pageNumber("2")
+            },
+            scannedPage(2) {
+                header("DOM CASMURRO")
+                heading("CAPÍTULO II")
+                paragraph("— Boa noite — disse ele.")
+                pageNumber("3")
+            },
+        )
+
     private fun parse(
         fixture: PdfFixture,
         fallbackTitle: String = "livro",
-    ): ParseOutcome = parser().parse(fixture.writeTo(folder.newFile()), fallbackTitle)
+        recognizer: PageTextRecognizer = ScriptedRecognizer(),
+        progress: ImportProgressListener = ImportProgressListener.NONE,
+    ): ParseOutcome =
+        parser(ocr = pdfOcr(recognizer, folder.root))
+            .parse(ParseRequest(BOOK_ID, fixture.writeTo(folder.newFile()), fallbackTitle, progress))
 
-    private fun parser(coverRenderer: PdfCoverRenderer = PdfCoverRenderer { cover }) =
-        PdfBookParser(PdfLayoutExtractor(context), coverRenderer, LayoutBookBuilder())
+    private fun parser(
+        coverRenderer: PdfCoverRenderer = PdfCoverRenderer { cover },
+        ocr: PdfOcr = pdfOcr(ScriptedRecognizer(), folder.root),
+    ) = PdfBookParser(PdfLayoutExtractor(context), ocr, coverRenderer, LayoutBookBuilder())
+
+    private companion object {
+        const val BOOK_ID = "00000000-0000-4000-8000-000000000001"
+    }
 }

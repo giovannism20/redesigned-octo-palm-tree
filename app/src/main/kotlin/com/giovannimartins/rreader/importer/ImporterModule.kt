@@ -17,7 +17,7 @@ object ImporterModule {
         @ApplicationContext context: Context,
     ): ContentResolver = context.contentResolver
 
-    /** Parser per format. PDFs need a text layer; scanned ones are explained until OCR arrives (Phase 4). */
+    /** Parser per format; scanned PDF pages are read with on-device text recognition (ADR 0015). */
     @Provides
     fun parsers(
         epub: EpubBookParser,

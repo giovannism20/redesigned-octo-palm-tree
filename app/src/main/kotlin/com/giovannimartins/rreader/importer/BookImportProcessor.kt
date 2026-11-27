@@ -20,7 +20,9 @@ import javax.inject.Inject
 /**
  * Second half of an import: parses a stored source file and persists the
  * normalized chapters, cover and metadata. Runs inside [ImportBookWorker] and
- * is safe to repeat for the same book.
+ * is safe to repeat for the same book: a run stopped by the system resumes
+ * from the pages text recognition stored, which are deleted once the import
+ * is over, ready or failed.
  */
 class BookImportProcessor
     @Inject
@@ -31,8 +33,14 @@ class BookImportProcessor
         @IoDispatcher private val io: CoroutineDispatcher,
         @DefaultDispatcher private val cpu: CoroutineDispatcher,
     ) {
-        /** Imports [bookId]; failures are recorded on the book row rather than thrown. */
-        suspend fun process(bookId: String) {
+        /**
+         * Imports [bookId], telling [progress] how long stages advance; failures are recorded on the book row rather
+         * than thrown.
+         */
+        suspend fun process(
+            bookId: String,
+            progress: ImportProgressListener = ImportProgressListener.NONE,
+        ) {
             val book = withContext(io) { bookDao.findById(bookId) }
             if (book == null || book.status == BookStatus.READY) return
             val format = BookFormat.entries.firstOrNull { it.name == book.format }
@@ -40,13 +48,14 @@ class BookImportProcessor
             if (format == null || parser == null) {
                 fail(bookId, ImportFailure.FORMAT_NOT_YET_SUPPORTED)
             } else {
-                val source = files.sourceFile(bookId, format)
+                val request = ParseRequest(bookId, files.sourceFile(bookId, format), book.title, progress)
                 // Parsing blocks; a cancelled import interrupts it, and parsers that check for interruption stop.
-                when (val outcome = runInterruptible(cpu) { parser.parse(source, book.title) }) {
+                when (val outcome = runInterruptible(cpu) { parser.parse(request) }) {
                     is ParseOutcome.Failed -> fail(bookId, outcome.reason)
                     is ParseOutcome.Parsed -> persist(book, outcome.book)
                 }
             }
+            withContext(io) { files.deleteOcrPages(bookId) }
         }
 
         private suspend fun persist(

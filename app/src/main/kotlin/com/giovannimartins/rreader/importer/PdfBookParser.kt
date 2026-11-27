@@ -8,6 +8,7 @@ import com.giovannimartins.rreader.pdf.PdfError
 import com.giovannimartins.rreader.pdf.PdfExtraction
 import com.giovannimartins.rreader.pdf.PdfLayoutExtractor
 import com.giovannimartins.rreader.pdf.PdfLimit
+import com.giovannimartins.rreader.pdf.PdfOcr
 import com.giovannimartins.rreader.textkit.layout.DocumentInfoCleaner
 import com.giovannimartins.rreader.textkit.layout.LayoutBookBuilder
 import com.giovannimartins.rreader.textkit.layout.LayoutError
@@ -17,29 +18,43 @@ import java.io.File
 import javax.inject.Inject
 
 /**
- * Imports PDFs with a text layer: [PdfLayoutExtractor] reads the positioned lines, the `:textkit`
- * [LayoutBookBuilder] cleans them into chapters, and the first page becomes the cover. The document's own title,
- * authors and language are used when [DocumentInfoCleaner] finds them meaningful; the title otherwise falls back to
- * the file name. Throws only [InterruptedException], when the import is cancelled.
+ * Imports PDFs: [PdfLayoutExtractor] reads the positioned lines of the text layer, [PdfOcr] reads the scanned pages
+ * with on-device text recognition (reporting its progress), the `:textkit` [LayoutBookBuilder] cleans all pages into
+ * chapters, and the first page becomes the cover. The document's own title, authors and language are used when
+ * [DocumentInfoCleaner] finds them meaningful; the title otherwise falls back to the file name. Throws only
+ * [InterruptedException], when the import is cancelled.
  */
 class PdfBookParser internal constructor(
     private val extractor: PdfLayoutExtractor,
+    private val ocr: PdfOcr,
     private val coverRenderer: PdfCoverRenderer,
     private val builder: LayoutBookBuilder,
 ) : BookParser {
     @Inject
     constructor(
         extractor: PdfLayoutExtractor,
+        ocr: PdfOcr,
         coverRenderer: FirstPageCoverRenderer,
-    ) : this(extractor, coverRenderer, LayoutBookBuilder())
+    ) : this(extractor, ocr, coverRenderer, LayoutBookBuilder())
 
-    override fun parse(
-        source: File,
-        fallbackTitle: String,
-    ): ParseOutcome =
-        when (val extraction = extractor.extract(source)) {
+    override fun parse(request: ParseRequest): ParseOutcome =
+        when (val extraction = read(request)) {
             is PdfExtraction.Failed -> ParseOutcome.Failed(extraction.error.toImportFailure())
-            is PdfExtraction.Extracted -> build(extraction.content, source, fallbackTitle)
+            is PdfExtraction.Extracted -> build(extraction.content, request.source, request.fallbackTitle)
+        }
+
+    /** The text layer of every page, with the scanned pages read by text recognition. */
+    private fun read(request: ParseRequest): PdfExtraction =
+        when (val extraction = extractor.extract(request.source)) {
+            is PdfExtraction.Failed -> {
+                extraction
+            }
+
+            is PdfExtraction.Extracted -> {
+                ocr.recognize(request.bookId, request.source, extraction.content) { page, pageCount ->
+                    request.progress.onProgress(ImportProgress.RecognizingText(page, pageCount))
+                }
+            }
         }
 
     private fun build(

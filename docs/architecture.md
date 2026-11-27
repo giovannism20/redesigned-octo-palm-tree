@@ -67,7 +67,7 @@ Base package: `com.giovannimartins.rreader`.
 | Package | Responsibility | Status |
 |---------|----------------|--------|
 | `data` | Room database (`db`), book file storage (`files`), library repository (`library`), DataStore settings and learned speaking rates (`settings`) | implemented |
-| `importer` | `BookIntake` (picker/share/view URIs → signature check, size-limited copy, SHA-256 dedupe, book row), `ImportBookWorker` + `BookImportProcessor` (parse and persist), `BookParser` per format (`EpubBookParser`, `PdfBookParser`) | implemented |
+| `importer` | `BookIntake` (picker/share/view URIs → signature check, size-limited copy, SHA-256 dedupe, book row), `ImportBookWorker` + `BookImportProcessor` (parse and persist; recognized pages deleted when the import ends), `BookParser` per format (`EpubBookParser`, `PdfBookParser`: text layer, then `PdfOcr` for scanned pages) taking a `ParseRequest` with an `ImportProgressListener` | implemented |
 | `pdf` | PdfBox text extraction (`PdfLayoutExtractor`: positioned lines, outline and document info within `PdfLimits`), `PdfRenderer` page rendering (`FirstPageCoverRenderer`: first page → JPEG cover; `PdfPageRasterizer`: pages → bitmaps for OCR within `OcrLimits`), text recognition behind `PageTextRecognizer` (`MlKitPageTextRecognizer`: bundled ML Kit Latin model → layout lines through textkit's `OcrPageLayout`), `PdfOcr` (recognizes the pictured pages without a usable text layer within `OcrLimits`, one page at a time app-wide through `OcrGate`, resumable through `OcrPageStore`) | in progress (text-layer PDFs; OCR in Phase 4) |
 | `tts` | `SpeechEngine` interface and `SystemTtsEngine` (multi-engine Android TTS → WAV), `AudioCache`, `WavInfo`, `SegmentRenderer` (segment → cached WAV, 300 MB LRU trim), `SpeakingRateTracker` (per-voice rate learned from rendered audio, kept across restarts through `SpeakingRateStore`); later `SherpaOnnxEngine` | implemented (neural voices in Phase 5) |
 | `playback` | `PlaybackService` (`MediaSessionService`, trusted controllers only), `ReaderPlayer` facade (chapter playlist over an internal ExoPlayer), `SegmentFeeder` (render-ahead window), `ChapterPlans`, `SeekTargets`, `PositionSaver`, `PlaybackRepository`, `ListeningStatus` (spoken segment and sleep timer for the UI), `ReaderCommands` (custom session commands), `SleepTimer` | implemented |
@@ -116,6 +116,7 @@ sequenceDiagram
     A->>A: validate type by signature, size limits
     A->>D: copy to filesDir/books/{id}/source, SHA-256 dedupe
     A->>W: enqueue import(bookId)
+    W->>W: PDF: PdfBox text layer, then ML Kit for pages without one (stored page by page)
     W->>T: parse / clean / segment chapters
     T-->>W: normalized book
     W->>D: chapters as JSON, book row READY

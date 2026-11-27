@@ -6,11 +6,17 @@ import java.io.File
 
 /** Turns a stored source file into a [NormalizedBook]. Implementations never throw for bad input. */
 fun interface BookParser {
-    fun parse(
-        source: File,
-        fallbackTitle: String,
-    ): ParseOutcome
+    /** Parses [request]; throws only [InterruptedException], when the import is cancelled. */
+    fun parse(request: ParseRequest): ParseOutcome
 }
+
+/** One book to parse: its id, its stored [source], the title to use when the book has none, and its progress sink. */
+data class ParseRequest(
+    val bookId: String,
+    val source: File,
+    val fallbackTitle: String,
+    val progress: ImportProgressListener = ImportProgressListener.NONE,
+)
 
 /** Result of [BookParser.parse]. */
 sealed interface ParseOutcome {

@@ -38,7 +38,7 @@
     <string name="import_failure_too_large">O arquivo é grande demais (limite: 300 MB).</string>
     <string name="import_failure_no_text">Não encontramos texto para ler neste livro.</string>
     <string name="import_failure_storage">Não foi possível salvar o livro. Verifique o espaço livre e tente de novo.</string>
-    <string name="import_failure_scanned_pdf">Este PDF é uma imagem escaneada. A leitura de PDFs escaneados chega numa próxima versão.</string>
+    <string name="import_failure_scanned_pdf">Não foi possível reconhecer texto legível neste PDF escaneado.</string>
     <string name="import_failure_password">Este PDF é protegido por senha e não pode ser aberto.</string>
     <string name="import_failure_too_many_pages">Este PDF tem páginas demais (limite: 3.000).</string>
     <string name="import_failure_too_complex">Este PDF é complexo demais para ser preparado neste celular.</string>

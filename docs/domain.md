@@ -51,5 +51,5 @@ Names used in code and docs. Add a term here when you introduce it.
 | **Margin band** | The top and bottom 10% of a page's height, where running lines are looked for. |
 | **Running line** | A running header or footer or a page number printed in a margin band; removed by cleanup. |
 | **Enclisis** | An unstressed pronoun joined to a verb with a hyphen ("fazê-lo", "dá-lhe"), or placed inside it (mesoclisis, "amá-lo-ei"). Cleanup keeps these hyphens when it joins words broken across lines. |
-| **Scanned PDF** | A PDF whose pages are pictures of text: more than half of its pages have fewer than 20 letters and digits outside running lines. Explained to the user until OCR arrives. |
+| **Scanned PDF** | A PDF whose pages are pictures of text: their pages have fewer than 20 letters and digits outside running lines. Its OCR pages are read by text recognition during the import; it fails as scanned only when more than half of its pages still have no readable text afterwards. |
 | **Document info** | The title, author and language a PDF declares about itself; kept only when meaningful (not a file name, placeholder or computer user name). |

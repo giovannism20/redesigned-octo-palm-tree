@@ -16,7 +16,7 @@ class EpubBookParserTest {
     fun `parses a real EPUB into chapters and metadata`() {
         val file = folder.newFile("book.epub").apply { writeBytes(MinimalEpub.bytes()) }
 
-        val outcome = EpubBookParser().parse(file, fallbackTitle = "fallback")
+        val outcome = EpubBookParser().parse(ParseRequest(BOOK_ID, file, fallbackTitle = "fallback"))
 
         val book = (outcome as ParseOutcome.Parsed).book
         assertThat(book.metadata.title).isEqualTo("Iracema")
@@ -44,6 +44,11 @@ class EpubBookParserTest {
     fun `reports a damaged file as corrupted`() {
         val file = folder.newFile("broken.epub").apply { writeText("not a zip") }
 
-        assertThat(EpubBookParser().parse(file, "x")).isEqualTo(ParseOutcome.Failed(ImportFailure.CORRUPTED))
+        assertThat(EpubBookParser().parse(ParseRequest(BOOK_ID, file, "x")))
+            .isEqualTo(ParseOutcome.Failed(ImportFailure.CORRUPTED))
+    }
+
+    private companion object {
+        const val BOOK_ID = "00000000-0000-4000-8000-000000000001"
     }
 }

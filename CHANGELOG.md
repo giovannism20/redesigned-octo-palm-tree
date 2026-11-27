@@ -40,8 +40,13 @@ All notable user-visible changes are documented here. The format follows
   bookmarks, chapter headings or page ranges; running headers, footers and
   page numbers are left out, paragraphs are rebuilt and words broken across
   lines are joined, keeping forms such as "fazê-lo"; the first page becomes
-  the cover. Scanned, password-protected and oversized PDFs get a clear
-  message.
+  the cover. Password-protected and oversized PDFs get a clear message.
+- Scanned PDFs are read with text recognition on the phone, without
+  internet: pages that are pictures of text are recognized and become
+  chapters and paragraphs like any other book. PDFs that mix typed and
+  scanned pages keep their page order, and blank pages are left alone. When
+  nothing readable can be recognized, or a scan is too long, a clear message
+  says so.
 - Voices screen: the phone's free Portuguese voices, offline first, with a
   sample and a default choice.
 - EPUB 2 and 3 books are imported with their chapters, titles, authors and
