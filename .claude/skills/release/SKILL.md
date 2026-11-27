@@ -10,7 +10,9 @@ description: Produce a signed R Reader release and install it on the primary use
    `app/build.gradle.kts`; move the `CHANGELOG.md` "Unreleased" entries under
    the new version.
 3. Make sure signing is configured outside the repo
-   ([docs/runbooks/release-signing.md](../../../docs/runbooks/release-signing.md)),
+   ([docs/runbooks/release-signing.md](../../../docs/runbooks/release-signing.md))
+   and that `secrets.properties` sets `CATALOG_CONTACT` for the catalogue's
+   User-Agent ([docs/runbooks/secrets.md](../../../docs/runbooks/secrets.md)),
    then run `./gradlew :app:assembleRelease` and verify the certificate with
    `apksigner verify --print-certs`.
 4. Run the AI-Generated Code Security Auditor and UI Finish-Gate Reviewer

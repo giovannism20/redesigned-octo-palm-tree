@@ -1,6 +1,8 @@
 # 0015. On-device OCR with bundled ML Kit, resumable per page, in a dataSync foreground job
 
-- **Status:** Accepted
+- **Status:** Accepted; the removal of `INTERNET` in decision 1 is superseded by
+  [ADR 0017](0017-free-catalogue-from-project-gutenberg.md), which keeps the
+  upload backend removed
 - **Date:** 2026-11-27
 
 ## Context

@@ -71,7 +71,7 @@ Base package: `com.giovannimartins.rreader`.
 | `pdf` | PdfBox text extraction (`PdfLayoutExtractor`: positioned lines, outline and document info within `PdfLimits`), `PdfRenderer` page rendering (`FirstPageCoverRenderer`: first page → JPEG cover; `PdfPageRasterizer`: pages → bitmaps for OCR within `OcrLimits`), text recognition behind `PageTextRecognizer` (`MlKitPageTextRecognizer`: bundled ML Kit Latin model → layout lines through textkit's `OcrPageLayout`), `PdfOcr` (recognizes the pictured pages without a usable text layer within `OcrLimits`, one page at a time app-wide through `OcrGate`, resumable through `OcrPageStore`) | in progress (text-layer PDFs; OCR in Phase 4) |
 | `tts` | `SpeechEngine` interface and `SystemTtsEngine` (multi-engine Android TTS → WAV), `AudioCache`, `WavInfo`, `SegmentRenderer` (segment → cached WAV, 300 MB LRU trim), `SpeakingRateTracker` (per-voice rate learned from rendered audio, kept across restarts through `SpeakingRateStore`); later `SherpaOnnxEngine` | implemented (neural voices in Phase 5) |
 | `playback` | `PlaybackService` (`MediaSessionService`, trusted controllers only), `ReaderPlayer` facade (chapter playlist over an internal ExoPlayer), `SegmentFeeder` (render-ahead window), `ChapterPlans`, `SeekTargets`, `PositionSaver`, `PlaybackRepository`, `ListeningStatus` (spoken segment and sleep timer for the UI), `ReaderCommands` (custom session commands), `SleepTimer` | implemented |
-| `catalog` | Public-domain catalogue client and downloads | planned |
+| `catalog` | Free public-domain catalogue (Project Gutenberg, [ADR 0017](decisions/0017-free-catalogue-from-project-gutenberg.md)): `CatalogHttp`, the app's only network client (HTTPS GETs through an `HttpTransport`, `UrlConnectionTransport` on `HttpsURLConnection`; every address and redirect checked by `CatalogHosts`; media type, size and redirect limits), `CatalogUserAgent` | in progress (HTTPS client) |
 | `ui` | Compose screens, ViewModels, navigation, theme, design system; `ui/player`: `PlaybackConnection` (`MediaController` while the app is visible), mini player, full player with speed, chapters, time left and the sleep timer; `ui/library`: progress and time left (`LibraryTimeLeft`); `ui/reader`: follow-along reader (`ReaderViewModel`, `ReaderChapter`); `ui/components`: `BookCover`, time-left text (`timeLeft`) | in progress (shell, library, add book, voices, player) |
 | `di` | Hilt modules (dispatchers, application scope, database, WorkManager) | implemented |
 
@@ -316,7 +316,9 @@ the volume on Android 17 ([ADR 0014](decisions/0014-target-android-17.md)).
   positions explicitly).
 - **Untrusted input never escapes validation:** archive entry names are never
   used as file paths, XML is parsed without DTDs, parsing runs with limits.
-- **No network access** happens without an explicit user action.
+- **No network access** happens without an explicit user action, and only
+  through `CatalogHttp`, over HTTPS to the allowlisted hosts (`CatalogHosts`,
+  mirrored by the network security config, which trusts no other host).
 
 ## Threading
 

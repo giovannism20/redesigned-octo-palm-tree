@@ -18,11 +18,12 @@ class MergedManifestTest {
     private val packageManager = context.packageManager
 
     @Test
-    fun `SR-5 the app asks for no network access, which libraries such as ML Kit would add`() {
+    fun `SR-5 the app may use the network, for the catalogue, and knows when it is offline`() {
         val permissions =
             packageManager.getPackageInfo(context.packageName, PackageManager.GET_PERMISSIONS).requestedPermissions
 
-        assertThat(permissions.orEmpty().toList()).doesNotContain(Manifest.permission.INTERNET)
+        assertThat(permissions.orEmpty().toList())
+            .containsAtLeast(Manifest.permission.INTERNET, Manifest.permission.ACCESS_NETWORK_STATE)
     }
 
     @Test
@@ -38,7 +39,7 @@ class MergedManifestTest {
     }
 
     @Test
-    fun `ML Kit usage logs have no backend that would upload them`() {
+    fun `ML Kit usage logs have no backend that would upload them, although the app has network access`() {
         val discovery = ComponentName(context, TRANSPORT_BACKEND_DISCOVERY)
 
         val backends = packageManager.getServiceInfo(discovery, PackageManager.GET_META_DATA).metaData

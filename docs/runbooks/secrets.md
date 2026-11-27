@@ -30,6 +30,16 @@ content (or, as a last resort, add a narrowly scoped allowlist entry to
    that are safe to ship (restricted, rate-limited, revocable). A truly
    sensitive key needs a server-side proxy, which requires a new ADR.
 
+## Values kept out of the repository that are not secrets
+
+`CATALOG_CONTACT` is the contact (a web page or an e-mail address) that the
+catalogue adds to its User-Agent, as Project Gutenberg asks of apps that use
+its catalogue ([ADR 0017](../decisions/0017-free-catalogue-from-project-gutenberg.md)).
+It is not secret, but it identifies the maintainer, so it lives in
+`secrets.properties` like a key (for example
+`CATALOG_CONTACT=https://example.org/r-reader`) and is empty in the
+repository. Set it before building a release.
+
 ## If a secret leaks (it is compromised from the moment it was committed)
 
 Do these in order and do not stop early:
