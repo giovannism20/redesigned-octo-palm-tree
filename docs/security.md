@@ -192,7 +192,9 @@ Each requirement is testable; reference its ID in tests and reviews.
 - **SR-9** Cloud backup is disabled; device-to-device transfer is allowed.
 - **SR-10** No secrets in the repository (see the layers below).
 - **SR-11** Dependencies are pinned in the version catalog and monitored by
-  Dependabot; CI runs CodeQL and validates the Gradle wrapper.
+  Dependabot; CI runs CodeQL and validates the Gradle wrapper. (Known
+  vulnerabilities that cannot be reached in a dependency are listed, with the
+  reason, under [Known vulnerabilities in dependencies](#known-vulnerabilities-in-dependencies).)
 - **SR-12** No `WebView`, dynamic code loading or reflection-based plugins.
 - **SR-13** Descriptive text read from untrusted files and feeds is bounded
   before it is stored or shown. (textkit's `MetadataLimits`, applied by the
@@ -234,6 +236,24 @@ initialization provider, component discovery services, the
 services' `GoogleApiActivity`. The app declares `INTERNET` for the
 catalogue (ADR 0017); the `datatransport` upload backend that ML Kit brings
 stays removed, and the network security config lets TLS reach Gutenberg only.
+
+## Known vulnerabilities in dependencies
+
+- **Bouncy Castle 1.72** (`bcprov`, `bcpkix` and `bcutil`, `-jdk15to18`),
+  which PdfBox-Android 2.0.27.0 brings. Scanners report vulnerabilities fixed
+  in later releases (1.73 to 1.78): an LDAP injection in its LDAP certificate
+  store, denial of service in PEM and ASN.1 parsing, excessive CPU with
+  crafted binary-field elliptic curves, an endless loop when checking
+  Ed25519 signatures, and flaws in its TLS code. None can be reached in
+  R Reader: the app reaches Bouncy Castle only through PdfBox's decryption of
+  PDFs that open without a password (RC4 and AES); it never parses
+  certificates, CMS, PEM or keys, never checks signatures, never uses LDAP,
+  and has no TLS through Bouncy Castle (its TLS library is not included; the
+  catalogue uses the platform's TLS). PDFs encrypted for certificate holders
+  are refused before their recipients are read, since PdfBox needs a key
+  store the app never gives it. Bouncy Castle is not upgraded on its own, so
+  that it stays the version PdfBox-Android is built and tested with; review
+  it again whenever PdfBox-Android is updated.
 
 ## Secret protection layers
 
