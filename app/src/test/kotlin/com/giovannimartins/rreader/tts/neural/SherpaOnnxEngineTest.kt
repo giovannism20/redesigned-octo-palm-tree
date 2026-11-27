@@ -6,15 +6,19 @@ import com.giovannimartins.rreader.tts.SynthesisResult
 import com.giovannimartins.rreader.tts.WavInfo
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.TestScope
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.File
+import kotlin.time.Duration.Companion.seconds
 
 /** The neural engine over a fake native layer: what it asks the models, writes and refuses. */
 @RunWith(RobolectricTestRunner::class)
@@ -23,9 +27,13 @@ class SherpaOnnxEngineTest {
     val folder = TemporaryFolder()
 
     private val runtime = FakeNeuralRuntime()
+    private val markers by lazy { NeuralCallMarkers(File(folder.root, "neural.inflight")) }
+
+    /** Where the engine releases an idle model: a virtual clock the tests move. */
+    private val idle = TestScope()
     private val store by lazy { VoicePackageStore(File(folder.root, "voices"), Dispatchers.Unconfined) }
     private val engine by lazy {
-        SherpaOnnxEngine(store, runtime, NeuralCallMarkers(File(folder.root, "neural.inflight")), Dispatchers.Default)
+        SherpaOnnxEngine(store, runtime, markers, Dispatchers.Default, idle)
     }
     private val dora = NeuralVoices.all.first { it.key == "dora" }
     private val alex = NeuralVoices.all.first { it.key == "alex" }
@@ -80,7 +88,7 @@ class SherpaOnnxEngineTest {
 
         assertThat(runtime.loads).containsExactly(NeuralVoices.KOKORO, NeuralVoices.CADU).inOrder()
         assertThat(runtime.closed).containsExactly(NeuralVoices.KOKORO)
-        runBlocking { engine.unload(NeuralVoices.CADU) }
+        runBlocking { engine.deleting(NeuralVoices.CADU) {} }
         assertThat(runtime.closed).containsExactly(NeuralVoices.KOKORO, NeuralVoices.CADU).inOrder()
     }
 
@@ -160,7 +168,86 @@ class SherpaOnnxEngineTest {
         assertThat(output.exists()).isFalse()
     }
 
+    @Test
+    fun `deleting a package waits for the render in progress, and a render asked for meanwhile finds it gone`() {
+        install(NeuralVoices.CADU)
+        val generating = CompletableDeferred<Unit>()
+        val finish = CompletableDeferred<Unit>()
+        runtime.onGenerate = {
+            generating.complete(Unit)
+            runBlocking { finish.await() }
+        }
+
+        val (first, second) =
+            runBlocking {
+                val first = async(Dispatchers.Default) { engine.synthesize("Olá.", cadu.toVoice(), output) }
+                generating.await()
+                val deletion =
+                    launch(start = CoroutineStart.UNDISPATCHED) {
+                        engine.deleting(NeuralVoices.CADU) { store.delete(NeuralVoices.CADU) }
+                    }
+                val second =
+                    async(start = CoroutineStart.UNDISPATCHED) {
+                        engine.synthesize("Oi.", cadu.toVoice(), File(folder.root, "out/second.wav"))
+                    }
+                assertThat(store.isComplete(NeuralVoices.CADU)).isTrue()
+                finish.complete(Unit)
+                deletion.join()
+                first.await() to second.await()
+            }
+
+        assertThat(first).isInstanceOf(SynthesisResult.Rendered::class.java)
+        assertThat(second).isEqualTo(SynthesisResult.Failed(SynthesisFailure.VOICE_UNAVAILABLE))
+        assertThat(runtime.loads).containsExactly(NeuralVoices.CADU)
+        assertThat(runtime.closed).containsExactly(NeuralVoices.CADU)
+    }
+
+    @Test
+    fun `a model no voice has used for two minutes is released, and loaded again when a voice speaks`() {
+        install(NeuralVoices.CADU)
+
+        synthesize(cadu, "Um.")
+        wait(SherpaOnnxEngine.IDLE_RELEASE - 1.seconds)
+        synthesize(cadu, "Dois.")
+        wait(SherpaOnnxEngine.IDLE_RELEASE - 1.seconds)
+        assertThat(runtime.closed).isEmpty()
+        wait(2.seconds)
+
+        assertThat(runtime.closed).containsExactly(NeuralVoices.CADU)
+        synthesize(cadu, "Três.")
+        assertThat(runtime.loads).containsExactly(NeuralVoices.CADU, NeuralVoices.CADU)
+    }
+
+    @Test
+    fun `the system asking for memory releases an idle model, never one that is speaking`() {
+        install(NeuralVoices.CADU)
+        val generating = CompletableDeferred<Unit>()
+        val finish = CompletableDeferred<Unit>()
+        runtime.onGenerate = {
+            generating.complete(Unit)
+            runBlocking { finish.await() }
+        }
+
+        runBlocking {
+            val speaking = async(Dispatchers.Default) { engine.synthesize("Olá.", cadu.toVoice(), output) }
+            generating.await()
+            engine.releaseIfIdle()
+            finish.complete(Unit)
+            speaking.await()
+        }
+        assertThat(runtime.closed).isEmpty()
+        engine.releaseIfIdle()
+
+        assertThat(runtime.closed).containsExactly(NeuralVoices.CADU)
+    }
+
     private val output get() = File(folder.root, "out/segment.wav")
+
+    /** Moves the engine's clock for releasing idle models by [time]. */
+    private fun wait(time: kotlin.time.Duration) {
+        idle.testScheduler.advanceTimeBy(time)
+        idle.testScheduler.runCurrent()
+    }
 
     /** What the native layer throws as a Java error. */
     private fun raise(error: Error): Nothing = throw error

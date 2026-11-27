@@ -46,8 +46,10 @@ device with scans drawn by the test itself (`PdfPageRasterizerTest`,
 The neural voices are tested without native code: `SherpaOnnxEngine` runs
 over a fake `NeuralRuntime` (phonemes from characters, a tone per phoneme), so
 speaker ids, Kokoro's merged phonemes, the dialogue pause, model loading and
-replacement, typed failures (also for `LinkageError` and `OutOfMemoryError`)
-and cancellation are checked on the JVM, and
+replacement, typed failures (also for `LinkageError` and `OutOfMemoryError`),
+cancellation, a package deleted while a render runs and another waits, and
+releasing the model after two idle minutes (on a `TestScope` clock) or when
+the system asks for memory are checked on the JVM, and
 `NeuralAudio`, `KokoroPhonemes` and `NeuralText` are plain unit tests. Voice
 package downloads use the fake `HttpTransport` and archives built in the tests
 (`TestArchives`): pinned SHA-256 and size, resuming with HTTP ranges (a corrupt

@@ -127,6 +127,10 @@ All notable user-visible changes are documented here. The format follows
   sentence is skipped with a short pause and listening goes on.
 - Choosing two voices quickly one after the other reads with the last one
   chosen.
+- Deleting a natural voice while it is reading waits for the sentence being
+  prepared, so the voice is not loaded again while its files are deleted.
+- A natural voice gives its memory back to the phone after two minutes
+  without speaking, or when the phone runs low on memory.
 - Dora, Alex and Santa prepare the next chapters while the phone charges
   only when nobody is listening: the preparation stops as soon as you press
   play, so listening starts as fast as without it, and goes on when you

@@ -7,6 +7,7 @@ import com.giovannimartins.rreader.net.UrlConnectionTransport
 import com.giovannimartins.rreader.tts.SynthesisResult
 import com.giovannimartins.rreader.tts.WavInfo
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
@@ -27,7 +28,8 @@ class SherpaOnnxEngineTest {
     fun speaksAPortugueseSentenceWithAPiperVoice() {
         val voice = runBlocking { installedPiperVoice() }
         val calls = NeuralCallMarkers(File(context.cacheDir, "neural-voice-test.inflight"))
-        val engine = SherpaOnnxEngine(store, SherpaOnnxRuntime(context), calls, Dispatchers.IO)
+        val engine =
+            SherpaOnnxEngine(store, SherpaOnnxRuntime(context), calls, Dispatchers.IO, CoroutineScope(Dispatchers.IO))
         val output = File(context.cacheDir, "neural-voice-test.wav").apply { delete() }
 
         val sentence = "Olá! Esta é a voz que vai ler os seus livros."

@@ -1,6 +1,7 @@
 package com.giovannimartins.rreader.tts.neural
 
 import com.giovannimartins.rreader.Diagnostics
+import com.giovannimartins.rreader.di.ApplicationScope
 import com.giovannimartins.rreader.di.IoDispatcher
 import com.giovannimartins.rreader.tts.PcmWav
 import com.giovannimartins.rreader.tts.SpeechEngine
@@ -9,9 +10,13 @@ import com.giovannimartins.rreader.tts.SynthesisResult
 import com.giovannimartins.rreader.tts.Voice
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -20,6 +25,8 @@ import java.io.IOException
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * [SpeechEngine] for the offline neural voices (ADR 0018), writing WAV files into the same rendering pipeline as the
@@ -33,6 +40,10 @@ import javax.inject.Singleton
  * speech killed the app twice in a row becomes a short pause, and a phonemizer or model that did so at start makes
  * the voice unavailable instead of being tried again. Errors the native layers throw as Java errors (a missing
  * library or method, memory running out) release the model and make the voice unavailable, never a crash.
+ *
+ * A model takes up to 142 MB of native memory, so it is released once no voice has spoken for [IDLE_RELEASE] (in
+ * [scope]), when the system asks the app to free memory ([releaseIfIdle]), and before its package is deleted
+ * ([deleting]), which waits for the render in progress so no render loads a package while its files go.
  */
 @Singleton
 class SherpaOnnxEngine
@@ -42,11 +53,15 @@ class SherpaOnnxEngine
         private val runtime: NeuralRuntime,
         private val calls: NeuralCallMarkers,
         @IoDispatcher private val dispatcher: CoroutineDispatcher,
+        @ApplicationScope private val scope: CoroutineScope,
     ) : SpeechEngine {
         private val mutex = Mutex()
 
         /** The model loaded now and its package; used under [mutex] only. */
         private var loaded: Pair<VoicePackage, NeuralModel>? = null
+
+        /** Releases the model after [IDLE_RELEASE] without renders; restarted by each render, under [mutex]. */
+        private var idleRelease: Job? = null
 
         /** Whether espeak-ng started in this process; used under [mutex] only. */
         private var phonemizerStarted = false
@@ -63,12 +78,48 @@ class SherpaOnnxEngine
             output: File,
         ): SynthesisResult {
             val neural = NeuralVoices.byId(voice.id) ?: return UNAVAILABLE
-            return mutex.withLock { withContext(dispatcher) { render(neural, text, output) } }
+            return mutex.withLock {
+                idleRelease?.cancel()
+                try {
+                    withContext(dispatcher) { render(neural, text, output) }
+                } finally {
+                    idleRelease =
+                        scope.launch {
+                            delay(IDLE_RELEASE)
+                            mutex.withLock { release() }
+                        }
+                }
+            }
         }
 
-        /** Frees the model of [pkg] when it is loaded, for example before the package is deleted. */
-        suspend fun unload(pkg: VoicePackage) {
-            mutex.withLock { if (loaded?.first == pkg) release() }
+        /**
+         * Runs [deleteFiles], which deletes [pkg]'s files, between renders and with [pkg]'s model released: the render
+         * in progress ends first, and the renders waiting find the package gone instead of loading it while its files
+         * go. A crash its model caused as it loaded is forgotten, so the package is tried again once downloaded again.
+         */
+        suspend fun deleting(
+            pkg: VoicePackage,
+            deleteFiles: suspend () -> Unit,
+        ) {
+            mutex.withLock {
+                if (loaded?.first == pkg) release()
+                calls.forget(NeuralCalls.load(pkg))
+                deleteFiles()
+            }
+        }
+
+        /**
+         * Releases the loaded model now, unless a voice is speaking: for when the system asks the app to free memory.
+         * Does not wait, so it can run on the main thread.
+         */
+        fun releaseIfIdle() {
+            if (!mutex.tryLock()) return
+            try {
+                idleRelease?.cancel()
+                release()
+            } finally {
+                mutex.unlock()
+            }
         }
 
         @Suppress("TooGenericExceptionCaught") // The native layers report their failures as runtime exceptions.
@@ -144,25 +195,20 @@ class SherpaOnnxEngine
             phonemizerStarted = true
         }
 
-        /** [text] spoken by [voice]'s [model]; text without phonemes, such as a lone symbol, is silence. */
+        /**
+         * [text] spoken by [voice]'s [model]: its phoneme sentences, merged for Kokoro, without empty ones. Text
+         * without phonemes, such as a lone symbol, is silence.
+         */
         private fun spoken(
             model: NeuralModel,
             voice: NeuralVoice,
             text: String,
             keepGoing: () -> Boolean,
         ): FloatArray {
-            val sentences = phonemes(voice.pkg.family, text)
+            val raw = if (text.isBlank()) emptyList() else runtime.phonemize(text)
+            val kokoro = voice.pkg.family == ModelFamily.KOKORO
+            val sentences = raw.map { if (kokoro) KokoroPhonemes.fold(it) else it }.filter(IntArray::isNotEmpty)
             return if (sentences.isEmpty()) FloatArray(0) else model.generate(sentences, voice.speakerId, keepGoing)
-        }
-
-        /** The phoneme sentences of [text], merged for Kokoro, without empty ones. */
-        private fun phonemes(
-            family: ModelFamily,
-            text: String,
-        ): List<IntArray> {
-            val sentences = if (text.isBlank()) emptyList() else runtime.phonemize(text)
-            val folded = if (family == ModelFamily.KOKORO) sentences.map(KokoroPhonemes::fold) else sentences
-            return folded.filter(IntArray::isNotEmpty)
         }
 
         private fun modelOf(pkg: VoicePackage): NeuralModel {
@@ -192,12 +238,15 @@ class SherpaOnnxEngine
             val sampleRate: Int,
         )
 
-        private companion object {
-            const val MILLIS_PER_SECOND = 1_000L
+        companion object {
+            /** How long a model stays loaded after the last render. */
+            val IDLE_RELEASE: Duration = 2.minutes
+
+            private const val MILLIS_PER_SECOND = 1_000L
 
             /** The sample rate of the pause that replaces a segment the app cannot speak. */
-            const val PAUSE_RATE = 16_000
-            val UNAVAILABLE = SynthesisResult.Failed(SynthesisFailure.VOICE_UNAVAILABLE)
+            private const val PAUSE_RATE = 16_000
+            private val UNAVAILABLE = SynthesisResult.Failed(SynthesisFailure.VOICE_UNAVAILABLE)
         }
     }
 

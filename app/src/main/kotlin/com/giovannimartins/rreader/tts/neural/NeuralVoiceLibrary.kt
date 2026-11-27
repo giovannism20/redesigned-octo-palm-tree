@@ -22,8 +22,9 @@ sealed interface PackageState {
 
 /**
  * The neural voices as the listener manages them: which packages are installed or being downloaded, and downloading,
- * cancelling and deleting them. Deleting a package frees its model first, and a default voice it provided gives way
- * to the phone's voice (books that named it fall back the same way, see `VoiceSelector`).
+ * cancelling and deleting them. Deleting a package frees its model and removes its files between two renders, so no
+ * render can load it meanwhile, and a default voice it provided gives way to the phone's voice (books that named it
+ * fall back the same way, see `VoiceSelector`).
  */
 @Singleton
 class NeuralVoiceLibrary
@@ -59,7 +60,6 @@ class NeuralVoiceLibrary
         suspend fun delete(pkg: VoicePackage) {
             val default = settings.settings.first().defaultVoiceId
             if (NeuralVoices.byId(default)?.pkg == pkg) settings.setDefaultVoice(VoiceIds.PHONE)
-            engine.unload(pkg)
-            store.delete(pkg)
+            engine.deleting(pkg) { store.delete(pkg) }
         }
     }

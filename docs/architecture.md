@@ -404,6 +404,11 @@ sequenceDiagram
   against their pins, instead of copying about half a gigabyte trusted by
   file sizes alone. A default voice that is not installed falls back to the
   phone's voice (see [Voice changes](#voice-changes)).
+- **Deletion.** `NeuralVoiceLibrary.delete` deletes a package's files under
+  the engine's lock (`SherpaOnnxEngine.deleting`): the render in progress
+  ends first, the package's model is released, and the renders that were
+  waiting find the package gone (`VOICE_UNAVAILABLE`) instead of loading a
+  model whose files are being deleted.
 - **Verification and installation.** The archive must have the pinned size
   and SHA-256; it is then unpacked by `VoicePackageArchive`, which keeps only
   the expected entries under the catalogue's names (regular files of their
@@ -479,8 +484,14 @@ cache as the phone's voices, so playback does not change (ADR 0003):
 3. **Model.** The voice's model speaks the phonemes as its speaker (Kokoro:
    Dora 42, Alex 43, Santa 44; Piper: 0) on up to four CPU threads, with the
    model's own pauses (silence scale 1). The model of the last package used
-   stays loaded; another package's voice replaces it. A render cancelled
-   while the model speaks stops after the current sentence.
+   stays loaded; another package's voice replaces it. A model takes up to
+   142 MB of native memory, so it is released after two minutes without
+   renders (`SherpaOnnxEngine.IDLE_RELEASE`), when the system asks the app for
+   memory while no voice speaks (`RReaderApplication.onTrimMemory`: in the
+   background or with memory running low, not when only the screen is
+   hidden), and before its package is deleted; the next render loads it
+   again. A render cancelled while the model speaks stops after the current
+   sentence.
 4. **Audio.** For Kokoro, `NeuralAudio` first notches out the narrow tones
    its int8 model leaves at 4.8 and 9.6 kHz (`ModelFamily.artifactTones`: a
    thin metallic whistle on headphones; Q 60, two passes per tone, the sound
@@ -516,7 +527,7 @@ the previous one left behind before its first call.
 - A phonemizer or a model that killed the app twice in a row as it started is
   not started again: the voice fails with `ENGINE_UNAVAILABLE` before any
   native call, which keeps the note, so the next process refuses it too, until
-  another neural call succeeds.
+  another neural call succeeds or the package is deleted.
 
 ### Catalogue
 

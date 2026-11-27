@@ -14,6 +14,7 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.TestScope
 import org.junit.Assert.assertThrows
 import org.junit.Rule
 import org.junit.Test
@@ -86,6 +87,21 @@ class NeuralCallMarkersTest {
     }
 
     @Test
+    fun `deleting a package forgets that its model killed the app, so the package is tried again once back`() {
+        install(NeuralVoices.CADU)
+        dieWhile(Stage.LOADING)
+        dieWhile(Stage.LOADING)
+        val engine = process()
+        assertThat(synthesize(engine, TEXT)).isEqualTo(SynthesisResult.Failed(SynthesisFailure.ENGINE_UNAVAILABLE))
+
+        runBlocking { engine.deleting(NeuralVoices.CADU) { store.delete(NeuralVoices.CADU) } }
+        install(NeuralVoices.CADU)
+
+        assertThat(synthesize(engine, TEXT)).isInstanceOf(SynthesisResult.Rendered::class.java)
+        assertThat(synthesize(process(), "Outra frase.")).isInstanceOf(SynthesisResult.Rendered::class.java)
+    }
+
+    @Test
     fun `espeak-ng that killed the app twice in a row as it started is not started again`() {
         install(NeuralVoices.CADU)
         dieWhile(Stage.STARTING)
@@ -154,7 +170,8 @@ class NeuralCallMarkersTest {
     }
 
     /** A new process: a new engine, whose markers read the note the process before it left behind. */
-    private fun process() = SherpaOnnxEngine(store, runtime, NeuralCallMarkers(marker), Dispatchers.Default)
+    private fun process() =
+        SherpaOnnxEngine(store, runtime, NeuralCallMarkers(marker), Dispatchers.Default, TestScope())
 
     private fun synthesize(
         engine: SherpaOnnxEngine,

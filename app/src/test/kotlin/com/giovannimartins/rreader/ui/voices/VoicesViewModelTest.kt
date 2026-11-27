@@ -24,6 +24,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -225,7 +226,7 @@ class VoicesViewModelTest {
 
     private fun viewModel(): VoicesViewModel {
         val calls = NeuralCallMarkers(File(folder.root, "neural.inflight"))
-        val engine = SherpaOnnxEngine(store, FakeNeuralRuntime(), calls, Dispatchers.Unconfined)
+        val engine = SherpaOnnxEngine(store, FakeNeuralRuntime(), calls, Dispatchers.Unconfined, TestScope())
         val library = NeuralVoiceLibrary(store, downloads, engine, settings)
         return VoicesViewModel(library, phone, settings, controls, { connection }, samples, AudioCache(folder.root))
             .also { viewModels += it }
