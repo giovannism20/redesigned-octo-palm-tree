@@ -87,6 +87,8 @@ class PlaybackRepository
                 null
             }
 
+        override suspend fun phoneVoice(): Voice? = preferences.phoneVoice()
+
         private suspend fun loadReadyBook(bookId: String): BookLoad {
             val book = bookDao.findById(bookId)?.takeIf { it.status == BookStatus.READY }
             val chapters =

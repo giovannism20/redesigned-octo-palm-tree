@@ -64,6 +64,12 @@ internal class FakeSpeechEngine(
     /** Voices that fail as unavailable, as a deleted voice does. */
     var unavailableVoices: Set<String> = emptySet()
 
+    /** Voices whose engine cannot start, as a neural voice whose model does not load. */
+    var engineUnavailableVoices: Set<String> = emptySet()
+
+    /** How many of the next renders fail as if the engine could not start, whatever their voice. */
+    var engineFailures = 0
+
     /** When set, renders after the first [rendersBeforeGate] wait until it completes. */
     var gate: CompletableDeferred<Unit>? = null
     var rendersBeforeGate = Int.MAX_VALUE
@@ -72,6 +78,12 @@ internal class FakeSpeechEngine(
     val atGate = CompletableDeferred<Unit>()
 
     override suspend fun voices(): List<Voice> = listOf(voice())
+
+    private fun engineFailure(voice: Voice): SynthesisFailure? {
+        val fails = voice.id in engineUnavailableVoices || engineFailures > 0
+        if (engineFailures > 0) engineFailures--
+        return SynthesisFailure.ENGINE_UNAVAILABLE.takeIf { fails }
+    }
 
     override suspend fun synthesize(
         text: String,
@@ -85,7 +97,9 @@ internal class FakeSpeechEngine(
         }
         spoken += text
         voicesUsed += voice.id
-        val failure = failure ?: SynthesisFailure.VOICE_UNAVAILABLE.takeIf { voice.id in unavailableVoices }
+        val failure =
+            failure ?: SynthesisFailure.VOICE_UNAVAILABLE.takeIf { voice.id in unavailableVoices }
+                ?: engineFailure(voice)
         return if (failure != null) {
             SynthesisResult.Failed(failure)
         } else {
@@ -134,4 +148,9 @@ internal class FakePlaybackContent(
 
     override suspend fun voiceFor(bookId: String): Voice? =
         voiceAnswers.removeFirstOrNull()?.invoke() ?: voice ?: book?.takeIf { it.id == bookId }?.voice
+
+    /** The phone's voice, which reads when a neural voice cannot start; null for a phone without one. */
+    var phone: Voice? = null
+
+    override suspend fun phoneVoice(): Voice? = phone
 }

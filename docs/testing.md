@@ -25,7 +25,10 @@ manually advanced `FakeClock` (`ReaderPlayerFixture`): sleep timers and long
 pauses then run deterministically while the audio plays on, and the timer
 logic is also tested on its own (`SleepTimerTest`). The listening session the
 player publishes, and the pre-render it asks for only while nobody listens, are
-checked with a recording fake (`ReaderPlayerSessionTest`); the pre-render job
+checked with a recording fake (`ReaderPlayerSessionTest`), and so is the voice
+fallback (`ReaderPlayerVoiceTest`: a neural voice whose engine cannot start is
+tried twice, then the phone's voice reads for the session; one failure keeps the
+voice; without a phone voice the player asks for one); the pre-render job
 itself runs with WorkManager's test helpers (`PrerenderTest`: held back while
 listening or while another model is in use, stopped after the segment being
 rendered, the same book and voice keep their job, a job started three times is

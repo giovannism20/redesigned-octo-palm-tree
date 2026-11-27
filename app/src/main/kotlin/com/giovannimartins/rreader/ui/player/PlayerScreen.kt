@@ -46,9 +46,11 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
@@ -80,6 +82,7 @@ fun PlayerRoute(
 ) {
     val nowPlaying by viewModel.nowPlaying.collectAsStateWithLifecycle()
     val sleepTimer by viewModel.sleepTimer.collectAsStateWithLifecycle()
+    val replacedVoice by viewModel.replacedVoice.collectAsStateWithLifecycle()
     val voices by voiceViewModel.menu.collectAsStateWithLifecycle()
     val current = nowPlaying ?: return
     PlayerScreen(
@@ -100,10 +103,14 @@ fun PlayerRoute(
         modifier = modifier,
         voices = voices,
         onChooseVoice = voiceViewModel::choose,
+        replacedVoice = replacedVoice,
     )
 }
 
-/** The full player: cover, titles, chapter progress, large controls, speed, sleep timer and chapters. */
+/**
+ * The full player: cover, titles, chapter progress, large controls, speed, sleep timer and chapters. [replacedVoice]
+ * names the voice chosen for the book when it could not start and the phone's voice reads instead.
+ */
 @Composable
 fun PlayerScreen(
     nowPlaying: NowPlaying,
@@ -123,6 +130,7 @@ fun PlayerScreen(
     modifier: Modifier = Modifier,
     voices: VoiceMenu = VoiceMenu(),
     onChooseVoice: (voiceId: String, forAllBooks: Boolean) -> Unit = { _, _ -> },
+    replacedVoice: String? = null,
 ) {
     var showChapters by rememberSaveable { mutableStateOf(false) }
     val title = nowPlaying.title.ifBlank { stringResource(R.string.library_untitled) }
@@ -168,7 +176,7 @@ fun PlayerScreen(
                 onChooseVoice = onChooseVoice,
                 onMoreVoices = onOpenVoices,
             )
-            PlayerStatus(nowPlaying = nowPlaying, onRetry = onRetry, onOpenVoices = onOpenVoices)
+            PlayerStatus(nowPlaying, replacedVoice, onRetry, onOpenVoices)
         }
         if (showChapters) {
             ChapterSheet(
@@ -350,10 +358,14 @@ private fun TransportControls(
     }
 }
 
-/** Buffering, end of the book or a problem with what to do next. */
+/**
+ * Buffering, end of the book, a problem with what to do next, or that the phone's voice reads because the book's voice
+ * ([replacedVoice]) could not start.
+ */
 @Composable
 private fun PlayerStatus(
     nowPlaying: NowPlaying,
+    replacedVoice: String?,
     onRetry: () -> Unit,
     onOpenVoices: () -> Unit,
     modifier: Modifier = Modifier,
@@ -370,6 +382,16 @@ private fun PlayerStatus(
                     text = stringResource(R.string.player_finished),
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center,
+                )
+            }
+
+            replacedVoice != null -> {
+                Text(
+                    text = stringResource(R.string.player_voice_fallback, replacedVoice),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
             }
 

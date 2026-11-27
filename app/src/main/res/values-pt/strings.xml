@@ -171,6 +171,7 @@
     <string name="player_time_left">faltam %1$s</string>
     <string name="player_preparing">Preparando a voz…</string>
     <string name="player_finished">Você chegou ao fim do livro.</string>
+    <string name="player_voice_fallback">Não foi possível usar a voz %1$s. O livro continua com a voz do celular.</string>
     <string name="player_error_no_voice">Nenhuma voz em português está instalada. Instale uma para ouvir este livro.</string>
     <string name="player_error_book">Não foi possível abrir este livro.</string>
     <string name="player_error_speech">A voz parou de funcionar. Tente de novo.</string>

@@ -19,6 +19,9 @@ class PlaybackPreferences
         suspend fun voiceFor(bookVoiceId: String?): Voice? =
             VoiceSelector.select(bookVoiceId, settings.settings.first().defaultVoiceId, engine.voices())
 
+        /** The phone's own Portuguese voice, or null when the phone has none (see [VoiceSelector.phoneVoice]). */
+        suspend fun phoneVoice(): Voice? = VoiceSelector.phoneVoice(engine.voices())
+
         suspend fun speed(): Float = settings.settings.first().playbackSpeed
 
         suspend fun saveSpeed(speed: Float) = settings.setPlaybackSpeed(speed)

@@ -10,6 +10,7 @@ import com.giovannimartins.rreader.textkit.model.ReadingPosition
 import com.giovannimartins.rreader.textkit.text.SpeechNormalizer
 import com.giovannimartins.rreader.tts.SegmentAudio
 import com.giovannimartins.rreader.tts.SegmentRenderer
+import com.giovannimartins.rreader.tts.SynthesisFailure
 import com.giovannimartins.rreader.tts.Voice
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -38,7 +39,17 @@ internal class SegmentFeeder(
         /** A segment was queued, or every remaining segment of the book has been queued. */
         fun onQueueChanged()
 
+        /** A chapter's text could not be read; the feeder stopped. */
         fun onFailure(error: PlaybackException)
+
+        /**
+         * [voice] could not render a segment, for [reason]; the feeder stopped. An engine that could not start
+         * ([SynthesisFailure.ENGINE_UNAVAILABLE]) was tried twice in a row first.
+         */
+        fun onSpeechFailed(
+            voice: Voice,
+            reason: SynthesisFailure,
+        )
     }
 
     private val queue = SegmentQueue()
@@ -171,14 +182,19 @@ internal class SegmentFeeder(
         last = cursor
         // For example a "* * *" scene break: nothing to say.
         val request = cursor.request(source.bookId, source.voice, speech) ?: return true
-        return when (val audio = renderer.render(request)) {
+        var audio = renderer.render(request)
+        // An engine that could not start released what it had loaded (a model, memory): a second try may work.
+        if (audio is SegmentAudio.Failed && audio.reason == SynthesisFailure.ENGINE_UNAVAILABLE) {
+            audio = renderer.render(request)
+        }
+        return when (audio) {
             is SegmentAudio.Ready -> {
                 append(cursor, audio)
                 true
             }
 
             is SegmentAudio.Failed -> {
-                events.onFailure(PlaybackErrors.speechFailed(audio.reason))
+                events.onSpeechFailed(source.voice, audio.reason)
                 false
             }
         }

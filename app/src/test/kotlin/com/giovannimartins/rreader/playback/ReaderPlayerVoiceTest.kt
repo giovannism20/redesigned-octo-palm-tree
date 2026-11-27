@@ -157,6 +157,80 @@ class ReaderPlayerVoiceTest {
     }
 
     @Test
+    fun `a neural voice that cannot start, tried twice, gives way to the phone voice for the session`() {
+        engine.engineUnavailableVoices = setOf(dora.id)
+        content.phone = phone
+        fixture.open()
+        player.play()
+
+        advance(player).untilState(Player.STATE_READY)
+        runMainLooperUntil { player.isPlaying }
+
+        assertThat(player.playerError).isNull()
+        assertThat(engine.voicesUsed.take(3)).containsExactly(dora.id, dora.id, phone.id).inOrder()
+        assertThat(engine.spoken[2]).isEqualTo(engine.spoken[0])
+        val session = fixture.status.session.value
+        assertThat(session?.voice).isEqualTo(phone)
+        assertThat(session?.replacedVoice).isEqualTo(dora)
+        content.voice = dora
+        player.handle(ReaderCommand.RefreshVoice)
+        ShadowLooper.idleMainLooper()
+        assertThat(engine.voicesUsed.count { it == dora.id }).isEqualTo(2)
+    }
+
+    @Test
+    fun `choosing another voice ends the fallback`() {
+        engine.engineUnavailableVoices = setOf(dora.id)
+        content.phone = phone
+        fixture.open()
+        advance(player).untilState(Player.STATE_READY)
+        val cadu = voice(id = "neural:cadu")
+        content.voice = cadu
+
+        player.handle(ReaderCommand.RefreshVoice)
+        runMainLooperUntil { cadu.id in engine.voicesUsed }
+
+        assertThat(
+            fixture.status.session.value
+                ?.voice,
+        ).isEqualTo(cadu)
+        assertThat(
+            fixture.status.session.value
+                ?.replacedVoice,
+        ).isNull()
+    }
+
+    @Test
+    fun `a neural voice that fails to start only once keeps reading`() {
+        engine.engineFailures = 1
+        content.phone = phone
+        fixture.open()
+
+        advance(player).untilState(Player.STATE_READY)
+
+        assertThat(engine.voicesUsed.toSet()).containsExactly(dora.id)
+        assertThat(
+            fixture.status.session.value
+                ?.replacedVoice,
+        ).isNull()
+    }
+
+    @Test
+    fun `without a phone voice, or for the phone voice itself, an engine that cannot start stops with no voice`() {
+        engine.engineUnavailableVoices = setOf(dora.id)
+        fixture.open()
+        player.play()
+        assertThat(advance(player).untilPlayerError().errorCode).isEqualTo(PlaybackErrors.NO_VOICE)
+
+        content.book = content.book?.copy(voice = phone)
+        engine.engineUnavailableVoices = setOf(phone.id)
+        fixture.open()
+        player.prepare()
+        assertThat(advance(player).untilPlayerError().errorCode).isEqualTo(PlaybackErrors.NO_VOICE)
+        assertThat(engine.voicesUsed.count { it == phone.id }).isEqualTo(2)
+    }
+
+    @Test
     fun `with no book open there is no voice to change`() {
         assertThat(player.handle(ReaderCommand.RefreshVoice)).isFalse()
     }

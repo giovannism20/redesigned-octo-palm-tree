@@ -23,7 +23,9 @@ import com.giovannimartins.rreader.textkit.text.SegmentPlanner
 import com.giovannimartins.rreader.textkit.text.SpeechNormalizer
 import com.giovannimartins.rreader.tts.SegmentRenderer
 import com.giovannimartins.rreader.tts.SpeakingRateTracker
+import com.giovannimartins.rreader.tts.SynthesisFailure
 import com.giovannimartins.rreader.tts.Voice
+import com.giovannimartins.rreader.tts.VoiceIds
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.CoroutineDispatcher
@@ -364,18 +366,20 @@ class ReaderPlayer internal constructor(
         rewindOnStart = false
         deps.status.publishSegment(null)
         loader.cancel()
+        voiceSwitch.replaced = null
         sessionHost.update()
     }
 
     private fun onBookLoaded(
-        loaded: PlaybackBook?,
+        found: PlaybackBook?,
         request: BookRequest,
         resumeAt: ReadingPosition?,
     ) {
-        if (loaded == null) {
+        if (found == null) {
             error = PlaybackErrors.bookUnavailable()
             return
         }
+        val loaded = voiceSwitch.adopt(found)
         book = loaded
         plans.reset(loaded)
         speed = loaded.speed
@@ -543,22 +547,69 @@ class ReaderPlayer internal constructor(
         }
     }
 
-    /** Changes the voice of the open book while it is listened to (see [ReaderCommand.RefreshVoice]). */
+    /**
+     * Changes the voice of the open book while it is listened to (see [ReaderCommand.RefreshVoice]), and replaces, for
+     * the rest of the session, a neural voice that could not start with the phone's voice.
+     */
     private inner class VoiceSwitch {
+        /** Neural voices that could not start in this session, by id, and the phone's voice that reads instead. */
+        private val replacements = mutableMapOf<String, Voice>()
+
+        /** The voice chosen for the open book that the phone's voice replaces now; null when none is replaced. */
+        var replaced: Voice? = null
+
+        /** [found], just loaded, read by the voice that can read it in this session; notes a replaced voice. */
+        fun adopt(found: PlaybackBook): PlaybackBook {
+            val reading = reading(found.voice)
+            replaced = found.voice?.takeIf { it.id != reading?.id }
+            return found.copy(voice = reading)
+        }
+
         /**
-         * Book [bookId], when it is still the open one, is now read by [voice]: when that is another voice, listening
-         * goes on with it from the start of the segment being spoken, keeping the position, also when the player is
-         * paused (it renders ahead with the new voice). A failure the voice caused (it was deleted, or failed to
-         * speak) is cleared, so listening continues; without any voice, the player asks for one.
+         * Book [bookId], when it is still the open one, is now read by [voice] (or the phone's voice, when [voice]
+         * could not start in this session): when that is another voice, listening goes on with it from the start of
+         * the segment being spoken, keeping the position, also when the player is paused (it renders ahead with the
+         * new voice). A failure the voice caused (it was deleted, or failed to speak) is cleared, so listening
+         * continues; without any voice, the player asks for one.
          */
         fun apply(
             bookId: String,
             voice: Voice?,
         ) {
             val open = book?.takeIf { it.id == bookId } ?: return
+            val reading = reading(voice)
+            replaced = voice?.takeIf { it.id != reading?.id }
             val voiceFailed = error?.errorCode in VOICE_ERRORS
-            if (voice?.id != open.voice?.id || voiceFailed) switchTo(open.copy(voice = voice), voiceFailed)
+            if (reading?.id != open.voice?.id || voiceFailed) {
+                switchTo(open.copy(voice = reading), voiceFailed)
+            } else {
+                sessionHost.update()
+            }
         }
+
+        /**
+         * [voice], a neural voice, could not start twice in a row: the phone's voice reads instead, for the rest of
+         * the session, from the start of the segment being spoken, and the listening session says which voice it
+         * replaces. Without a phone voice, the player fails for [reason] as for any voice.
+         */
+        fun fallBackFrom(
+            voice: Voice,
+            reason: SynthesisFailure,
+        ) {
+            scope.launch {
+                val phone = deps.content.phoneVoice()
+                val open = book?.takeIf { it.voice?.id == voice.id } ?: return@launch
+                if (phone == null) {
+                    fail(PlaybackErrors.speechFailed(reason))
+                } else {
+                    replacements[voice.id] = phone
+                    replaced = voice
+                    switchTo(open.copy(voice = phone), voiceFailed = true)
+                }
+            }
+        }
+
+        private fun reading(chosen: Voice?): Voice? = chosen?.let { replacements[it.id] ?: it }
 
         private fun switchTo(
             changed: PlaybackBook,
@@ -604,7 +655,7 @@ class ReaderPlayer internal constructor(
         fun update() {
             val open = book
             val listening = open != null && prepared && playWhenReady && error == null && !ended
-            val session = open?.let { ListeningSession(it.id, it.voice, listening) }
+            val session = open?.let { ListeningSession(it.id, it.voice, listening, voiceSwitch.replaced) }
             if (session != published) {
                 published = session
                 deps.status.publishSession(session)
@@ -654,6 +705,18 @@ class ReaderPlayer internal constructor(
         }
 
         override fun onFailure(error: PlaybackException) = fail(error)
+
+        override fun onSpeechFailed(
+            voice: Voice,
+            reason: SynthesisFailure,
+        ) {
+            // A neural voice that cannot start gives way to the phone's voice instead of stopping the book.
+            if (reason == SynthesisFailure.ENGINE_UNAVAILABLE && VoiceIds.neuralKey(voice.id) != null) {
+                voiceSwitch.fallBackFrom(voice, reason)
+            } else {
+                fail(PlaybackErrors.speechFailed(reason))
+            }
+        }
     }
 
     private companion object {

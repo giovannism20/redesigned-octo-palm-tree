@@ -125,6 +125,9 @@ All notable user-visible changes are documented here. The format follows
 - A sentence that makes a natural voice close the app no longer stops the
   book for good: if the app closes twice in a row on the same sentence, that
   sentence is skipped with a short pause and listening goes on.
+- A natural voice that cannot start on the phone (for example when memory
+  runs out) no longer leaves the book without a voice: listening goes on
+  with the phone's voice, and the player says which voice could not be used.
 - Choosing two voices quickly one after the other reads with the last one
   chosen.
 - Deleting a natural voice while it is reading waits for the sentence being

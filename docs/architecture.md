@@ -203,9 +203,10 @@ flowchart LR
 - **State to the UI.** The facade publishes the segment being spoken
   (`SpokenSegment`: book, chapter, character range), the sleep timer
   (`SleepTimerState`) and the listening session (`ListeningSession`: the open
-  book, its voice and whether it is being listened to, which the pre-render
-  job also reads) in `ListeningStatus`, a Hilt singleton that the player
-  and the ViewModels share. It changes when the
+  book, its voice, whether it is being listened to, which the pre-render job
+  also reads, and the voice the phone's voice replaces, if any) in
+  `ListeningStatus`, a Hilt singleton that the player and the ViewModels
+  share. It changes when the
   internal player moves to another segment and as soon as a seek or the start
   position is resolved (before its audio is rendered), and clears when a book
   closes or the player is released. This works because the playback service
@@ -255,6 +256,20 @@ spoken, without reopening the book:
    adopts the new voice's speaking rate for chapter durations. A failure the
    old voice caused (`NO_VOICE`, `SPEECH_FAILED`) is cleared, so listening
    continues; with no voice left at all, the player fails with `NO_VOICE`.
+
+A neural voice that cannot start (`ENGINE_UNAVAILABLE`: a model or library
+that does not load, memory running out, or a start that killed the app twice)
+does not leave the book without a voice. The feeder tries the segment once
+more, since the engine released what it had loaded; when it fails again, the
+player falls back to the phone's voice (`PlaybackContent.phoneVoice`) for the
+rest of the session, the player's life: listening goes on from the start of
+the segment being spoken, and `REFRESH_VOICE` or a book opened later that
+names that voice get the phone's voice instead. The listening session names
+the replaced voice (`ListeningSession.replacedVoice`), and the full player
+says it ("Não foi possível usar a voz Dora. O livro continua com a voz do
+celular.", a polite live region for TalkBack). Choosing another voice ends the
+notice. Without a phone voice, or when the phone's voice itself cannot start,
+the player fails with `NO_VOICE` as before.
 
 ### Follow-along reader
 

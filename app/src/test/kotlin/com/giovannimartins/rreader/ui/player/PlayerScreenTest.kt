@@ -176,6 +176,16 @@ class PlayerScreenTest {
     }
 
     @Test
+    fun `says when the phone voice reads because the book's voice could not be used`() {
+        show(previewNowPlaying(), replacedVoice = "Dora")
+
+        compose
+            .onNodeWithText("The voice Dora could not be used, so the book goes on with the phone voice.")
+            .performScrollTo()
+            .assertExists()
+    }
+
+    @Test
     fun `the mini player opens the player and controls playback`() {
         compose.setContent {
             RReaderTheme {
@@ -198,6 +208,7 @@ class PlayerScreenTest {
     private fun show(
         nowPlaying: NowPlaying,
         sleepTimer: SleepTimerState = SleepTimerState.Off,
+        replacedVoice: String? = null,
     ) {
         compose.setContent {
             RReaderTheme {
@@ -216,6 +227,7 @@ class PlayerScreenTest {
                     onRetry = { events += "retry" },
                     onOpenVoices = { events += "voices" },
                     onOpenReader = { events += "reader" },
+                    replacedVoice = replacedVoice,
                 )
             }
         }

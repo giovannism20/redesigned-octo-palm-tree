@@ -40,4 +40,7 @@ interface PlaybackContent {
      * voice and the installed voices; null when no usable voice is installed or the book is gone.
      */
     suspend fun voiceFor(bookId: String): Voice?
+
+    /** The phone's own voice ([VoiceSelector.phoneVoice]), which reads when a chosen voice cannot; null without one. */
+    suspend fun phoneVoice(): Voice?
 }
