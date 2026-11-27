@@ -19,6 +19,12 @@ All notable user-visible changes are documented here. The format follows
   in the library (or "Listen" on "Continue listening") starts it.
 - Clear messages when no Portuguese voice is installed (with a shortcut to
   Voices) or when the voice fails, with a way to try again.
+- PDF books with a text layer are imported: chapters come from the
+  bookmarks, chapter headings or page ranges; running headers, footers and
+  page numbers are left out, paragraphs are rebuilt and words broken across
+  lines are joined, keeping forms such as "fazê-lo"; the first page becomes
+  the cover. Scanned, password-protected and oversized PDFs get a clear
+  message.
 - Voices screen: the phone's free Portuguese voices, offline first, with a
   sample and a default choice.
 - EPUB 2 and 3 books are imported with their chapters, titles, authors and

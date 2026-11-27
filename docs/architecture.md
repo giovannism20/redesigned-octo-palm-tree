@@ -67,8 +67,8 @@ Base package: `com.giovannimartins.rreader`.
 | Package | Responsibility | Status |
 |---------|----------------|--------|
 | `data` | Room database (`db`), book file storage (`files`), library repository (`library`), DataStore settings (`settings`) | implemented |
-| `importer` | `BookIntake` (picker/share/view URIs → signature check, size-limited copy, SHA-256 dedupe, book row), `ImportBookWorker` + `BookImportProcessor` (parse and persist), `BookParser` per format (`EpubBookParser`; PDF in Phase 2) | implemented |
-| `pdf` | PdfBox text extraction (`PdfLayoutExtractor`: positioned lines, outline and document info within `PdfLimits`), `PdfRenderer` page rendering, ML Kit OCR → layout lines | in progress (text extraction) |
+| `importer` | `BookIntake` (picker/share/view URIs → signature check, size-limited copy, SHA-256 dedupe, book row), `ImportBookWorker` + `BookImportProcessor` (parse and persist), `BookParser` per format (`EpubBookParser`, `PdfBookParser`) | implemented |
+| `pdf` | PdfBox text extraction (`PdfLayoutExtractor`: positioned lines, outline and document info within `PdfLimits`), `PdfRenderer` page rendering (`FirstPageCoverRenderer`: first page → JPEG cover), ML Kit OCR → layout lines | in progress (text-layer PDFs; OCR in Phase 4) |
 | `tts` | `SpeechEngine` interface and `SystemTtsEngine` (multi-engine Android TTS → WAV), `AudioCache`, `WavInfo`, `SegmentRenderer` (segment → cached WAV, 300 MB LRU trim), `SpeakingRateTracker` (per-voice rate learned from rendered audio); later `SherpaOnnxEngine` | implemented (neural voices in Phase 5) |
 | `playback` | `PlaybackService` (`MediaSessionService`, trusted controllers only), `ReaderPlayer` facade (chapter playlist over an internal ExoPlayer), `SegmentFeeder` (render-ahead window), `ChapterPlans`, `SeekTargets`, `PositionSaver`, `PlaybackRepository`; later the sleep timer | implemented (sleep timer in Phase 3) |
 | `catalog` | Public-domain catalogue client and downloads | planned |
@@ -199,6 +199,9 @@ sequenceDiagram
 - Imports, OCR and long pre-rendering (for example of slow neural voices)
   run in WorkManager so they survive process death. The render-ahead window
   of the playing book runs inside the playback service instead.
+- Parsing a book blocks, so `BookImportProcessor` runs it with
+  `runInterruptible`: a cancelled import interrupts the thread, and the PDF
+  extractor, which checks between pages and glyphs, stops.
 - The playback service runs in the main process as a foreground service of
   type `mediaPlayback`. The facade and the internal ExoPlayer live on the
   main looper; chapter text is read on `IO`, planned on `Default`, and

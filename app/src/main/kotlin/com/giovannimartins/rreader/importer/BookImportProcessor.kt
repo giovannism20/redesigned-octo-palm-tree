@@ -12,6 +12,7 @@ import com.giovannimartins.rreader.di.IoDispatcher
 import com.giovannimartins.rreader.textkit.BookFormat
 import com.giovannimartins.rreader.textkit.model.NormalizedBook
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import javax.inject.Inject
@@ -40,7 +41,8 @@ class BookImportProcessor
                 fail(bookId, ImportFailure.FORMAT_NOT_YET_SUPPORTED)
             } else {
                 val source = files.sourceFile(bookId, format)
-                when (val outcome = withContext(cpu) { parser.parse(source, book.title) }) {
+                // Parsing blocks; a cancelled import interrupts it, and parsers that check for interruption stop.
+                when (val outcome = runInterruptible(cpu) { parser.parse(source, book.title) }) {
                     is ParseOutcome.Failed -> fail(bookId, outcome.reason)
                     is ParseOutcome.Parsed -> persist(book, outcome.book)
                 }

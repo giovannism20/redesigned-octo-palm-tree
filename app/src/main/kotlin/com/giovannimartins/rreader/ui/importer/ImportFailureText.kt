@@ -15,6 +15,10 @@ fun ImportFailure.messageRes(): Int =
         ImportFailure.TOO_LARGE -> R.string.import_failure_too_large
         ImportFailure.NO_READABLE_TEXT -> R.string.import_failure_no_text
         ImportFailure.STORAGE_ERROR -> R.string.import_failure_storage
+        ImportFailure.SCANNED_PDF -> R.string.import_failure_scanned_pdf
+        ImportFailure.PASSWORD_PROTECTED -> R.string.import_failure_password
+        ImportFailure.TOO_MANY_PAGES -> R.string.import_failure_too_many_pages
+        ImportFailure.TOO_COMPLEX -> R.string.import_failure_too_complex
     }
 
 /** Text for a one-off import message. */

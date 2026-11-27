@@ -2,7 +2,6 @@ package com.giovannimartins.rreader.importer
 
 import android.content.ContentResolver
 import android.content.Context
-import com.giovannimartins.rreader.data.db.ImportFailure
 import com.giovannimartins.rreader.textkit.BookFormat
 import dagger.Module
 import dagger.Provides
@@ -18,14 +17,14 @@ object ImporterModule {
         @ApplicationContext context: Context,
     ): ContentResolver = context.contentResolver
 
-    /**
-     * Parser per format. The PDF parser arrives in roadmap Phase 2; until then a
-     * PDF import fails with a clear "not supported yet" reason.
-     */
+    /** Parser per format. PDFs need a text layer; scanned ones are explained until OCR arrives (Phase 4). */
     @Provides
-    fun parsers(epub: EpubBookParser): Map<BookFormat, @JvmSuppressWildcards BookParser> =
+    fun parsers(
+        epub: EpubBookParser,
+        pdf: PdfBookParser,
+    ): Map<BookFormat, @JvmSuppressWildcards BookParser> =
         mapOf(
             BookFormat.EPUB to epub,
-            BookFormat.PDF to BookParser { _, _ -> ParseOutcome.Failed(ImportFailure.FORMAT_NOT_YET_SUPPORTED) },
+            BookFormat.PDF to pdf,
         )
 }

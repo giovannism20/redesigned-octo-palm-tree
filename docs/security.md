@@ -45,6 +45,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | DoS | EPUB parser (B1) | Medium | Zip bomb or millions of entries exhaust memory/storage | Caps on entry count, per-entry and total uncompressed size; streaming reads |
 | Info disclosure / DoS | XML parsing (B1) | Medium | External entities or DTD expansion (XXE, billion laughs) | DTD and external entities disabled on every XML parser |
 | DoS | PDF parsing (B1) | Medium | Malformed or gigantic PDF hangs or crashes the app | Parse in a worker with page, time, glyph and buffer limits (SR-4); password-protected files refused; out-of-memory reported as a typed failure so WorkManager does not retry a crash forever |
+| DoS | Cover rendering (B1) | Low | A crafted first page crashes or stalls the platform PDF renderer (native code) | Rendered only after PdfBox read the file, one page downscaled to at most 600 x 900 px, inside the import worker; a failure means no cover |
 | Tampering | Intents (B2) | Medium | Another app sends a crafted `file://` URI or huge stream | Accept `content://` only, copy with size limit, re-detect type |
 | Spoofing / Tampering | Downloads (B3) | Medium | Network attacker swaps a voice model or book | HTTPS only; pinned SHA-256 for models; validate books like any import |
 | Info disclosure | TTS engine (B4) | Low/Medium | Network-backed voices send book text to a vendor | Default to offline voices; label network voices in the UI |

@@ -47,4 +47,16 @@ enum class ImportFailure {
     TOO_LARGE,
     NO_READABLE_TEXT,
     STORAGE_ERROR,
+
+    /** A PDF whose pages are pictures of text, which needs OCR (roadmap Phase 4). */
+    SCANNED_PDF,
+
+    /** A PDF that needs a password to open. */
+    PASSWORD_PROTECTED,
+
+    /** A PDF over the page limit of the extractor (SR-4). */
+    TOO_MANY_PAGES,
+
+    /** A PDF that exceeded the extractor's time, text or memory limits (SR-4). */
+    TOO_COMPLEX,
 }

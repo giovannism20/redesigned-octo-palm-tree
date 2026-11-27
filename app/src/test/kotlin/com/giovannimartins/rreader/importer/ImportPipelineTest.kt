@@ -11,7 +11,11 @@ import com.giovannimartins.rreader.data.db.BookStatus
 import com.giovannimartins.rreader.data.db.ImportFailure
 import com.giovannimartins.rreader.data.db.RReaderDatabase
 import com.giovannimartins.rreader.data.files.BookFileStore
+import com.giovannimartins.rreader.pdf.PdfCoverRenderer
+import com.giovannimartins.rreader.pdf.PdfFixture
+import com.giovannimartins.rreader.pdf.PdfLayoutExtractor
 import com.giovannimartins.rreader.textkit.BookFormat
+import com.giovannimartins.rreader.textkit.layout.LayoutBookBuilder
 import com.giovannimartins.rreader.textkit.model.BookMetadata
 import com.giovannimartins.rreader.textkit.model.Chapter
 import com.giovannimartins.rreader.textkit.model.CoverImage
@@ -135,6 +139,36 @@ class ImportPipelineTest {
             assertThat(files.readChapterText(bookId, 0)).contains("Verdes mares bravios")
         }
 
+    @Test
+    fun `imports a real PDF end to end`() =
+        runTest {
+            val pdf =
+                PdfFixture(context).apply {
+                    title = "Iracema"
+                    page {
+                        line("Verdes mares bravios de minha terra natal,", x = PdfFixture.INDENT)
+                        line("onde canta a jandaia nas frondes da carnaúba.")
+                    }
+                }
+            val bookId =
+                (
+                    intake().importStream(
+                        ByteArrayInputStream(pdf.bytes()),
+                        "iracema",
+                    ) as IntakeResult.Queued
+                ).bookId
+            val parser = PdfBookParser(PdfLayoutExtractor(context), PdfCoverRenderer { null }, LayoutBookBuilder())
+
+            processor(parser, BookFormat.PDF).process(bookId)
+
+            val stored = database.bookDao().findById(bookId)!!
+            assertThat(stored.format).isEqualTo(BookFormat.PDF.name)
+            assertThat(stored.status).isEqualTo(BookStatus.READY)
+            assertThat(stored.title).isEqualTo("Iracema")
+            assertThat(files.readChapterText(bookId, 0))
+                .isEqualTo("Verdes mares bravios de minha terra natal, onde canta a jandaia nas frondes da carnaúba.")
+        }
+
     private fun kotlinx.coroutines.test.TestScope.intake() =
         BookIntake(
             contentResolver = context.contentResolver,
@@ -145,14 +179,16 @@ class ImportPipelineTest {
             io = StandardTestDispatcher(testScheduler),
         )
 
-    private fun kotlinx.coroutines.test.TestScope.processor(parser: BookParser) =
-        BookImportProcessor(
-            bookDao = database.bookDao(),
-            files = files,
-            parsers = mapOf(BookFormat.EPUB to parser),
-            io = StandardTestDispatcher(testScheduler),
-            cpu = StandardTestDispatcher(testScheduler),
-        )
+    private fun kotlinx.coroutines.test.TestScope.processor(
+        parser: BookParser,
+        format: BookFormat = BookFormat.EPUB,
+    ) = BookImportProcessor(
+        bookDao = database.bookDao(),
+        files = files,
+        parsers = mapOf(format to parser),
+        io = StandardTestDispatcher(testScheduler),
+        cpu = StandardTestDispatcher(testScheduler),
+    )
 
     private companion object {
         /** Minimal bytes that the format detector recognises as an EPUB (stored "mimetype" first entry). */
