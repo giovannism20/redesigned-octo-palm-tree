@@ -38,4 +38,7 @@ Names used in code and docs. Add a term here when you introduce it.
 | **OCR page** | A PDF page without a usable text layer whose text is recognized on-device. |
 | **Page layout** | One page as PDF extraction or OCR sees it: its size and its layout lines in reading order (`PageLayout`). |
 | **Outline entry** | A PDF bookmark: a title, the page it points to and optionally a position on that page (`OutlineEntry`). Marks where a chapter starts. |
+| **Margin band** | The top and bottom 10% of a page's height, where running lines are looked for. |
+| **Running line** | A running header or footer or a page number printed in a margin band; removed by cleanup. |
 | **Enclisis** | An unstressed pronoun joined to a verb with a hyphen ("fazê-lo", "dá-lhe"), or placed inside it (mesoclisis, "amá-lo-ei"). Cleanup keeps these hyphens when it joins words broken across lines. |
+| **Scanned PDF** | A PDF whose pages are pictures of text: more than half of its pages have fewer than 20 letters and digits outside running lines. Explained to the user until OCR arrives. |

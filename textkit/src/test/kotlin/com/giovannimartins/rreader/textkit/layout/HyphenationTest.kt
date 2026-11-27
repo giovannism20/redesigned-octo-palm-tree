@@ -104,6 +104,24 @@ class HyphenationTest {
         assertThat(text.toString()).isEqualTo("palavra")
     }
 
+    @Test
+    fun `joins hyphenated words inside paragraphs and across pages`() {
+        val first =
+            page(0) {
+                full("Ele não queria fazê-", indent = true)
+                full("lo naquela manhã, mas a noi-")
+                full("te chegou e o hifeni\u00AD")
+                full("zado capítulo continuou na pá-")
+            }
+        val second = page(1) { last("gina seguinte, dá-lhe razão.") }
+
+        assertThat(paragraphsOf(first, second))
+            .containsExactly(
+                "Ele não queria fazê-lo naquela manhã, mas a noite chegou e o hifenizado capítulo continuou na " +
+                    "página seguinte, dá-lhe razão.",
+            )
+    }
+
     private fun join(
         first: String,
         second: String,

@@ -40,7 +40,7 @@ See [ADR 0003](decisions/0003-sentence-audio-rendering-with-media3.md).
 
 | Module | Kind | Responsibility | Status |
 |--------|------|----------------|--------|
-| `:textkit` | Pure Kotlin/JVM library | Book model, EPUB parsing, PDF/OCR text cleanup, chapter detection, sentence segmentation, speech normalization, progress and time estimates | implemented for Phase 1 (format detection, model, EPUB, text, estimates); PDF layout in Phase 2 |
+| `:textkit` | Pure Kotlin/JVM library | Book model, EPUB parsing, PDF/OCR text cleanup, chapter detection, sentence segmentation, speech normalization, progress and time estimates | implemented (format detection, model, EPUB, text, estimates, PDF/OCR layout cleanup) |
 | `:app` | Android application | UI, import, PDF/OCR adapters, TTS engines, rendering, playback service, persistence | in progress (shell, library, import, voices, playback) |
 
 `:app` depends on `:textkit`; `:textkit` never depends on Android. Anything
