@@ -3,6 +3,7 @@
     <!-- Navigation -->
     <string name="tab_library">Biblioteca</string>
     <string name="tab_add_book">Adicionar</string>
+    <string name="tab_explore">Explorar</string>
 
     <!-- Library -->
     <string name="library_title">Biblioteca</string>
@@ -48,6 +49,37 @@
     <string name="import_notification_channel_description">Mostra o andamento da preparação de um livro escaneado.</string>
     <string name="import_failure_too_many_scanned_pages">Este PDF escaneado tem páginas demais para reconhecer (limite: 1.500).</string>
     <string name="import_failure_ocr">Não foi possível reconhecer o texto deste PDF escaneado. Tente adicionar o livro de novo.</string>
+
+    <!-- Explore: the free catalogue -->
+    <string name="explore_title">Explorar</string>
+    <string name="explore_intro">Livros clássicos grátis, em domínio público, do Projeto Gutenberg. O livro que você baixar vai para a sua biblioteca.</string>
+    <string name="explore_offline">Você está sem internet. Conecte-se ao Wi-Fi ou aos dados móveis para pesquisar e baixar livros.</string>
+    <string name="explore_search_label">Pesquisar por título ou autor</string>
+    <string name="explore_search">Pesquisar</string>
+    <string name="explore_searching">Pesquisando…</string>
+    <string name="explore_results_title">Resultados para “%1$s”</string>
+    <string name="explore_no_results">Nenhum livro encontrado. Tente outro título ou autor.</string>
+    <string name="explore_more_results">Mais resultados</string>
+    <string name="explore_back_to_suggestions">Voltar às sugestões</string>
+    <string name="explore_suggestions_title">Clássicos sugeridos</string>
+    <string name="explore_old_spelling">Muitos destes livros mantêm a ortografia da época em que foram escritos.</string>
+    <string name="explore_search_offline">Sem conexão com a internet. Conecte-se e tente de novo.</string>
+    <string name="explore_search_unavailable">A pesquisa não está funcionando agora. Tente mais tarde.</string>
+    <string name="explore_try_again">Tentar de novo</string>
+    <string name="explore_download">Baixar</string>
+    <string name="explore_download_book">Baixar %1$s</string>
+    <string name="explore_retry_download_book">Tentar baixar %1$s de novo</string>
+    <string name="explore_waiting">Aguardando a internet para baixar…</string>
+    <string name="explore_downloading">Baixando…</string>
+    <string name="explore_downloading_percent">Baixando… %1$d%%</string>
+    <string name="explore_added">Adicionado à sua biblioteca.</string>
+    <string name="explore_already_in_library">Este livro já está na sua biblioteca.</string>
+    <string name="explore_open_library">Abrir na biblioteca</string>
+    <string name="explore_failure_network">O download parou porque a conexão com a internet falhou.</string>
+    <string name="explore_failure_unavailable">Não foi possível baixar o livro agora. Tente mais tarde.</string>
+    <string name="explore_failure_not_found">Este livro não está mais disponível.</string>
+    <string name="explore_failure_too_large">Este livro é grande demais para baixar (limite: 100 MB).</string>
+    <string name="explore_failure_not_a_book">O arquivo baixado não é um livro que o aplicativo consiga ler.</string>
 
     <!-- Voices -->
     <string name="tab_voices">Vozes</string>

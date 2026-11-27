@@ -8,6 +8,13 @@ All notable user-visible changes are documented here. The format follows
 
 ### Added
 
+- Explore tab: free classics in Portuguese from Project Gutenberg, such as
+  Dom Casmurro, Iracema and Os Maias, each with a short description, and a
+  search by title or author. One tap on "Download" adds a book to the
+  library; the download goes on when you leave the screen, waits for the
+  internet when the phone is offline, and says when the book is already in
+  the library. Without internet the screen says so, and the suggestions stay
+  visible.
 - Books from Project Gutenberg are read without the English license text
   that comes with them: listening starts with the book itself and stops at
   its last page.

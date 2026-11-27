@@ -13,4 +13,7 @@ abstract class CatalogModule {
 
     @Binds
     abstract fun downloads(downloads: WorkManagerCatalogDownloads): CatalogDownloads
+
+    @Binds
+    abstract fun networkStatus(status: ConnectivityNetworkStatus): NetworkStatus
 }

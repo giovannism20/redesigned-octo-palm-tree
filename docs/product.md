@@ -46,7 +46,7 @@ Every design decision is checked against this person first.
 | Reading | Follow-along text with the current sentence highlighted, tap a sentence to read from there, adjustable text size |
 | Sleep timer | Minutes or end of chapter, with a gentle fade-out |
 | Voices | Android system voices (offline preferred); later, downloadable on-device neural voices |
-| Catalogue | Curated and searchable public-domain books in Portuguese |
+| Catalogue | Curated and searchable public-domain books in Portuguese from Project Gutenberg, downloaded into the library |
 
 ## Non-goals
 

@@ -54,7 +54,7 @@ Libraries used by the app are declared in `gradle/libs.versions.toml`.
 | Kotlin standard library, kotlinx.coroutines and kotlinx.serialization (OCR pages saved as JSON) | Apache License 2.0 |
 | Dagger / Hilt | Apache License 2.0 |
 | Coil | Apache License 2.0 |
-| Material Icons (vector paths in `app/src/main/res/drawable/ic_*.xml`: library, add book, voices, play, pause, speed, chapters, minimize, notification headset, sleep timer, text, back) | Apache License 2.0 |
+| Material Icons (vector paths in `app/src/main/res/drawable/ic_*.xml`: library, add book, voices, play, pause, speed, chapters, minimize, notification headset, sleep timer, text, back, explore, search, download) | Apache License 2.0 |
 | AndroidX Media3 "skip back/forward 15" icons (vector paths in `ic_replay_15.xml` and `ic_forward_15.xml`, Copyright 2024 The Android Open Source Project) | Apache License 2.0 |
 | jsoup (EPUB XML/XHTML parsing in `:textkit`) | MIT License (full text below) |
 | PdfBox-Android (PDF text extraction) | Apache License 2.0 (NOTICE below) |
@@ -150,6 +150,20 @@ TensorFlow Lite, Abseil, Protocol Buffers, Eigen, ICU and zlib). Their
 license texts are shipped by Google with the libraries, in the
 `third_party_licenses.txt` file of each ML Kit and Google Play services
 package.
+
+### Project Gutenberg
+
+The Explore tab searches and downloads public-domain books from
+[Project Gutenberg](https://www.gutenberg.org/) when the user asks, following
+its terms for catalogue apps
+([ADR 0017](docs/decisions/0017-free-catalogue-from-project-gutenberg.md)).
+R Reader is not affiliated with Project Gutenberg. The curated list
+(`app/src/main/assets/catalog/curated.json`) holds only ebook numbers, titles
+and authors, with descriptions written for this project. A downloaded book is
+stored as Gutenberg delivers it, license included; the license is not read
+aloud. Gutenberg's books are in the public domain in the United States, and
+Gutenberg asks readers elsewhere to check the laws of their country; the
+authors of the suggested classics all died before 1925.
 
 ### Bouncy Castle
 

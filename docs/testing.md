@@ -36,6 +36,13 @@ image on their scanned pages. The real renderer and ML Kit are tested on a
 device with scans drawn by the test itself (`PdfPageRasterizerTest`,
 `MlKitPageTextRecognizerTest`).
 
+The catalogue is tested without the network: a fake `HttpTransport` answers
+from a script (redirects, statuses, media types, broken, truncated and
+oversized bodies), the feed parser and the license stripper run on feeds and
+books written in the tests, and the download job runs with WorkManager's test
+helpers and a real intake on an in-memory database. The Explore screen runs
+under Robolectric like the player screens.
+
 `./gradlew check` is the local gate and runs unit tests, lint, detekt and
 formatting checks. CI runs the same plus the secret scan, CodeQL and the
 documentation link check.
@@ -67,6 +74,12 @@ documentation link check.
   crashing recognizer, and stored pages that are damaged, too large or of
   another format. Expected: a typed failure, a capped bitmap, or the page
   recognized again.
+- **Hostile network answers** (`CatalogHttpTest`, `CatalogHostsTest`,
+  `GutenbergFeedParserTest`, `CatalogDownloaderTest`): addresses and redirects
+  off the allowlist or to cleartext, too many redirects, unexpected media
+  types, bodies over the limit (announced or not), broken and truncated
+  connections, an HTML page served as an EPUB, XXE and entity expansion in
+  feeds. Expected: a typed failure, and no request off the allowlist.
 
 ## Stress tests
 
@@ -109,3 +122,12 @@ new version:
     it: recognition continues from where it stopped, not from page 1.
 12. With notifications denied for R Reader, import a scanned PDF: it still
     finishes. Remove a book while it is being recognized: the work stops.
+13. In Explore, on Wi-Fi, download a suggested classic: it appears in the
+    library, is prepared, and listening starts with the book itself, not
+    with English license text. Download it again: it is already in the
+    library.
+14. Search "machado", tap "Mais resultados", then "Voltar às sugestões".
+15. In airplane mode, Explore says the phone is offline and a search says
+    there is no connection; "Baixar" waits, and the download starts by
+    itself once airplane mode is off.
+16. Start a download and lock the phone or switch apps: it finishes.

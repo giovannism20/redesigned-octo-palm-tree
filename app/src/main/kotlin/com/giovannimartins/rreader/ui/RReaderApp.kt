@@ -25,6 +25,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.giovannimartins.rreader.ui.explore.ExploreRoute
 import com.giovannimartins.rreader.ui.importer.ImportScreen
 import com.giovannimartins.rreader.ui.importer.ImportViewModel
 import com.giovannimartins.rreader.ui.importer.messageRes
@@ -175,6 +176,10 @@ private fun ShellDestination(
         when (destination) {
             TopDestination.LIBRARY -> {
                 LibraryRoute(onAddBook = { onNavigate(TopDestination.ADD_BOOK) }, onOpenPlayer = onOpenPlayer)
+            }
+
+            TopDestination.EXPLORE -> {
+                ExploreRoute(onOpenLibrary = { onNavigate(TopDestination.LIBRARY) })
             }
 
             TopDestination.ADD_BOOK -> {
