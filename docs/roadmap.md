@@ -16,15 +16,17 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 - [x] `secrets.properties` pattern wired into Gradle (`BuildConfig`), release signing from properties outside the repo
 - [ ] CI: build, unit tests, lint, detekt, formatting, Gradle wrapper validation, CodeQL, documentation link check
 - [x] Enable private vulnerability reporting on GitHub
+- [x] Emulator tooling: command-line tools, emulator, Android 16/17 Play images, `rreader-api36` AVD (needs KVM: enable SVM in firmware)
+- [ ] `rreader-api37` AVD (Android 17 reference image)
 - [ ] Feasibility spike on a real phone: `synthesizeToFile` speed/quality with the Google pt-BR voice
 - [ ] Feasibility spike on a real phone: sequential sentence playback for 30+ minutes with the screen locked
 
 ## Phase 0b — Visual identity
 
-- [ ] 3–4 logo concepts ("an R overlapping another R") as SVG, shown on a comparison page
+- [x] 3–4 logo concepts ("an R overlapping another R") as SVG, shown on a comparison page (awaiting the owner's choice)
 - [ ] Chosen logo → adaptive icon (foreground/background), monochrome themed icon, splash screen, in-app logo
 - [ ] Palette, large type scale and core components → Compose theme (`docs/design/`)
-- [ ] Short usability test script for the primary user
+- [x] Short usability test script for the primary user ([docs/design/usability-test.md](design/usability-test.md))
 
 ## Phase 1 — EPUB MVP (first version on the phone)
 
