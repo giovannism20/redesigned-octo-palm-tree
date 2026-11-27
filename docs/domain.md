@@ -36,3 +36,6 @@ Names used in code and docs. Add a term here when you introduce it.
 | **Sleep timer** | Stops playback after a duration or at the end of the chapter, fading out first. |
 | **Catalogue entry** | A public-domain book offered for download in the Explore tab. |
 | **OCR page** | A PDF page without a usable text layer whose text is recognized on-device. |
+| **Page layout** | One page as PDF extraction or OCR sees it: its size and its layout lines in reading order (`PageLayout`). |
+| **Outline entry** | A PDF bookmark: a title, the page it points to and optionally a position on that page (`OutlineEntry`). Marks where a chapter starts. |
+| **Enclisis** | An unstressed pronoun joined to a verb with a hyphen ("fazê-lo", "dá-lhe"), or placed inside it (mesoclisis, "amá-lo-ei"). Cleanup keeps these hyphens when it joins words broken across lines. |
