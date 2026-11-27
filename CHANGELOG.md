@@ -122,6 +122,9 @@ All notable user-visible changes are documented here. The format follows
 
 - The Dora, Alex and Santa voices no longer have a thin, high metallic
   whistle in the background, which was easy to hear on headphones.
+- A sentence that makes a natural voice close the app no longer stops the
+  book for good: if the app closes twice in a row on the same sentence, that
+  sentence is skipped with a short pause and listening goes on.
 - A backup started by the phone (for example at night while charging) no
   longer stops the book being read: R Reader takes no part in Android backup.
 - The player and the follow-along text showed some text, the times and the

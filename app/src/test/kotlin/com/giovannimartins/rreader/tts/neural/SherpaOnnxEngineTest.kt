@@ -24,7 +24,9 @@ class SherpaOnnxEngineTest {
 
     private val runtime = FakeNeuralRuntime()
     private val store by lazy { VoicePackageStore(File(folder.root, "voices"), Dispatchers.Unconfined) }
-    private val engine by lazy { SherpaOnnxEngine(store, runtime, Dispatchers.Default) }
+    private val engine by lazy {
+        SherpaOnnxEngine(store, runtime, NeuralCallMarkers(File(folder.root, "neural.inflight")), Dispatchers.Default)
+    }
     private val dora = NeuralVoices.all.first { it.key == "dora" }
     private val alex = NeuralVoices.all.first { it.key == "alex" }
     private val cadu = NeuralVoices.all.first { it.key == "cadu" }
@@ -103,6 +105,28 @@ class SherpaOnnxEngineTest {
     }
 
     @Test
+    fun `a missing library or method, or memory running out, makes the voice unavailable and frees its model`() {
+        install(NeuralVoices.CADU)
+        val unavailable = SynthesisResult.Failed(SynthesisFailure.ENGINE_UNAVAILABLE)
+
+        runtime.onGenerate = { raise(OutOfMemoryError("model")) }
+        assertThat(synthesize(cadu, "Olá.")).isEqualTo(unavailable)
+        assertThat(runtime.closed).containsExactly(NeuralVoices.CADU)
+
+        runtime.onGenerate = {}
+        runtime.onPhonemize = { raise(NoSuchMethodError("piperPhonemizeText")) }
+        assertThat(synthesize(cadu, "Olá.")).isEqualTo(unavailable)
+        assertThat(runtime.closed).containsExactly(NeuralVoices.CADU, NeuralVoices.CADU)
+
+        runtime.onPhonemize = {}
+        runtime.onLoad = { raise(UnsatisfiedLinkError("sherpa-onnx-jni")) }
+        assertThat(synthesize(cadu, "Olá.")).isEqualTo(unavailable)
+
+        runtime.onLoad = {}
+        assertThat(synthesize(cadu, "Olá.")).isInstanceOf(SynthesisResult.Rendered::class.java)
+    }
+
+    @Test
     fun `text without phonemes becomes a short pause`() {
         install(NeuralVoices.CADU)
 
@@ -137,6 +161,9 @@ class SherpaOnnxEngineTest {
     }
 
     private val output get() = File(folder.root, "out/segment.wav")
+
+    /** What the native layer throws as a Java error. */
+    private fun raise(error: Error): Nothing = throw error
 
     private fun synthesize(
         voice: NeuralVoice,

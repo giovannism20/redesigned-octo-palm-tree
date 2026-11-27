@@ -39,7 +39,8 @@ device with scans drawn by the test itself (`PdfPageRasterizerTest`,
 The neural voices are tested without native code: `SherpaOnnxEngine` runs
 over a fake `NeuralRuntime` (phonemes from characters, a tone per phoneme), so
 speaker ids, Kokoro's merged phonemes, the dialogue pause, model loading and
-replacement, typed failures and cancellation are checked on the JVM, and
+replacement, typed failures (also for `LinkageError` and `OutOfMemoryError`)
+and cancellation are checked on the JVM, and
 `NeuralAudio`, `KokoroPhonemes` and `NeuralText` are plain unit tests. Voice
 package downloads use the fake `HttpTransport` and archives built in the tests
 (`TestArchives`): pinned SHA-256 and size, resuming with HTTP ranges (a corrupt
@@ -108,13 +109,17 @@ documentation link check.
   crashing recognizer, and stored pages that are damaged, too large or of
   another format. Expected: a typed failure, a capped bitmap, or the page
   recognized again.
-- **Crashes in native code** (`NativeCallMarkersTest`, `PdfOcrTest`,
-  `PdfBookParserTest`, `ImportBookWorkerTest`): a fake renderer or
-  recognizer "kills the process" with an `Error` nothing catches, and the
-  test puts back the native call marker the run left, as a real crash
-  would. Expected: the call is made again after one death and skipped after
-  two (cover left out, page without text, or "too complex"), and an import
-  started ten times is given up.
+- **Crashes in native code** (`NativeCallNoteTest`, `NativeCallMarkersTest`,
+  `PdfOcrTest`, `PdfBookParserTest`, `ImportBookWorkerTest`, and for the
+  neural voices the `NeuralCallMarkersTest` of `tts/neural`): a fake renderer,
+  recognizer or neural runtime "kills the process" with an `Error` nothing
+  catches, and the test puts back the native call marker the run left, as a
+  real crash would; each new engine or run stands for a new process.
+  Expected: the call is made again after one death and skipped after two
+  (cover left out, page without text, or "too complex"; a neural segment
+  becomes a pause that the audio cache keeps, a phonemizer or model that
+  died starting makes the voice unavailable), and an import started ten
+  times is given up.
 - **Hostile network answers** (`CatalogHttpTest`, `CatalogHostsTest`,
   `GutenbergFeedParserTest`, `CatalogDownloaderTest`): addresses and redirects
   off the allowlist or to cleartext, too many redirects, unexpected media

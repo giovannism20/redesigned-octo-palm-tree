@@ -8,6 +8,7 @@ import com.giovannimartins.rreader.playback.voice
 import com.giovannimartins.rreader.tts.AudioCache
 import com.giovannimartins.rreader.tts.VoiceIds
 import com.giovannimartins.rreader.tts.neural.FakeNeuralRuntime
+import com.giovannimartins.rreader.tts.neural.NeuralCallMarkers
 import com.giovannimartins.rreader.tts.neural.NeuralVoiceLibrary
 import com.giovannimartins.rreader.tts.neural.NeuralVoices
 import com.giovannimartins.rreader.tts.neural.SherpaOnnxEngine
@@ -223,7 +224,8 @@ class VoicesViewModelTest {
     }
 
     private fun viewModel(): VoicesViewModel {
-        val engine = SherpaOnnxEngine(store, FakeNeuralRuntime(), Dispatchers.Unconfined)
+        val calls = NeuralCallMarkers(File(folder.root, "neural.inflight"))
+        val engine = SherpaOnnxEngine(store, FakeNeuralRuntime(), calls, Dispatchers.Unconfined)
         val library = NeuralVoiceLibrary(store, downloads, engine, settings)
         return VoicesViewModel(library, phone, settings, controls, { connection }, samples, AudioCache(folder.root))
             .also { viewModels += it }

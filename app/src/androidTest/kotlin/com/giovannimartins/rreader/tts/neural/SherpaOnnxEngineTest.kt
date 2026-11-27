@@ -26,7 +26,8 @@ class SherpaOnnxEngineTest {
     @Test
     fun speaksAPortugueseSentenceWithAPiperVoice() {
         val voice = runBlocking { installedPiperVoice() }
-        val engine = SherpaOnnxEngine(store, SherpaOnnxRuntime(context), Dispatchers.IO)
+        val calls = NeuralCallMarkers(File(context.cacheDir, "neural-voice-test.inflight"))
+        val engine = SherpaOnnxEngine(store, SherpaOnnxRuntime(context), calls, Dispatchers.IO)
         val output = File(context.cacheDir, "neural-voice-test.wav").apply { delete() }
 
         val sentence = "Olá! Esta é a voz que vai ler os seus livros."

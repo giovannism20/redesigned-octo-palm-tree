@@ -14,6 +14,14 @@ class NeuralRuntimeException(
  */
 interface NeuralRuntime {
     /**
+     * Starts the phonemizer (espeak-ng), copying its data first when needed; does nothing once it started. [phonemize]
+     * starts it too: calling this first lets a crash in starting it be told apart from a crash on some text.
+     *
+     * @throws NeuralRuntimeException when it cannot start.
+     */
+    fun startPhonemizer()
+
+    /**
      * The Brazilian Portuguese phonemes of [text], one array of Unicode code points per sentence.
      *
      * @throws NeuralRuntimeException when the phonemizer cannot start.

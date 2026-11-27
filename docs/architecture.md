@@ -82,8 +82,8 @@ Base package: `com.giovannimartins.rreader`.
 | `pdf` | PdfBox text extraction (`PdfLayoutExtractor`: positioned lines, outline and document info within `PdfLimits`), `PdfRenderer` page rendering (`FirstPageCoverRenderer`: first page → JPEG cover; `PdfPageRasterizer`: pages → bitmaps for OCR within `OcrLimits`), text recognition behind `PageTextRecognizer` (`MlKitPageTextRecognizer`: bundled ML Kit Latin model → layout lines through textkit's `OcrPageLayout`), `PdfOcr` (recognizes the pictured pages without a usable text layer within `OcrLimits`, one page at a time app-wide through `OcrGate`, resumable through `OcrPageStore`), `NativeCallMarkers` (notes each call into native code while it runs, so a cover or page that crashes the process twice is skipped) | in progress (text-layer PDFs; OCR in Phase 4) |
 | `tts` | `SpeechEngine` interface; `RoutingSpeechEngine`, the engine the app renders with (neural voices to `SherpaOnnxEngine`, the others to `SystemTtsEngine`, multi-engine Android TTS → WAV); `VoiceIds` (system, neural and "phone" voice ids), `AudioCache`, `WavInfo`, `PcmWav`, `SegmentRenderer` (segment → cached WAV, 300 MB LRU trim), `SpeakingRateTracker` (per-voice rate learned from rendered audio, kept across restarts through `SpeakingRateStore`) | implemented |
 | `playback` | `PlaybackService` (`MediaSessionService`, trusted controllers only), `ReaderPlayer` facade (chapter playlist over an internal ExoPlayer), `SegmentFeeder` (render-ahead window), `Prerenderer` (`PrerenderJobs`/`PrerenderWorker`: slow voices rendered ahead while charging), `VoiceSelector`, `ChapterPlans`, `SeekTargets`, `PositionSaver`, `PlaybackRepository`, `ListeningStatus` (spoken segment and sleep timer for the UI), `ReaderCommands` (custom session commands), `SleepTimer` | implemented |
-| `tts/neural` | Offline neural voices ([ADR 0018](decisions/0018-offline-neural-voices.md)): `NeuralVoices` (the nine voices, most recommended first, and their seven `VoicePackage`s pinned by size and SHA-256), `VoiceModelHttp` (the `HttpsClient` for `VoiceModelHosts`), `VoicePackageStore` (`filesDir/voices/{package}`, installed state), `VoicePackageDownloader` (space check, resumable download, SHA-256, `VoicePackageArchive` unpacking), `VoiceDownloads` (`WorkManagerVoiceDownloads`: one `VoiceDownloadWorker` job per package, Wi-Fi unless mobile data was accepted); `SherpaOnnxEngine` (the neural `SpeechEngine`) over `NeuralRuntime` (`SherpaOnnxRuntime`: piper-phonemize with the shipped Portuguese espeak-ng data, `EspeakData`, and sherpa-onnx models), with `NeuralText`, `KokoroPhonemes` and `NeuralAudio` preparing text, phonemes and audio | implemented |
-| `nativecall` | `NativeCallNote`: the note on disk of the call into native code being made, under a key of ids and numbers only; the next process reads the note a crash left behind, and a call in which the process died twice in a row is skipped (SR-4). PDF imports use it through `NativeCallMarkers` | implemented |
+| `tts/neural` | Offline neural voices ([ADR 0018](decisions/0018-offline-neural-voices.md)): `NeuralVoices` (the nine voices, most recommended first, and their seven `VoicePackage`s pinned by size and SHA-256), `VoiceModelHttp` (the `HttpsClient` for `VoiceModelHosts`), `VoicePackageStore` (`filesDir/voices/{package}`, installed state), `VoicePackageDownloader` (space check, resumable download, SHA-256, `VoicePackageArchive` unpacking), `VoiceDownloads` (`WorkManagerVoiceDownloads`: one `VoiceDownloadWorker` job per package, Wi-Fi unless mobile data was accepted); `SherpaOnnxEngine` (the neural `SpeechEngine`) over `NeuralRuntime` (`SherpaOnnxRuntime`: piper-phonemize with the shipped Portuguese espeak-ng data, `EspeakData`, and sherpa-onnx models), with `NeuralText`, `KokoroPhonemes` and `NeuralAudio` preparing text, phonemes and audio, and `NeuralCallMarkers` noting each native call so one that killed the app twice is not made again | implemented |
+| `nativecall` | `NativeCallNote`: the note on disk of the call into native code being made, under a key of ids and numbers only; the next process reads the note a crash left behind, and a call in which the process died twice in a row is skipped (SR-4). PDF imports use it through `NativeCallMarkers`, the neural voices through `NeuralCallMarkers` | implemented |
 | `work` | Helpers shared by WorkManager jobs (`reportingProgress`: conflated progress publishing) | implemented |
 | `net` | `HttpsClient`, the only way to the network: HTTPS GETs through an `HttpTransport` (`UrlConnectionTransport` on `HttpsURLConnection`), every address and redirect checked by the client's `HostAllowlist`, media type, size and redirect limits, and resuming an interrupted download from where it stopped (`Range`, HTTP 206) | implemented |
 | `catalog` | Free public-domain catalogue (Project Gutenberg, [ADR 0017](decisions/0017-free-catalogue-from-project-gutenberg.md)): `CatalogHttp`, the `HttpsClient` for `CatalogHosts` with the `CatalogUserAgent`; `CuratedCatalog` (curated classics from an asset), `CatalogRepository` (OPDS search through `GutenbergEndpoints`, pages kept in memory by `SearchCache`), `CatalogDownloads` (`WorkManagerCatalogDownloads`: one unique `DownloadBookWorker` job per book, needing a connection) running `CatalogDownloader` (EPUB → temporary file → `BookIntake.importFile`), `NetworkStatus` (offline or not, from the system's default network) | implemented |
@@ -487,9 +487,32 @@ cache as the phone's voices, so playback does not change (ADR 0003):
    scale) and adds a 250 ms pause after the speech; `PcmWav` writes 16-bit
    mono PCM at the model's rate (24 kHz Kokoro, 22.05 or 16 kHz Piper).
 
-Failures are typed: a missing package is `VOICE_UNAVAILABLE`, a library or
-model that does not load `ENGINE_UNAVAILABLE`, anything else the native code
-throws `RENDER_ERROR`; text without phonemes becomes a short pause.
+Failures are typed: a missing package is `VOICE_UNAVAILABLE`; a library or
+model that does not load, a missing native method (`LinkageError`) or memory
+running out (`OutOfMemoryError`) is `ENGINE_UNAVAILABLE`, with the model
+released; anything else the native code throws is `RENDER_ERROR`. Text without
+phonemes becomes a short pause.
+
+**Crashes in native code** (SR-4). espeak-ng and ONNX Runtime can crash the
+process on some input, which nothing can catch: the playback service dies, and
+without care every resume would render the same segment and die again, and
+WorkManager would run the pre-render job into it again and again. So, as PDF
+imports do (`NativeCallNote`), `NeuralCallMarkers` notes each call into native
+code in `noBackupFilesDir/neural.inflight` from just before it starts until it
+returns: starting espeak-ng (`phonemizer`, once per process), loading a model
+(`load <package>`) and speaking a segment (`speak <voice> <hash>`: the first 16
+hex digits of the SHA-256 of the segment's text; never the text). Renders run
+one at a time, so one note serves the whole app; each process reads the note
+the previous one left behind before its first call.
+
+- A segment whose speech killed the app twice in a row becomes a short pause
+  (250 ms, after the dialogue pause if it starts with one), which the
+  renderer caches like any audio, so listening and the pre-render job go past
+  it and do not try it again while it is cached. One death alone loses nothing.
+- A phonemizer or a model that killed the app twice in a row as it started is
+  not started again: the voice fails with `ENGINE_UNAVAILABLE` before any
+  native call, which keeps the note, so the next process refuses it too, until
+  another neural call succeeds.
 
 ### Catalogue
 
@@ -571,6 +594,7 @@ sequenceDiagram
 | Normalized chapters | `filesDir/books/{bookId}/chapters/{index}.txt` | UTF-8 text, immutable after import |
 | Covers | `filesDir/books/{bookId}/cover` | Raw image bytes as extracted or rendered |
 | Recognized pages | `filesDir/books/{bookId}/ocr/{page}.json` | Lines text recognition read on a page and the time it took (versioned JSON); written as each page is read so a stopped import resumes, deleted when the import ends (ADR 0015) |
+| Neural native call marker | `noBackupFilesDir/neural.inflight` | The call into native code a neural voice is making (`phonemizer`, `load <package>` or `speak <voice> <text hash>`), written before the call and deleted after it; read by the next process, so a call it died in twice in a row is not made again (SR-4) |
 | Native call marker | `filesDir/books/{bookId}/native.inflight` | The call into native code (cover, opening for recognition, a page) the import is making, written before the call and deleted after it; one left behind tells the next run where the process died, and a call it died in twice in a row is skipped (SR-4); deleted when the import ends |
 | Catalogue download in progress | `filesDir/imports/{uuid}.part` | The EPUB being received; deleted once the intake copied it into the book's folder, or when the download fails |
 | Catalogue search pages | Memory only (`SearchCache`) | At most 20 pages, each for 15 minutes; search words are never written to disk |

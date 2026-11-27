@@ -17,6 +17,11 @@ internal object Diagnostics {
         Log.w(TAG, "$where: ${error.javaClass.simpleName}")
     }
 
+    /** Something that was not done because it killed the app before, such as a call into native code (SR-4). */
+    fun recordSkipped(what: String) {
+        Log.w(TAG, "$what skipped")
+    }
+
     /** A request that was refused with a result [code], such as a session command the service rejected. */
     fun recordRefused(
         what: String,

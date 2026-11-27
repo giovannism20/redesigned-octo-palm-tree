@@ -29,6 +29,16 @@ class SherpaOnnxRuntime
         /** Whether espeak-ng started; null before the first try. It can only be started once per process. */
         private var phonemizerReady: Boolean? = null
 
+        /**
+         * Starts espeak-ng once. When it fails to start, it is not tried again in the same process; when only its
+         * data could not be copied (storage full), the next voice that needs it tries again.
+         */
+        @Synchronized
+        override fun startPhonemizer() {
+            val ready = phonemizerReady ?: initializePhonemizer(espeakData()).also { phonemizerReady = it }
+            if (!ready) throw NeuralRuntimeException("The phonemizer could not start")
+        }
+
         @Synchronized
         override fun phonemize(text: String): List<IntArray> {
             val safeText = PhonemizerText.clean(text)
@@ -83,15 +93,6 @@ class SherpaOnnxRuntime
                     throw NeuralRuntimeException("The speech library is missing", e)
                 }
             return SherpaOnnxModel(tts)
-        }
-
-        /**
-         * Starts espeak-ng once. When it fails to start, it is not tried again in the same process; when only its
-         * data could not be copied (storage full), the next voice that needs it tries again.
-         */
-        private fun startPhonemizer() {
-            val ready = phonemizerReady ?: initializePhonemizer(espeakData()).also { phonemizerReady = it }
-            if (!ready) throw NeuralRuntimeException("The phonemizer could not start")
         }
 
         private fun espeakData(): File =
