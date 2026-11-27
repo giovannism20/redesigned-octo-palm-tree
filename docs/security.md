@@ -50,6 +50,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 | Spoofing / Tampering | Downloads (B3) | Medium | Network attacker swaps a voice model or book | HTTPS only; pinned SHA-256 for models; validate books like any import |
 | Info disclosure | TTS engine (B4) | Low/Medium | Network-backed voices send book text to a vendor | Default to offline voices; label network voices in the UI |
 | Info disclosure / Tampering | Media session (B2) | Low | Another app connects to the exported playback service to see what is being listened to, or to control playback | Untrusted controllers are rejected; media ids must be book UUIDs (optionally with a chapter); the notification's content intent is explicit and immutable; no media button receiver, so playback never starts from the background |
+| Info disclosure | ML Kit (B5) | Medium | The OCR library logs its usage to Google, or downloads models, and could send data off the phone | Bundled model only, no download path; `INTERNET` and the `datatransport` upload backend are removed from the merged manifest, so its logs are dropped (ADR 0015, verified by `MergedManifestTest`) |
 | Info disclosure | Logs | Low | Book text or file names in logs | No content/file names in release logs |
 | Info disclosure | Backups | Low | Cloud backup copies reading history | Cloud backup disabled; device-to-device transfer allowed |
 | Tampering | Supply chain (B5) | Medium | Compromised dependency, wrapper or action | Wrapper validation, pinned Actions, Dependabot, CodeQL, minimal permissions |
@@ -78,7 +79,11 @@ Each requirement is testable; reference its ID in tests and reviews.
   5,000 entries, 32 levels deep, and stops at loops; running out of memory or
   stack ends in a typed failure. Verified by `PdfSecurityTest`.)
 - **SR-5** Cleartext traffic is disabled (`network_security_config`); only
-  allowlisted HTTPS hosts are contacted, and only after a user action.
+  allowlisted HTTPS hosts are contacted, and only after a user action. (Until
+  downloads arrive the app has no network permission at all: the `INTERNET`
+  permission that ML Kit's `datatransport` dependency declares is removed
+  from the merged manifest, and so is its upload backend. Verified by
+  `MergedManifestTest`.)
 - **SR-6** Downloaded voice models are verified against SHA-256 values pinned
   in code before use.
 - **SR-7** Exported components are limited to the launcher/intake activity and
@@ -106,7 +111,7 @@ Each requirement is testable; reference its ID in tests and reviews.
 |------------|-----|
 | `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | Listening with the screen locked runs in a `mediaPlayback` foreground service ([ADR 0014](decisions/0014-target-android-17.md)). |
 | `WAKE_LOCK` | The player keeps the CPU awake while reading with the screen off. |
-| `ACCESS_NETWORK_STATE` | Merged from ExoPlayer; unused, and the app has no `INTERNET` permission yet. |
+| `ACCESS_NETWORK_STATE` | Merged from ExoPlayer and ML Kit's `datatransport`; unused, and the app has no `INTERNET` permission. |
 | `RECEIVE_BOOT_COMPLETED` | Merged from WorkManager, which reschedules pending import jobs after a restart. |
 | `…DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` | Signature permission defined by AndroidX Core to keep runtime receivers private. |
 
@@ -114,7 +119,11 @@ No runtime permission is requested: the playback notification is a media
 notification, exempt from the notification permission. Other exported
 components merged from libraries require system-only permissions
 (`BIND_JOB_SERVICE`, `DUMP`), and the tooling activities exist only in debug
-builds.
+builds. ML Kit adds only components that are not exported: its
+initialization provider, component discovery services, the
+`datatransport` scheduler (job service and alarm receiver) and Google Play
+services' `GoogleApiActivity`. The `INTERNET` permission that ML Kit
+brings is removed (ADR 0015).
 
 ## Secret protection layers
 

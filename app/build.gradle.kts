@@ -3,6 +3,7 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.room)
@@ -139,6 +140,8 @@ dependencies {
     implementation(libs.androidx.media3.session)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.pdfbox.android)
+    implementation(libs.mlkit.text.recognition)
+    implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit4)
     testImplementation(libs.truth)

@@ -50,8 +50,8 @@ Libraries used by the app are declared in `gradle/libs.versions.toml`.
 
 | Component | License |
 |-----------|---------|
-| AndroidX (Compose, Activity, Lifecycle, Room, WorkManager, Media3, DataStore, Hilt integrations) | Apache License 2.0 |
-| Kotlin standard library and kotlinx.coroutines | Apache License 2.0 |
+| AndroidX (Compose, Activity, Lifecycle, Room, WorkManager, Media3, DataStore, Hilt integrations; AppCompat, which comes with ML Kit) | Apache License 2.0 |
+| Kotlin standard library, kotlinx.coroutines and kotlinx.serialization (OCR pages saved as JSON) | Apache License 2.0 |
 | Dagger / Hilt | Apache License 2.0 |
 | Coil | Apache License 2.0 |
 | Material Icons (vector paths in `app/src/main/res/drawable/ic_*.xml`: library, add book, voices, play, pause, speed, chapters, minimize, notification headset, sleep timer, text, back) | Apache License 2.0 |
@@ -59,6 +59,9 @@ Libraries used by the app are declared in `gradle/libs.versions.toml`.
 | jsoup (EPUB XML/XHTML parsing in `:textkit`) | MIT License (full text below) |
 | PdfBox-Android (PDF text extraction) | Apache License 2.0 (NOTICE below) |
 | Bouncy Castle (cryptography used by PdfBox-Android) | MIT License (full text below) |
+| ML Kit Text Recognition v2 with the bundled Latin model (`com.google.mlkit:text-recognition` and the ML Kit `common`, `vision-common`, `vision-interfaces`, `text-recognition-bundled-common` and `play-services-mlkit-text-recognition` libraries it brings) | ML Kit Terms of Service (see below) |
+| Google Play services Base, Basement and Tasks, and ODML Image, which come with ML Kit | Android Software Development Kit License |
+| Firebase components and encoders, and Google datatransport, which come with ML Kit | Apache License 2.0 |
 
 ### jsoup
 
@@ -126,6 +129,27 @@ The library also bundles, unmodified and with their own notices inside it,
 the Adobe Font Metrics of the 14 standard PDF fonts (Adobe Systems, free to
 use and redistribute with their notices) and the Liberation Sans font
 (Red Hat, SIL Open Font License 1.1), which PdfBox uses as a fallback font.
+
+### ML Kit text recognition
+
+[ML Kit](https://developers.google.com/ml-kit) Text Recognition v2 reads the
+pages of scanned PDFs on the phone ([ADR 0015](docs/decisions/0015-on-device-ocr-with-bundled-ml-kit.md)).
+It is not open source: Google offers it free of charge under the
+[ML Kit Terms of Service](https://developers.google.com/ml-kit/terms) and the
+[Google APIs Terms of Service](https://developers.google.com/terms), and the
+Google Play services libraries that come with it under the
+[Android Software Development Kit License](https://developer.android.com/studio/terms).
+R Reader bundles the Latin recognition model in the app, so text recognition
+never downloads anything and works offline. The app has no network
+permission and unregisters the backend that would upload ML Kit's usage
+logs, so nothing about the books or the app leaves the phone
+([ADR 0012](docs/decisions/0012-no-accounts-local-only-data.md)).
+
+ML Kit's native library is built from open-source components (among them
+TensorFlow Lite, Abseil, Protocol Buffers, Eigen, ICU and zlib). Their
+license texts are shipped by Google with the libraries, in the
+`third_party_licenses.txt` file of each ML Kit and Google Play services
+package.
 
 ### Bouncy Castle
 

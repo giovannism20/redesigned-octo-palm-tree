@@ -7,6 +7,13 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <!-- Keeps the CPU awake while reading with the screen off (ExoPlayer wake mode). -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!--
+        ML Kit's usage logging (Firebase datatransport) asks for the network. The app has no network access:
+        no telemetry, and nothing leaves the phone without a user action (ADR 0012, ADR 0015).
+    -->
+    <uses-permission
+        android:name="android.permission.INTERNET"
+        tools:node="remove" />
 
     <!--
         Cloud backup is excluded entirely (data_extraction_rules / backup_rules);
@@ -74,6 +81,18 @@
                 android:value="androidx.startup"
                 tools:node="remove" />
         </provider>
+
+        <!--
+            Unregisters the only datatransport backend, which uploads ML Kit's usage logs, so they are dropped
+            instead of being queued on the phone (ADR 0012, ADR 0015).
+        -->
+        <service
+            android:name="com.google.android.datatransport.runtime.backends.TransportBackendDiscovery"
+            tools:node="merge">
+            <meta-data
+                android:name="backend:com.google.android.datatransport.cct.CctBackendFactory"
+                tools:node="remove" />
+        </service>
     </application>
 
 </manifest>
