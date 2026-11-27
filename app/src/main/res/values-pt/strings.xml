@@ -42,6 +42,10 @@
     <string name="import_failure_password">Este PDF é protegido por senha e não pode ser aberto.</string>
     <string name="import_failure_too_many_pages">Este PDF tem páginas demais (limite: 3.000).</string>
     <string name="import_failure_too_complex">Este PDF é complexo demais para ser preparado neste celular.</string>
+    <string name="import_recognizing_text">Reconhecendo texto: página %1$d de %2$d</string>
+    <string name="import_notification_title">Preparando um livro</string>
+    <string name="import_notification_channel">Livros em preparação</string>
+    <string name="import_notification_channel_description">Mostra o andamento da preparação de um livro escaneado.</string>
     <string name="import_failure_too_many_scanned_pages">Este PDF escaneado tem páginas demais para reconhecer (limite: 1.500).</string>
     <string name="import_failure_ocr">Não foi possível reconhecer o texto deste PDF escaneado. Tente adicionar o livro de novo.</string>
 

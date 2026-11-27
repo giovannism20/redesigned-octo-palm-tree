@@ -67,7 +67,7 @@ Base package: `com.giovannimartins.rreader`.
 | Package | Responsibility | Status |
 |---------|----------------|--------|
 | `data` | Room database (`db`), book file storage (`files`), library repository (`library`), DataStore settings and learned speaking rates (`settings`) | implemented |
-| `importer` | `BookIntake` (picker/share/view URIs → signature check, size-limited copy, SHA-256 dedupe, book row), `ImportBookWorker` + `BookImportProcessor` (parse and persist; recognized pages deleted when the import ends), `BookParser` per format (`EpubBookParser`, `PdfBookParser`: text layer, then `PdfOcr` for scanned pages) taking a `ParseRequest` with an `ImportProgressListener` | implemented |
+| `importer` | `BookIntake` (picker/share/view URIs → signature check, size-limited copy, SHA-256 dedupe, book row), `ImportBookWorker` + `BookImportProcessor` (parse and persist; recognized pages deleted when the import ends), `BookParser` per format (`EpubBookParser`, `PdfBookParser`: text layer, then `PdfOcr` for scanned pages) taking a `ParseRequest` with an `ImportProgressListener`, `ImportJobs` (one unique WorkManager job per book: enqueue, cancel, observe progress), `ImportNotifications` (progress notification of the `dataSync` foreground service) | implemented |
 | `pdf` | PdfBox text extraction (`PdfLayoutExtractor`: positioned lines, outline and document info within `PdfLimits`), `PdfRenderer` page rendering (`FirstPageCoverRenderer`: first page → JPEG cover; `PdfPageRasterizer`: pages → bitmaps for OCR within `OcrLimits`), text recognition behind `PageTextRecognizer` (`MlKitPageTextRecognizer`: bundled ML Kit Latin model → layout lines through textkit's `OcrPageLayout`), `PdfOcr` (recognizes the pictured pages without a usable text layer within `OcrLimits`, one page at a time app-wide through `OcrGate`, resumable through `OcrPageStore`) | in progress (text-layer PDFs; OCR in Phase 4) |
 | `tts` | `SpeechEngine` interface and `SystemTtsEngine` (multi-engine Android TTS → WAV), `AudioCache`, `WavInfo`, `SegmentRenderer` (segment → cached WAV, 300 MB LRU trim), `SpeakingRateTracker` (per-voice rate learned from rendered audio, kept across restarts through `SpeakingRateStore`); later `SherpaOnnxEngine` | implemented (neural voices in Phase 5) |
 | `playback` | `PlaybackService` (`MediaSessionService`, trusted controllers only), `ReaderPlayer` facade (chapter playlist over an internal ExoPlayer), `SegmentFeeder` (render-ahead window), `ChapterPlans`, `SeekTargets`, `PositionSaver`, `PlaybackRepository`, `ListeningStatus` (spoken segment and sleep timer for the UI), `ReaderCommands` (custom session commands), `SleepTimer` | implemented |
@@ -325,6 +325,13 @@ the volume on Android 17 ([ADR 0014](decisions/0014-target-android-17.md)).
 - Imports, OCR and long pre-rendering (for example of slow neural voices)
   run in WorkManager so they survive process death. The render-ahead window
   of the playing book runs inside the playback service instead.
+- While text recognition runs, the import job asks WorkManager to run it in
+  its foreground service with the `dataSync` type and a progress
+  notification; if the platform refuses (the job started in the background),
+  it goes on as a normal job, which the system may stop and WorkManager runs
+  again, resuming from the stored pages (ADR 0015). Progress goes through
+  WorkManager (`setProgress`), observed through `ImportJobs`. One page at a
+  time is drawn and recognized in the whole app (`OcrGate`).
 - Parsing a book blocks, so `BookImportProcessor` runs it with
   `runInterruptible`: a cancelled import interrupts the thread, and the PDF
   extractor, which checks between pages and glyphs, stops.

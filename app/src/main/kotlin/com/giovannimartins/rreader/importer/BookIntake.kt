@@ -3,9 +3,6 @@ package com.giovannimartins.rreader.importer
 import android.content.ContentResolver
 import android.net.Uri
 import android.provider.OpenableColumns
-import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
 import com.giovannimartins.rreader.Diagnostics
 import com.giovannimartins.rreader.data.db.BookDao
 import com.giovannimartins.rreader.data.db.BookEntity
@@ -54,7 +51,7 @@ class BookIntake
         private val contentResolver: ContentResolver,
         private val bookDao: BookDao,
         private val files: BookFileStore,
-        private val workManager: WorkManager,
+        private val jobs: ImportJobs,
         private val clock: Clock,
         @IoDispatcher private val io: CoroutineDispatcher,
     ) {
@@ -95,7 +92,7 @@ class BookIntake
                     val bookId = UUID.randomUUID().toString()
                     files.adoptSource(temp, bookId, format)
                     bookDao.insert(newBook(bookId, fallbackTitle, format, copy))
-                    enqueue(bookId)
+                    jobs.enqueue(bookId)
                     IntakeResult.Queued(bookId)
                 } catch (e: TooLargeException) {
                     Diagnostics.recordHandled("copy import", e)
@@ -116,7 +113,7 @@ class BookIntake
         private suspend fun retryOrReportDuplicate(existing: BookEntity): IntakeResult =
             if (existing.status == BookStatus.FAILED) {
                 bookDao.markImporting(existing.id)
-                enqueue(existing.id)
+                jobs.enqueue(existing.id)
                 IntakeResult.Queued(existing.id)
             } else {
                 IntakeResult.Duplicate(existing.id)
@@ -178,14 +175,6 @@ class BookIntake
             archived = false,
             voiceId = null,
         )
-
-        private fun enqueue(bookId: String) {
-            val request =
-                OneTimeWorkRequestBuilder<ImportBookWorker>()
-                    .setInputData(ImportBookWorker.inputFor(bookId))
-                    .build()
-            workManager.enqueueUniqueWork(ImportBookWorker.uniqueName(bookId), ExistingWorkPolicy.KEEP, request)
-        }
 
         /** Title derived from the file name, used until the book's own metadata is read. */
         private fun displayTitle(uri: Uri): String {

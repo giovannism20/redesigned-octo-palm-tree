@@ -239,7 +239,7 @@ class ImportPipelineTest {
             contentResolver = context.contentResolver,
             bookDao = database.bookDao(),
             files = files,
-            workManager = workManager,
+            jobs = WorkManagerImportJobs(workManager),
             clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC),
             io = StandardTestDispatcher(testScheduler),
         )

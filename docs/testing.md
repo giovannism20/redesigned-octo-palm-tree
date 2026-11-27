@@ -86,3 +86,11 @@ new version:
 7. Turn on airplane mode: playback continues.
 8. Increase the system font size to the maximum: screens stay usable.
 9. Turn on TalkBack: every control is announced.
+10. Share a scanned PDF of about 100 pages: the library shows "Reconhecendo
+    texto: página X de Y" and, if notifications are allowed, so does a
+    notification; lock the screen until it finishes, then listen to a
+    chapter.
+11. Force-close the app while a scanned PDF is being recognized and reopen
+    it: recognition continues from where it stopped, not from page 1.
+12. With notifications denied for R Reader, import a scanned PDF: it still
+    finishes. Remove a book while it is being recognized: the work stops.

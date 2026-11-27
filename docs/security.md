@@ -120,13 +120,16 @@ Each requirement is testable; reference its ID in tests and reviews.
 | Permission | Why |
 |------------|-----|
 | `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | Listening with the screen locked runs in a `mediaPlayback` foreground service ([ADR 0014](decisions/0014-target-android-17.md)). |
+| `FOREGROUND_SERVICE_DATA_SYNC` | Text recognition of a scanned book runs in WorkManager's foreground service with the `dataSync` type, the type for importing and processing local files ([ADR 0015](decisions/0015-on-device-ocr-with-bundled-ml-kit.md)). |
+| `POST_NOTIFICATIONS` | Lets that service show its progress on Android 13+ once the user allows notifications in the system settings. Never requested: the library shows the progress and the work runs the same without the notification (ADR 0015). |
 | `WAKE_LOCK` | The player keeps the CPU awake while reading with the screen off. |
 | `ACCESS_NETWORK_STATE` | Merged from ExoPlayer and ML Kit's `datatransport`; unused, and the app has no `INTERNET` permission. |
 | `RECEIVE_BOOT_COMPLETED` | Merged from WorkManager, which reschedules pending import jobs after a restart. |
 | `…DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` | Signature permission defined by AndroidX Core to keep runtime receivers private. |
 
 No runtime permission is requested: the playback notification is a media
-notification, exempt from the notification permission. Other exported
+notification, exempt from the notification permission, and the import
+progress notification is optional. Other exported
 components merged from libraries require system-only permissions
 (`BIND_JOB_SERVICE`, `DUMP`), and the tooling activities exist only in debug
 builds. ML Kit adds only components that are not exported: its

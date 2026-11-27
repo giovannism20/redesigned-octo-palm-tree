@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
@@ -22,6 +23,18 @@ class MergedManifestTest {
             packageManager.getPackageInfo(context.packageName, PackageManager.GET_PERMISSIONS).requestedPermissions
 
         assertThat(permissions.orEmpty().toList()).doesNotContain(Manifest.permission.INTERNET)
+    }
+
+    @Test
+    fun `long imports run in WorkManager's foreground service as dataSync work`() {
+        val service = ComponentName(context, "androidx.work.impl.foreground.SystemForegroundService")
+        val permissions =
+            packageManager.getPackageInfo(context.packageName, PackageManager.GET_PERMISSIONS).requestedPermissions
+
+        assertThat(packageManager.getServiceInfo(service, 0).foregroundServiceType)
+            .isEqualTo(ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        assertThat(permissions.orEmpty().toList())
+            .containsAtLeast(Manifest.permission.FOREGROUND_SERVICE_DATA_SYNC, Manifest.permission.POST_NOTIFICATIONS)
     }
 
     @Test

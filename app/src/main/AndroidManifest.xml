@@ -5,6 +5,13 @@
     <!-- Background listening runs in a mediaPlayback foreground service (ADR 0003, ADR 0014). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- Text recognition of scanned books runs in a dataSync foreground service (ADR 0015). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!--
+        Lets that service show its progress on Android 13+ once notifications are allowed. Never requested: the
+        library shows the progress, and the work goes on without the notification (ADR 0015).
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Keeps the CPU awake while reading with the screen off (ExoPlayer wake mode). -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!--
@@ -81,6 +88,12 @@
                 android:value="androidx.startup"
                 tools:node="remove" />
         </provider>
+
+        <!-- WorkManager's foreground service runs long imports (text recognition) as dataSync work (ADR 0015). -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
 
         <!--
             Unregisters the only datatransport backend, which uploads ML Kit's usage logs, so they are dropped

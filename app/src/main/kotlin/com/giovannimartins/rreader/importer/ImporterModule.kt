@@ -17,6 +17,9 @@ object ImporterModule {
         @ApplicationContext context: Context,
     ): ContentResolver = context.contentResolver
 
+    @Provides
+    fun importJobs(jobs: WorkManagerImportJobs): ImportJobs = jobs
+
     /** Parser per format; scanned PDF pages are read with on-device text recognition (ADR 0015). */
     @Provides
     fun parsers(
