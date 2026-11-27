@@ -71,7 +71,7 @@ Base package: `com.giovannimartins.rreader`.
 | `pdf` | PdfBox text extraction (`PdfLayoutExtractor`: positioned lines, outline and document info within `PdfLimits`), `PdfRenderer` page rendering (`FirstPageCoverRenderer`: first page → JPEG cover; `PdfPageRasterizer`: pages → bitmaps for OCR within `OcrLimits`), text recognition behind `PageTextRecognizer` (`MlKitPageTextRecognizer`: bundled ML Kit Latin model → layout lines through textkit's `OcrPageLayout`), `PdfOcr` (recognizes the pictured pages without a usable text layer within `OcrLimits`, one page at a time app-wide through `OcrGate`, resumable through `OcrPageStore`) | in progress (text-layer PDFs; OCR in Phase 4) |
 | `tts` | `SpeechEngine` interface and `SystemTtsEngine` (multi-engine Android TTS → WAV), `AudioCache`, `WavInfo`, `SegmentRenderer` (segment → cached WAV, 300 MB LRU trim), `SpeakingRateTracker` (per-voice rate learned from rendered audio, kept across restarts through `SpeakingRateStore`); later `SherpaOnnxEngine` | implemented (neural voices in Phase 5) |
 | `playback` | `PlaybackService` (`MediaSessionService`, trusted controllers only), `ReaderPlayer` facade (chapter playlist over an internal ExoPlayer), `SegmentFeeder` (render-ahead window), `ChapterPlans`, `SeekTargets`, `PositionSaver`, `PlaybackRepository`, `ListeningStatus` (spoken segment and sleep timer for the UI), `ReaderCommands` (custom session commands), `SleepTimer` | implemented |
-| `catalog` | Free public-domain catalogue (Project Gutenberg, [ADR 0017](decisions/0017-free-catalogue-from-project-gutenberg.md)): `CatalogHttp`, the app's only network client (HTTPS GETs through an `HttpTransport`, `UrlConnectionTransport` on `HttpsURLConnection`; every address and redirect checked by `CatalogHosts`; media type, size and redirect limits), `CatalogUserAgent` | in progress (HTTPS client) |
+| `catalog` | Free public-domain catalogue (Project Gutenberg, [ADR 0017](decisions/0017-free-catalogue-from-project-gutenberg.md)): `CatalogHttp`, the app's only network client (HTTPS GETs through an `HttpTransport`, `UrlConnectionTransport` on `HttpsURLConnection`; every address and redirect checked by `CatalogHosts`; media type, size and redirect limits), `CatalogUserAgent`; `CuratedCatalog` (curated classics from an asset), `CatalogRepository` (OPDS search through `GutenbergEndpoints`, pages kept in memory by `SearchCache`) | in progress (client, curated list, search) |
 | `ui` | Compose screens, ViewModels, navigation, theme, design system; `ui/player`: `PlaybackConnection` (`MediaController` while the app is visible), mini player, full player with speed, chapters, time left and the sleep timer; `ui/library`: progress and time left (`LibraryTimeLeft`); `ui/reader`: follow-along reader (`ReaderViewModel`, `ReaderChapter`); `ui/components`: `BookCover`, time-left text (`timeLeft`) | in progress (shell, library, add book, voices, player) |
 | `di` | Hilt modules (dispatchers, application scope, database, WorkManager) | implemented |
 
@@ -293,6 +293,24 @@ the volume on Android 17 ([ADR 0014](decisions/0014-target-android-17.md)).
 - It is scheduled with Media3's `Clock`, which the facade receives
   (`Clock.DEFAULT` in the app), so tests drive it with a `FakeClock`.
 
+### Catalogue
+
+The Explore tab offers free public-domain books from Project Gutenberg
+([ADR 0017](decisions/0017-free-catalogue-from-project-gutenberg.md)).
+
+- **Curated classics.** `CuratedCatalog` reads
+  `assets/catalog/curated.json`: 26 classics in Portuguese, each a Gutenberg
+  ebook number with its title, author and a short description. Showing them
+  needs no network.
+- **Search.** `CatalogRepository.search` asks Gutenberg's OPDS search feed
+  for one page (25 books) of `<words> l.pt`, the filter for books in
+  Portuguese, through `CatalogHttp` (`application/atom+xml`, at most 1 MiB);
+  textkit's `GutenbergFeedParser` reads it. The next page is asked for only
+  when the listener wants more results, through the feed's `next` link once
+  `CatalogHosts` accepts it. Pages stay in memory for 15 minutes
+  (`SearchCache`, 20 pages). A missing or broken connection is `OFFLINE`; any
+  other failure, `UNAVAILABLE`.
+
 ## Persistence
 
 | What | Where | Notes |
@@ -304,6 +322,7 @@ the volume on Android 17 ([ADR 0014](decisions/0014-target-android-17.md)).
 | Normalized chapters | `filesDir/books/{bookId}/chapters/{index}.txt` | UTF-8 text, immutable after import |
 | Covers | `filesDir/books/{bookId}/cover` | Raw image bytes as extracted or rendered |
 | Recognized pages | `filesDir/books/{bookId}/ocr/{page}.json` | Lines text recognition read on a page and the time it took (versioned JSON); written as each page is read so a stopped import resumes, deleted when the import ends (ADR 0015) |
+| Catalogue search pages | Memory only (`SearchCache`) | At most 20 pages, each for 15 minutes; search words are never written to disk |
 | Rendered audio | `cacheDir/tts/{bookId}/{voiceHash}/{chapter}-{start}-{end}.wav` | Trimmed to 300 MB, least recently used first, keeping the render-ahead window; safe to delete |
 
 ## Invariants

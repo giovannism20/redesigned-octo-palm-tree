@@ -1,0 +1,158 @@
+[
+  {
+    "id": 55752,
+    "title": "Dom Casmurro",
+    "author": "Machado de Assis",
+    "description": "Bento Santiago relembra a juventude e o ciúme que sente de Capitu."
+  },
+  {
+    "id": 54829,
+    "title": "Memórias Póstumas de Brás Cubas",
+    "author": "Machado de Assis",
+    "description": "Um defunto conta a própria vida com ironia e muito humor."
+  },
+  {
+    "id": 55682,
+    "title": "Quincas Borba",
+    "author": "Machado de Assis",
+    "description": "Rubião herda a fortuna de um filósofo excêntrico e se perde no Rio de Janeiro."
+  },
+  {
+    "id": 56737,
+    "title": "Esaú e Jacó",
+    "author": "Machado de Assis",
+    "description": "Os gêmeos Pedro e Paulo, rivais desde o berço, no fim do Império."
+  },
+  {
+    "id": 55797,
+    "title": "Memorial de Aires",
+    "author": "Machado de Assis",
+    "description": "O diário de um diplomata aposentado que observa a vida no Rio de Janeiro."
+  },
+  {
+    "id": 67162,
+    "title": "Helena",
+    "author": "Machado de Assis",
+    "description": "Uma jovem reconhecida em testamento muda a vida de uma família rica."
+  },
+  {
+    "id": 57001,
+    "title": "Papéis Avulsos",
+    "author": "Machado de Assis",
+    "description": "Contos célebres, entre eles O Alienista e Teoria do Medalhão."
+  },
+  {
+    "id": 67740,
+    "title": "Iracema",
+    "author": "José de Alencar",
+    "description": "A lenda da virgem dos lábios de mel e do nascimento do Ceará."
+  },
+  {
+    "id": 67724,
+    "title": "O Guarani — volume 1",
+    "author": "José de Alencar",
+    "description": "Peri, um indígena goitacá, dedica a vida a proteger Ceci. Primeira parte."
+  },
+  {
+    "id": 67725,
+    "title": "O Guarani — volume 2",
+    "author": "José de Alencar",
+    "description": "Segunda parte da história de Peri e Ceci, com o desfecho do romance."
+  },
+  {
+    "id": 69187,
+    "title": "O Cortiço",
+    "author": "Aluísio Azevedo",
+    "description": "A vida agitada de um cortiço no Rio de Janeiro do século XIX."
+  },
+  {
+    "id": 67535,
+    "title": "Triste Fim de Policarpo Quaresma",
+    "author": "Lima Barreto",
+    "description": "Um patriota sonhador enfrenta a dura realidade do Brasil."
+  },
+  {
+    "id": 68541,
+    "title": "O Ateneu",
+    "author": "Raul Pompeia",
+    "description": "Sérgio relembra os anos difíceis num internato de elite."
+  },
+  {
+    "id": 68635,
+    "title": "Inocência",
+    "author": "Visconde de Taunay",
+    "description": "Um amor proibido no sertão de Mato Grosso."
+  },
+  {
+    "id": 74475,
+    "title": "A Escrava Isaura",
+    "author": "Bernardo Guimarães",
+    "description": "A luta de uma escrava pela liberdade e pelo amor."
+  },
+  {
+    "id": 40409,
+    "title": "Os Maias",
+    "author": "Eça de Queirós",
+    "description": "A história de uma família rica de Lisboa ao longo de três gerações."
+  },
+  {
+    "id": 42942,
+    "title": "O Primo Basílio",
+    "author": "Eça de Queirós",
+    "description": "A volta de um primo sedutor abala o casamento de Luísa."
+  },
+  {
+    "id": 31971,
+    "title": "O Crime do Padre Amaro",
+    "author": "Eça de Queirós",
+    "description": "Um jovem padre e um amor proibido numa cidade do interior."
+  },
+  {
+    "id": 18220,
+    "title": "A Cidade e as Serras",
+    "author": "Eça de Queirós",
+    "description": "Jacinto troca o luxo de Paris pela vida simples nas serras."
+  },
+  {
+    "id": 16384,
+    "title": "O Mandarim",
+    "author": "Eça de Queirós",
+    "description": "Basta tocar uma campainha para herdar a fortuna de um mandarim."
+  },
+  {
+    "id": 16425,
+    "title": "Amor de Perdição",
+    "author": "Camilo Castelo Branco",
+    "description": "Simão e Teresa, um amor proibido entre famílias inimigas."
+  },
+  {
+    "id": 16428,
+    "title": "Os Fidalgos da Casa Mourisca",
+    "author": "Júlio Dinis",
+    "description": "Uma família nobre em decadência aprende o valor do trabalho."
+  },
+  {
+    "id": 29120,
+    "title": "A Morgadinha dos Canaviais",
+    "author": "Júlio Dinis",
+    "description": "Um rapaz de Lisboa descobre os amores e as intrigas de uma aldeia do Minho."
+  },
+  {
+    "id": 24401,
+    "title": "Viagens na Minha Terra",
+    "author": "Almeida Garrett",
+    "description": "Uma viagem pelo Ribatejo com a história de Joaninha, a menina dos rouxinóis."
+  },
+  {
+    "id": 45966,
+    "title": "Eurico, o Presbítero",
+    "author": "Alexandre Herculano",
+    "description": "Um padre guerreiro na invasão muçulmana da Península Ibérica."
+  },
+  {
+    "id": 3333,
+    "title": "Os Lusíadas",
+    "author": "Luís de Camões",
+    "description": "O poema épico sobre a viagem de Vasco da Gama à Índia."
+  }
+]
