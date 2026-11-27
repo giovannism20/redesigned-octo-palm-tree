@@ -40,17 +40,23 @@ data class PdfLimits(
     }
 }
 
-/** Names the [PdfLimits] value a document exceeded; reported by [PdfError.LimitExceeded]. */
+/** Names the [PdfLimits] or [OcrLimits] value a document exceeded; reported by [PdfError.LimitExceeded]. */
 enum class PdfLimit {
     /** [PdfLimits.maxPages]. */
     MAX_PAGES,
 
-    /** [PdfLimits.timeBudget]. */
+    /** [OcrLimits.maxPages]: too many pages to recognize. */
+    MAX_OCR_PAGES,
+
+    /** [PdfLimits.timeBudget], [OcrLimits.timeBudget] or [OcrLimits.pageTimeout]. */
     TIME_BUDGET,
 
     /** [PdfLimits.maxGlyphs]. */
     MAX_GLYPHS,
 
-    /** PdfBox reached [PdfLimits.maxBufferBytes], or the app ran out of memory while reading the document. */
+    /**
+     * PdfBox reached [PdfLimits.maxBufferBytes], the app ran out of memory while reading the document, or a page
+     * picture for text recognition could not be allocated.
+     */
     MEMORY,
 }

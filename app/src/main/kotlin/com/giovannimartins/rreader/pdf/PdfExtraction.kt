@@ -20,6 +20,11 @@ data class PdfContent(
     val pages: List<PageLayout>,
     val outline: List<OutlineEntry>,
     val info: PdfInfo,
+    /**
+     * Indexes of the pages whose text may be a picture: they draw an image or many path segments, or could not be read
+     * completely. Text recognition looks at those among the pages without a usable text layer.
+     */
+    val picturedPages: Set<Int> = emptySet(),
 )
 
 /** The document information dictionary and catalog language, as stored: possibly blank or meaningless. */

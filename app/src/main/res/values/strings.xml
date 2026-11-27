@@ -43,6 +43,7 @@
     <string name="import_failure_password">This PDF is protected by a password and cannot be opened.</string>
     <string name="import_failure_too_many_pages">This PDF has too many pages (limit: 3,000).</string>
     <string name="import_failure_too_complex">This PDF is too complex to prepare on this phone.</string>
+    <string name="import_failure_too_many_scanned_pages">This scanned PDF has too many pages to recognize (limit: 1,500).</string>
     <string name="import_failure_ocr">The text of this scanned PDF could not be recognized. Try adding the book again.</string>
 
     <!-- Voices -->

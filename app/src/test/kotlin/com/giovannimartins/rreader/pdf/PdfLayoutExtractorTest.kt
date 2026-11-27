@@ -69,6 +69,23 @@ class PdfLayoutExtractorTest {
     }
 
     @Test
+    fun `notes the pages whose text may be a picture, and not blank or text pages`() {
+        val fixture =
+            PdfFixture(context).apply {
+                page { line("Uma página com texto de verdade.") }
+                picturePage()
+                blankPage()
+                outlinedTextPage()
+                outlinedTextPage(segments = LayoutTextStripper.MIN_SHAPE_SEGMENTS - 1)
+            }
+
+        val content = extract(fixture)
+
+        assertThat(content.pages).hasSize(5)
+        assertThat(content.picturedPages).containsExactly(1, 3)
+    }
+
+    @Test
     fun `reads the outline in document order with target pages and positions`() {
         val fixture =
             PdfFixture(context).apply {

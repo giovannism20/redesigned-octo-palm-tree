@@ -20,6 +20,7 @@ fun ImportFailure.messageRes(): Int =
         ImportFailure.TOO_MANY_PAGES -> R.string.import_failure_too_many_pages
         ImportFailure.TOO_COMPLEX -> R.string.import_failure_too_complex
         ImportFailure.OCR_FAILED -> R.string.import_failure_ocr
+        ImportFailure.TOO_MANY_SCANNED_PAGES -> R.string.import_failure_too_many_scanned_pages
     }
 
 /** Text for a one-off import message. */

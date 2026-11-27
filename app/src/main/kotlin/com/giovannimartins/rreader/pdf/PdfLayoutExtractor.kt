@@ -92,6 +92,7 @@ class PdfLayoutExtractor internal constructor(
                 pages = stripper.pages,
                 outline = outlineOf(document),
                 info = PdfInfo(information.title, information.author, document.documentCatalog.language),
+                picturedPages = stripper.picturedPages,
             ),
         )
     }

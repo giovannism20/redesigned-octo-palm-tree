@@ -43,7 +43,8 @@ Names used in code and docs. Add a term here when you introduce it.
 | **Resume rewind** | After a pause of more than 5 minutes (or a book left that long), listening resumes one segment or about 10 seconds of text earlier, whichever is less, from the start of the segment that holds that point; never before the start of the book. Seeks and chapter jumps cancel it. |
 | **Fade-out** | The last 10 seconds of a sleep timer, while the internal player's volume falls to zero before the pause; the full volume is restored after pausing. |
 | **Catalogue entry** | A public-domain book offered for download in the Explore tab. |
-| **OCR page** | A PDF page without a usable text layer whose text is recognized on-device. |
+| **OCR page** | A PDF page without a usable text layer whose text may be a picture (it draws an image, text turned into outlines, or content PdfBox could not read), so its text is recognized on-device with ML Kit. Blank pages and short pages of text PDFs are not OCR pages. |
+| **Recognized page** | An OCR page as text recognition read it, stored in the book's `ocr` folder as soon as it is read so a stopped import resumes after it, and deleted when the import ends. |
 | **Page layout** | One page as PDF extraction or OCR sees it: its size and its layout lines in reading order (`PageLayout`). |
 | **Recognized line** | A line of text an OCR engine found on the picture of a page, with its box in the picture's pixels (`RecognizedLine`); a **recognized block** groups the lines the engine read together, usually a paragraph. `OcrPageLayout` turns them into layout lines in page units. |
 | **Outline entry** | A PDF bookmark: a title, the page it points to and optionally a position on that page (`OutlineEntry`). Marks where a chapter starts. |

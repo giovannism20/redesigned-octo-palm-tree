@@ -72,6 +72,7 @@ internal fun PdfError.toImportFailure(): ImportFailure =
 private fun PdfLimit.toImportFailure(): ImportFailure =
     when (this) {
         PdfLimit.MAX_PAGES -> ImportFailure.TOO_MANY_PAGES
+        PdfLimit.MAX_OCR_PAGES -> ImportFailure.TOO_MANY_SCANNED_PAGES
         PdfLimit.TIME_BUDGET, PdfLimit.MAX_GLYPHS, PdfLimit.MEMORY -> ImportFailure.TOO_COMPLEX
     }
 

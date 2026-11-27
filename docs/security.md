@@ -78,7 +78,16 @@ Each requirement is testable; reference its ID in tests and reviews.
   document and 100,000 kept per page; PdfBox buffers at most 16 MiB in memory and 512 MiB in all, the rest
   in a temporary file in the app cache; the outline reader visits at most
   5,000 entries, 32 levels deep, and stops at loops; running out of memory or
-  stack ends in a typed failure. Verified by `PdfSecurityTest`.)
+  stack ends in a typed failure. Verified by `PdfSecurityTest`. Text
+  recognition (`PdfOcr` with `OcrLimits`, ADR 0015) refuses books with more
+  than 1,500 pages to recognize before drawing any; stops after 60 minutes of
+  recognition per book, counting the pages stored by earlier runs; gives ML
+  Kit one minute per page; draws one page at a time in the whole app into a
+  bitmap of at most 4,096 pixels a side and 12 million pixels; and ends in a
+  typed failure when a bitmap cannot be allocated or the recognizer fails.
+  Stored recognized pages over 4 MiB, of another format version or that do
+  not parse are ignored and recognized again. Verified by `PdfOcrTest`,
+  `OcrLimitsTest` and `OcrPageStoreTest`.)
 - **SR-5** Cleartext traffic is disabled (`network_security_config`); only
   allowlisted HTTPS hosts are contacted, and only after a user action. (Until
   downloads arrive the app has no network permission at all: the `INTERNET`

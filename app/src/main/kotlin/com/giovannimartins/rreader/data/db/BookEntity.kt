@@ -62,4 +62,7 @@ enum class ImportFailure {
 
     /** On-device text recognition failed on a scanned PDF (ADR 0015). */
     OCR_FAILED,
+
+    /** A scanned PDF with more pages to recognize than the text recognition limit (SR-4). */
+    TOO_MANY_SCANNED_PAGES,
 }

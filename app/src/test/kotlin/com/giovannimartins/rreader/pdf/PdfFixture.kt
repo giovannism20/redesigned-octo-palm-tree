@@ -10,10 +10,13 @@ import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission
 import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy
 import com.tom_roush.pdfbox.pdmodel.font.PDFont
 import com.tom_roush.pdfbox.pdmodel.font.PDType1Font
+import com.tom_roush.pdfbox.pdmodel.graphics.color.PDDeviceGray
+import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
 import com.tom_roush.pdfbox.pdmodel.interactive.documentnavigation.destination.PDPageFitDestination
 import com.tom_roush.pdfbox.pdmodel.interactive.documentnavigation.destination.PDPageXYZDestination
 import com.tom_roush.pdfbox.pdmodel.interactive.documentnavigation.outline.PDDocumentOutline
 import com.tom_roush.pdfbox.pdmodel.interactive.documentnavigation.outline.PDOutlineItem
+import java.io.ByteArrayInputStream
 import java.io.File
 
 /**
@@ -24,7 +27,7 @@ internal class PdfFixture(
     context: Context,
 ) {
     private val pages = mutableListOf<List<Text>>()
-    private val shapes = mutableSetOf<Int>()
+    private val drawings = mutableMapOf<Int, Drawing>()
     private val bookmarks = mutableListOf<Bookmark>()
     var title: String? = null
     var author: String? = null
@@ -42,11 +45,14 @@ internal class PdfFixture(
         pages += PageText().apply(block).texts
     }
 
-    /** Adds a page with a filled rectangle and no text, as a scan looks to a text extractor. */
-    fun picturePage() {
-        shapes += pages.size
-        pages += emptyList<Text>()
-    }
+    /** Adds a page that is a picture without text, as a scanned page looks to a text extractor. */
+    fun picturePage() = drawnPage(Drawing.Picture)
+
+    /** Adds a page without text that draws [segments] path segments, as text turned into outlines does. */
+    fun outlinedTextPage(segments: Int = LayoutTextStripper.MIN_SHAPE_SEGMENTS) = drawnPage(Drawing.Shapes(segments))
+
+    /** Adds a page with nothing on it but a few rules, as a blank page of a printed book. */
+    fun blankPage() = drawnPage(Drawing.Shapes(RULE_SEGMENTS))
 
     /** A bookmark to page [pageIndex], at [top] points from the top edge or to the whole page; [children] nest. */
     fun bookmark(
@@ -65,7 +71,7 @@ internal class PdfFixture(
 
     fun writeTo(file: File): File {
         PDDocument().use { document ->
-            pages.forEachIndexed { index, texts -> document.addPage(drawPage(document, texts, index in shapes)) }
+            pages.forEachIndexed { index, texts -> document.addPage(drawPage(document, texts, drawings[index])) }
             if (bookmarks.isNotEmpty()) {
                 document.documentCatalog.documentOutline =
                     PDDocumentOutline().apply { bookmarks.filter { it.root }.forEach { addLast(it.toItem(document)) } }
@@ -84,16 +90,36 @@ internal class PdfFixture(
         return file
     }
 
+    private fun drawnPage(drawing: Drawing) {
+        drawings[pages.size] = drawing
+        pages += emptyList<Text>()
+    }
+
     private fun drawPage(
         document: PDDocument,
         texts: List<Text>,
-        withShape: Boolean,
+        drawing: Drawing?,
     ): PDPage {
         val page = PDPage(PDRectangle.A5).also { it.rotation = rotation }
         PDPageContentStream(document, page).use { stream ->
-            if (withShape) {
-                stream.addRect(MARGIN, MARGIN, page.mediaBox.width - 2 * MARGIN, page.mediaBox.height - 2 * MARGIN)
-                stream.fill()
+            val width = page.mediaBox.width - 2 * MARGIN
+            val height = page.mediaBox.height - 2 * MARGIN
+            when (drawing) {
+                Drawing.Picture -> {
+                    stream.drawImage(grayPicture(document), MARGIN, MARGIN, width, height)
+                }
+
+                is Drawing.Shapes -> {
+                    stream.moveTo(MARGIN, MARGIN)
+                    repeat(drawing.segments - 1) { step ->
+                        stream.lineTo(MARGIN + step % width, MARGIN + step % height)
+                    }
+                    stream.stroke()
+                }
+
+                null -> {
+                    Unit
+                }
             }
             texts.forEach { text ->
                 stream.beginText()
@@ -104,6 +130,20 @@ internal class PdfFixture(
             }
         }
         return page
+    }
+
+    /** A small grey picture, stored without compression; text extraction never decodes it. */
+    private fun grayPicture(document: PDDocument): PDImageXObject {
+        val pixels = ByteArray(PICTURE_SIDE * PICTURE_SIDE) { (it % GRAY_LEVELS).toByte() }
+        return PDImageXObject(
+            document,
+            ByteArrayInputStream(pixels),
+            null,
+            PICTURE_SIDE,
+            PICTURE_SIDE,
+            BITS_PER_COMPONENT,
+            PDDeviceGray.INSTANCE,
+        )
     }
 
     private fun Bookmark.toItem(document: PDDocument): PDOutlineItem {
@@ -156,6 +196,14 @@ internal class PdfFixture(
         }
     }
 
+    private sealed interface Drawing {
+        data object Picture : Drawing
+
+        data class Shapes(
+            val segments: Int,
+        ) : Drawing
+    }
+
     class Text(
         val text: String,
         val x: Float,
@@ -185,5 +233,9 @@ internal class PdfFixture(
         const val FOOTER_BASELINE = 565f
         private const val MARGIN = 30f
         private const val KEY_LENGTH = 128
+        private const val RULE_SEGMENTS = 4
+        private const val PICTURE_SIDE = 16
+        private const val GRAY_LEVELS = 256
+        private const val BITS_PER_COMPONENT = 8
     }
 }

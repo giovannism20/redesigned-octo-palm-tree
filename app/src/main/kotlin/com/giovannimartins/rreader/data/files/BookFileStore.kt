@@ -18,6 +18,7 @@ import javax.inject.Singleton
  * files/books/{bookId}/source.{epub,pdf}
  * files/books/{bookId}/chapters/{index}.txt
  * files/books/{bookId}/cover
+ * files/books/{bookId}/ocr/{page}.json   (pages read by text recognition while the import runs)
  * files/imports/            (temporary files while copying)
  * ```
  *
@@ -25,6 +26,7 @@ import javax.inject.Singleton
  * build a path outside this layout.
  */
 @Singleton
+@Suppress("TooManyFunctions") // It owns every path of a book's storage; splitting it would scatter the layout.
 class BookFileStore internal constructor(
     filesDir: File,
 ) {
@@ -55,6 +57,15 @@ class BookFileStore internal constructor(
     ): File {
         require(index >= 0) { "Chapter index must not be negative" }
         return File(File(bookDir(bookId), "chapters"), "$index.txt")
+    }
+
+    /** Where the page at [pageIndex] read by text recognition is kept while the book's import runs. */
+    fun ocrPageFile(
+        bookId: String,
+        pageIndex: Int,
+    ): File {
+        require(pageIndex >= 0) { "Page index must not be negative" }
+        return File(File(bookDir(bookId), OCR_DIRECTORY), "$pageIndex.json")
     }
 
     /** Moves a completed temporary import into place as the book's source file. */
@@ -97,6 +108,19 @@ class BookFileStore internal constructor(
         cover: CoverImage,
     ) = writeAtomically(coverFile(bookId), cover.bytes)
 
+    /** Writes the page at [pageIndex] read by text recognition, replacing it whole or not at all. */
+    @Throws(IOException::class)
+    fun writeOcrPage(
+        bookId: String,
+        pageIndex: Int,
+        bytes: ByteArray,
+    ) = writeAtomically(ocrPageFile(bookId, pageIndex), bytes)
+
+    /** Removes the pages text recognition stored for a book, once its import is over. */
+    fun deleteOcrPages(bookId: String) {
+        File(bookDir(bookId), OCR_DIRECTORY).deleteRecursively()
+    }
+
     /** Removes everything stored for a book. */
     fun delete(bookId: String) {
         bookDir(bookId).deleteRecursively()
@@ -121,6 +145,7 @@ class BookFileStore internal constructor(
     }
 
     private companion object {
+        const val OCR_DIRECTORY = "ocr"
         val UUID_PATTERN = Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
     }
 }
