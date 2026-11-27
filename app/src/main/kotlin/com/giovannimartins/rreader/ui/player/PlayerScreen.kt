@@ -148,13 +148,7 @@ fun PlayerScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             PlayerTopBar(onMinimize = onMinimize)
-            Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                BookCover(
-                    title = title,
-                    coverFile = nowPlaying.coverFile,
-                    modifier = Modifier.widthIn(max = 220.dp),
-                )
-            }
+            PlayerCover(title = title, nowPlaying = nowPlaying, modifier = Modifier.fillMaxWidth().weight(1f))
             BookHeading(nowPlaying = nowPlaying, title = title)
             ChapterProgress(nowPlaying = nowPlaying, onSeekTo = onSeekTo)
             TimeLeftLines(nowPlaying = nowPlaying)

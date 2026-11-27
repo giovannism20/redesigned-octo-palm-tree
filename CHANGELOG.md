@@ -120,6 +120,8 @@ All notable user-visible changes are documented here. The format follows
 
 ### Fixed
 
+- With very large text the player's cover no longer covers the book's title:
+  it gives way to the controls when no room is left.
 - The Dora, Alex and Santa voices no longer have a thin, high metallic
   whistle in the background, which was easy to hear on headphones.
 - A sentence that makes a natural voice close the app no longer stops the
