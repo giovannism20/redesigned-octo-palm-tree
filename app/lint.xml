@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Reviewed Lint findings in dependencies. Keep every entry narrow and explain why it is safe. -->
+<lint>
+    <!-- Bouncy Castle comes with PdfBox-Android (for certificate-encrypted PDFs) and ships
+         trust-all TrustManagers for its EST client. R Reader makes no TLS connection through
+         Bouncy Castle, and R8 removes those unused classes from release builds. -->
+    <issue id="TrustAllX509TrustManager">
+        <ignore path="**/bcpkix-jdk15to18-*.jar" />
+    </issue>
+</lint>
