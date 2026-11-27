@@ -1,11 +1,11 @@
-package com.giovannimartins.rreader.catalog
+package com.giovannimartins.rreader.net
 
 import java.io.Closeable
 import java.io.IOException
 import java.io.InputStream
 import java.net.URI
 
-/** The answer to one GET: its status, the headers the catalogue needs and the body, which must be closed. */
+/** The answer to one GET: its status, the headers the app needs and the body, which must be closed. */
 class HttpResponse(
     val code: Int,
     /** The `Content-Type` header, or null. */
@@ -15,6 +15,8 @@ class HttpResponse(
     /** The `Location` header of a redirect, or null. */
     val location: String?,
     val body: InputStream,
+    /** The `Content-Range` header of a partial answer (HTTP 206), or null. */
+    val contentRange: String? = null,
     private val release: () -> Unit = {},
 ) : Closeable {
     override fun close() {
@@ -27,7 +29,7 @@ class HttpResponse(
 }
 
 /**
- * Sends one HTTPS GET and does not follow redirects: [CatalogHttp] decides where to go next. The app uses
+ * Sends one HTTPS GET and does not follow redirects: [HttpsClient] decides where to go next. The app uses
  * [UrlConnectionTransport]; tests use a fake.
  */
 fun interface HttpTransport {

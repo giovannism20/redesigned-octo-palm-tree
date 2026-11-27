@@ -35,7 +35,7 @@ new dependency class). Reporting policy: [SECURITY.md](../SECURITY.md).
 |---|----------|-----------|----------|
 | B1 | File intake | Any file chosen/shared by the user → importer | Signature-based type detection, size limits, parsing limits, typed failures |
 | B2 | Inter-app intents and media controllers | Other apps → exported activity / media session service | Minimal exported components, accept only `content://` URIs with read grants, validate MIME and content; the media session accepts only trusted controllers and book-id requests, ignores media buttons and notification actions that other apps send as start intents, and grants the app's own commands to the app's own controllers only |
-| B3 | Network | Internet → catalogue client (search feeds, book downloads); later the model downloader | `CatalogHttp` is the only client: HTTPS only, host allowlist (`CatalogHosts`: exactly `www.gutenberg.org` and its official mirror `gutenberg.pglaf.org`, [ADR 0019](decisions/0019-gutenberg-site-and-mirror-only.md)) checked for every address and redirect, at most 5 redirects, expected media type, size limits, timeouts; the network security config disables cleartext and trusts no CA for other hosts; downloaded books then cross B1 like any file; SHA-256 pinning for models |
+| B3 | Network | Internet → catalogue client (search feeds, book downloads); later the model downloader | Every request goes through `HttpsClient` (`CatalogHttp` for the catalogue): HTTPS only, host allowlist (`CatalogHosts`: exactly `www.gutenberg.org` and its official mirror `gutenberg.pglaf.org`, [ADR 0019](decisions/0019-gutenberg-site-and-mirror-only.md)) checked for every address and redirect, at most 5 redirects, expected media type, size limits, timeouts; the network security config disables cleartext and trusts no CA for other hosts; downloaded books then cross B1 like any file; SHA-256 pinning for models |
 | B4 | TTS engine | App → third-party TTS engine process | Prefer offline voices; flag voices that need the network (their text leaves the device) |
 | B5 | Build supply chain | Dependencies, Gradle wrapper, Actions → build | Version catalog, Dependabot, wrapper validation, Actions pinned by SHA, CodeQL; the AARs published only on GitHub are downloaded by the build from their releases and refused unless they match pinned SHA-256 values |
 | B6 | Public repository | Developer machines → GitHub | Secret guard layers, no personal data, reviewed third-party content |
@@ -136,7 +136,7 @@ Each requirement is testable; reference its ID in tests and reviews.
   `PdfBookParserTest`.)
 - **SR-5** Cleartext traffic is disabled (`network_security_config`); only
   allowlisted HTTPS hosts are contacted, and only after a user action. (ADR
-  0017: `CatalogHttp` is the app's only network client and sends a request
+  0017: `HttpsClient` (as `CatalogHttp`, for the catalogue) is the app's only network client and sends a request
   only when the listener searches, asks for more results or downloads a book;
   a queued download waits for a connection, tries again after a lost
   connection or a site that is down or busy, but starts no new try two minutes

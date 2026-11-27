@@ -1,4 +1,4 @@
-package com.giovannimartins.rreader.catalog
+package com.giovannimartins.rreader.net
 
 import java.io.ByteArrayInputStream
 import java.io.IOException
@@ -50,6 +50,14 @@ internal class FakeTransport : HttpTransport {
             contentType: String?,
             contentLength: Long,
         ) = HttpResponse(200, contentType, contentLength, null, body)
+
+        /** A partial answer (HTTP 206) carrying [body] as the bytes [range] (`bytes first-last/length`) of a file. */
+        fun partial(
+            body: ByteArray,
+            contentType: String?,
+            range: String?,
+            contentLength: Long = body.size.toLong(),
+        ) = HttpResponse(206, contentType, contentLength, null, ByteArrayInputStream(body), contentRange = range)
 
         fun redirect(
             location: String?,

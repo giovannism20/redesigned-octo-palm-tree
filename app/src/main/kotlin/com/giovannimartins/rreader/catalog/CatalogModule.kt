@@ -9,9 +9,6 @@ import dagger.hilt.components.SingletonComponent
 @InstallIn(SingletonComponent::class)
 abstract class CatalogModule {
     @Binds
-    abstract fun transport(transport: UrlConnectionTransport): HttpTransport
-
-    @Binds
     abstract fun downloads(downloads: WorkManagerCatalogDownloads): CatalogDownloads
 
     @Binds

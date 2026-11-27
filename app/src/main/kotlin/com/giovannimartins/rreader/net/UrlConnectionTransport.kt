@@ -1,4 +1,4 @@
-package com.giovannimartins.rreader.catalog
+package com.giovannimartins.rreader.net
 
 import java.io.ByteArrayInputStream
 import java.io.IOException
@@ -8,10 +8,10 @@ import javax.inject.Inject
 import javax.net.ssl.HttpsURLConnection
 
 /**
- * [HttpTransport] on the platform's `HttpsURLConnection`, so the catalogue needs no HTTP library. Redirects are left
- * to [CatalogHttp], no response is cached, and connecting and each read time out. The app installs no
- * `CookieHandler`, so cookies are neither stored nor sent. Only HTTPS is spoken: anything else is refused here, and the
- * network security config forbids cleartext and trusts no other host (SR-5).
+ * [HttpTransport] on the platform's `HttpsURLConnection`, so the app needs no HTTP library. Redirects are left to
+ * [HttpsClient], no response is cached, and connecting and each read time out. The app installs no
+ * `CookieHandler`, so cookies are neither stored nor sent. Only HTTPS is spoken: anything else is refused here, and
+ * the network security config forbids cleartext and trusts no host outside the allowlists (SR-5).
  */
 class UrlConnectionTransport
     @Inject
@@ -30,7 +30,7 @@ class UrlConnectionTransport
             try {
                 val code = connection.responseCode
                 val body =
-                    if (code == HttpURLConnection.HTTP_OK) {
+                    if (code == HttpURLConnection.HTTP_OK || code == HttpURLConnection.HTTP_PARTIAL) {
                         connection.inputStream
                     } else {
                         connection.errorStream ?: ByteArrayInputStream(ByteArray(0))
@@ -41,6 +41,7 @@ class UrlConnectionTransport
                     contentLength = connection.contentLengthLong,
                     location = connection.getHeaderField("Location"),
                     body = body,
+                    contentRange = connection.getHeaderField("Content-Range"),
                     release = connection::disconnect,
                 )
             } catch (e: IOException) {

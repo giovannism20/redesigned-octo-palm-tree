@@ -11,9 +11,6 @@ import com.giovannimartins.rreader.catalog.CatalogRepository
 import com.giovannimartins.rreader.catalog.CuratedCatalog
 import com.giovannimartins.rreader.catalog.DOM_CASMURRO
 import com.giovannimartins.rreader.catalog.DownloadState
-import com.giovannimartins.rreader.catalog.FakeTransport
-import com.giovannimartins.rreader.catalog.FakeTransport.Companion.ATOM
-import com.giovannimartins.rreader.catalog.FakeTransport.Companion.ok
 import com.giovannimartins.rreader.catalog.GutenbergEndpoints
 import com.giovannimartins.rreader.catalog.IRACEMA
 import com.giovannimartins.rreader.catalog.MutableClock
@@ -28,6 +25,9 @@ import com.giovannimartins.rreader.data.db.RReaderDatabase
 import com.giovannimartins.rreader.data.files.BookFileStore
 import com.giovannimartins.rreader.data.library.LibraryRepository
 import com.giovannimartins.rreader.importer.FakeImportJobs
+import com.giovannimartins.rreader.net.FakeTransport
+import com.giovannimartins.rreader.net.FakeTransport.Companion.ATOM
+import com.giovannimartins.rreader.net.FakeTransport.Companion.ok
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

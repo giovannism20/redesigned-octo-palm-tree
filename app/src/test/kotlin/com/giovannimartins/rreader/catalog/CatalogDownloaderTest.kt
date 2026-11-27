@@ -3,10 +3,6 @@ package com.giovannimartins.rreader.catalog
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import com.giovannimartins.rreader.catalog.FakeTransport.Companion.EPUB
-import com.giovannimartins.rreader.catalog.FakeTransport.Companion.ok
-import com.giovannimartins.rreader.catalog.FakeTransport.Companion.redirect
-import com.giovannimartins.rreader.catalog.FakeTransport.Companion.status
 import com.giovannimartins.rreader.data.db.BookStatus
 import com.giovannimartins.rreader.data.db.RReaderDatabase
 import com.giovannimartins.rreader.data.files.BookFileStore
@@ -15,6 +11,12 @@ import com.giovannimartins.rreader.importer.BookIntake
 import com.giovannimartins.rreader.importer.EpubBookParser
 import com.giovannimartins.rreader.importer.FakeImportJobs
 import com.giovannimartins.rreader.importer.MinimalEpub
+import com.giovannimartins.rreader.net.FakeTransport
+import com.giovannimartins.rreader.net.FakeTransport.Companion.EPUB
+import com.giovannimartins.rreader.net.FakeTransport.Companion.ok
+import com.giovannimartins.rreader.net.FakeTransport.Companion.redirect
+import com.giovannimartins.rreader.net.FakeTransport.Companion.status
+import com.giovannimartins.rreader.net.HttpResponse
 import com.giovannimartins.rreader.textkit.BookFormat
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers

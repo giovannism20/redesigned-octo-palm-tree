@@ -1,8 +1,9 @@
 package com.giovannimartins.rreader.catalog
 
-import com.giovannimartins.rreader.catalog.FakeTransport.Companion.ATOM
-import com.giovannimartins.rreader.catalog.FakeTransport.Companion.ok
-import com.giovannimartins.rreader.catalog.FakeTransport.Companion.status
+import com.giovannimartins.rreader.net.FakeTransport
+import com.giovannimartins.rreader.net.FakeTransport.Companion.ATOM
+import com.giovannimartins.rreader.net.FakeTransport.Companion.ok
+import com.giovannimartins.rreader.net.FakeTransport.Companion.status
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking

@@ -6,6 +6,9 @@ import com.giovannimartins.rreader.data.files.BookFileStore
 import com.giovannimartins.rreader.di.IoDispatcher
 import com.giovannimartins.rreader.importer.BookIntake
 import com.giovannimartins.rreader.importer.IntakeResult
+import com.giovannimartins.rreader.net.FetchFailure
+import com.giovannimartins.rreader.net.FetchResult
+import com.giovannimartins.rreader.net.HttpsRequest
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -132,7 +135,7 @@ class CatalogDownloader
         ): FetchResult {
             onProgress(DownloadProgress(fromMirror))
             return file.outputStream().use { sink ->
-                http.fetch(CatalogRequest(address, EPUB_TYPES, MAX_DOWNLOAD_BYTES), sink) { received, total ->
+                http.fetch(HttpsRequest(address, EPUB_TYPES, MAX_DOWNLOAD_BYTES), sink) { received, total ->
                     onProgress(DownloadProgress(fromMirror, received, total))
                 }
             }
@@ -157,7 +160,12 @@ class CatalogDownloader
                         DownloadFailure.SITE_DOWN
                     }
 
-                    FetchFailure.REFUSED, FetchFailure.WRONG_TYPE, FetchFailure.BLOCKED -> {
+                    // Books are never resumed, so a refused resume cannot happen here; it means the same as a refusal.
+                    FetchFailure.RESUME_REFUSED,
+                    FetchFailure.REFUSED,
+                    FetchFailure.WRONG_TYPE,
+                    FetchFailure.BLOCKED,
+                    -> {
                         DownloadFailure.UNAVAILABLE
                     }
                 }

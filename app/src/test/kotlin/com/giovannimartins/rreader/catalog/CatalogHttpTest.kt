@@ -1,10 +1,15 @@
 package com.giovannimartins.rreader.catalog
 
-import com.giovannimartins.rreader.catalog.FakeTransport.Companion.EPUB
-import com.giovannimartins.rreader.catalog.FakeTransport.Companion.breakingBody
-import com.giovannimartins.rreader.catalog.FakeTransport.Companion.ok
-import com.giovannimartins.rreader.catalog.FakeTransport.Companion.redirect
-import com.giovannimartins.rreader.catalog.FakeTransport.Companion.status
+import com.giovannimartins.rreader.net.FakeTransport
+import com.giovannimartins.rreader.net.FakeTransport.Companion.EPUB
+import com.giovannimartins.rreader.net.FakeTransport.Companion.breakingBody
+import com.giovannimartins.rreader.net.FakeTransport.Companion.ok
+import com.giovannimartins.rreader.net.FakeTransport.Companion.redirect
+import com.giovannimartins.rreader.net.FakeTransport.Companion.status
+import com.giovannimartins.rreader.net.FetchFailure
+import com.giovannimartins.rreader.net.FetchResult
+import com.giovannimartins.rreader.net.HttpsClient
+import com.giovannimartins.rreader.net.HttpsRequest
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -99,12 +104,12 @@ class CatalogHttpTest {
 
     @Test
     fun `stops after too many redirects`() {
-        (0..CatalogHttp.MAX_REDIRECTS + 1).forEach { hop ->
+        (0..HttpsClient.MAX_REDIRECTS + 1).forEach { hop ->
             transport.answer("https://www.gutenberg.org/hop/$hop") { redirect("/hop/${hop + 1}") }
         }
 
         assertThat(fetch("https://www.gutenberg.org/hop/0")).isEqualTo(FetchResult.Failed(FetchFailure.BLOCKED))
-        assertThat(transport.requests).hasSize(CatalogHttp.MAX_REDIRECTS + 1)
+        assertThat(transport.requests).hasSize(HttpsClient.MAX_REDIRECTS + 1)
     }
 
     @Test
@@ -195,7 +200,7 @@ class CatalogHttpTest {
                 FetchFailure.REFUSED,
             )
         assertThat(FetchFailure.entries.filter { it.retryable })
-            .containsExactly(FetchFailure.NETWORK, FetchFailure.SERVER)
+            .containsExactly(FetchFailure.NETWORK, FetchFailure.SERVER, FetchFailure.RESUME_REFUSED)
     }
 
     @Test
@@ -224,7 +229,7 @@ class CatalogHttpTest {
         return runBlocking { http.fetch(request(address), sink) }
     }
 
-    private fun request(address: String) = CatalogRequest(address, setOf(EPUB), MAX_BYTES)
+    private fun request(address: String) = HttpsRequest(address, setOf(EPUB), MAX_BYTES)
 
     private companion object {
         const val BOOK = "https://www.gutenberg.org/ebooks/55752.epub3.images"

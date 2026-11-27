@@ -1,5 +1,8 @@
 package com.giovannimartins.rreader.catalog
 
+import com.giovannimartins.rreader.net.FetchFailure
+import com.giovannimartins.rreader.net.FetchResult
+import com.giovannimartins.rreader.net.HttpsRequest
 import com.giovannimartins.rreader.textkit.gutenberg.GutenbergFeedParser
 import java.io.ByteArrayOutputStream
 import java.time.Clock
@@ -76,7 +79,7 @@ class CatalogRepository
         ): SearchResult {
             cache[address]?.let { return SearchResult.Found(it) }
             val body = ByteArrayOutputStream()
-            return when (val result = http.fetch(CatalogRequest(address, FEED_TYPES, MAX_FEED_BYTES), body)) {
+            return when (val result = http.fetch(HttpsRequest(address, FEED_TYPES, MAX_FEED_BYTES), body)) {
                 is FetchResult.Failed -> SearchResult.Failed(failureOf(result.failure))
                 is FetchResult.Received -> read(terms, address, body.toByteArray())
             }
