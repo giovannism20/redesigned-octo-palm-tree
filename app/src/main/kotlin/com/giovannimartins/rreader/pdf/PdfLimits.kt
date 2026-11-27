@@ -8,16 +8,17 @@ import kotlin.time.Duration.Companion.minutes
  * end in a typed failure, never in an endless import or an out-of-memory crash.
  */
 data class PdfLimits(
-    /** Documents with more pages are refused before any text is read. */
+    /** Documents with more pages are refused, before any text is read when they declare it. */
     val maxPages: Int = DEFAULT_MAX_PAGES,
     /**
      * Extraction stops once it has run this long, checked before every page and every [ExtractionBudget.CHECK_INTERVAL]
-     * glyphs. It stays well under the ten minutes after which WorkManager stops a worker and retries it.
+     * glyphs or content stream operators. It stays well under the ten minutes after which WorkManager stops a worker
+     * and retries it.
      */
     val timeBudget: Duration = DEFAULT_TIME_BUDGET,
     /** Glyphs read per page; the rest of a page beyond it is ignored, which bounds the memory a page can take. */
     val maxGlyphsPerPage: Int = DEFAULT_MAX_GLYPHS_PER_PAGE,
-    /** Glyphs read from the whole document before extraction stops. */
+    /** Glyphs met in the whole document, also those beyond a page's cap, before extraction stops. */
     val maxGlyphs: Long = DEFAULT_MAX_GLYPHS,
     /** Memory PdfBox may use for the file's streams before it spills them to a temporary file in the app cache. */
     val mainMemoryBytes: Long = DEFAULT_MAIN_MEMORY_BYTES,

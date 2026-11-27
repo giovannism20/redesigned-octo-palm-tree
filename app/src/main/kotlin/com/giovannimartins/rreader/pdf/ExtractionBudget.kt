@@ -4,34 +4,52 @@ import kotlin.time.TimeSource
 
 /**
  * Keeps one extraction within the time and size [limits] and lets it be cancelled. PdfBox has no cancellation of its
- * own, so the extractor calls [checkPage] and [countGlyph] from its callbacks; they interrupt the extraction by
- * throwing.
+ * own, so the extractor reports pages, glyphs and content stream operators from its callbacks; the budget interrupts
+ * the extraction by throwing.
  */
 internal class ExtractionBudget(
     private val limits: PdfLimits,
     timeSource: TimeSource,
 ) {
     private val start = timeSource.markNow()
+    private var pages = 0
     private var glyphs = 0L
+    private var operators = 0L
 
     /**
      * Throws [InterruptedException] when the import was cancelled (its thread interrupted, as `runInterruptible` does
      * when the coroutine is cancelled), or [ExtractionStopped] when the time budget is spent.
      */
-    fun checkPage() {
+    fun check() {
         if (Thread.currentThread().isInterrupted) throw InterruptedException("PDF extraction cancelled")
         if (start.elapsedNow() > limits.timeBudget) throw ExtractionStopped(PdfLimit.TIME_BUDGET)
     }
 
-    /** Counts one glyph, enforcing [PdfLimits.maxGlyphs] and checking time and cancellation now and then. */
+    /**
+     * Counts a page about to be read, enforcing [PdfLimits.maxPages] again: the page count a document declares, which
+     * the extractor checks first, can be a lie.
+     */
+    fun startPage() {
+        pages++
+        if (pages > limits.maxPages) throw ExtractionStopped(PdfLimit.MAX_PAGES)
+        check()
+    }
+
+    /** Counts one glyph, kept or not, enforcing [PdfLimits.maxGlyphs] and checking the clock now and then. */
     fun countGlyph() {
         glyphs++
         if (glyphs > limits.maxGlyphs) throw ExtractionStopped(PdfLimit.MAX_GLYPHS)
-        if (glyphs % CHECK_INTERVAL == 0L) checkPage()
+        if (glyphs % CHECK_INTERVAL == 0L) check()
+    }
+
+    /** Counts one content stream operator, so that a page full of drawing and no text still checks the clock. */
+    fun countOperator() {
+        operators++
+        if (operators % CHECK_INTERVAL == 0L) check()
     }
 
     companion object {
-        /** Glyphs between two checks of the clock. */
+        /** Glyphs, or operators, between two checks of the clock. */
         const val CHECK_INTERVAL: Long = 1_024
     }
 }

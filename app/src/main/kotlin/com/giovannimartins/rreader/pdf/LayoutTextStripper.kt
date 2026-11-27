@@ -3,6 +3,8 @@ package com.giovannimartins.rreader.pdf
 import com.giovannimartins.rreader.Diagnostics
 import com.giovannimartins.rreader.textkit.layout.LayoutLine
 import com.giovannimartins.rreader.textkit.layout.PageLayout
+import com.tom_roush.pdfbox.contentstream.operator.Operator
+import com.tom_roush.pdfbox.cos.COSBase
 import com.tom_roush.pdfbox.pdmodel.PDPage
 import com.tom_roush.pdfbox.text.PDFTextStripper
 import com.tom_roush.pdfbox.text.TextPosition
@@ -49,7 +51,7 @@ internal class LayoutTextStripper(
     }
 
     override fun startPage(page: PDPage) {
-        budget.checkPage()
+        budget.startPage()
         val box = page.cropBox
         val turned = page.rotation % HALF_TURN != 0
         pageWidth = abs(if (turned) box.height else box.width).finiteOrZero()
@@ -60,10 +62,18 @@ internal class LayoutTextStripper(
         line.clear()
     }
 
+    override fun processOperator(
+        operator: Operator,
+        operands: MutableList<COSBase>,
+    ) {
+        budget.countOperator()
+        super.processOperator(operator, operands)
+    }
+
     override fun processTextPosition(text: TextPosition) {
+        budget.countGlyph()
         if (pageGlyphs < maxGlyphsPerPage) {
             pageGlyphs++
-            budget.countGlyph()
             super.processTextPosition(text)
         }
     }

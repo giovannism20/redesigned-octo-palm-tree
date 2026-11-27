@@ -5,6 +5,9 @@ import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.tom_roush.pdfbox.cos.COSName
 import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.pdmodel.PDPage
+import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
+import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
 import org.junit.Assert.assertThrows
 import org.junit.Rule
 import org.junit.Test
@@ -12,6 +15,7 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.File
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
@@ -32,6 +36,46 @@ class PdfSecurityTest {
             extract(book, PdfLimits(maxPages = 2)),
         ).isEqualTo(failure(PdfError.LimitExceeded(PdfLimit.MAX_PAGES)))
         assertThat(extract(book, PdfLimits(maxPages = 3))).isInstanceOf(PdfExtraction.Extracted::class.java)
+    }
+
+    @Test
+    fun `SR-4 counts pages while reading, as the declared page count can lie`() {
+        val lying = file()
+        PDDocument.load(textPages(3).writeTo(file())).use { document ->
+            document.pages.cosObject.setInt(COSName.COUNT, 2)
+            document.save(lying)
+        }
+        PDDocument.load(lying).use { assertThat(it.numberOfPages).isEqualTo(2) }
+
+        assertThat(PdfLayoutExtractor(context, PdfLimits(maxPages = 2), TimeSource.Monotonic).extract(lying))
+            .isEqualTo(failure(PdfError.LimitExceeded(PdfLimit.MAX_PAGES)))
+    }
+
+    @Test
+    fun `SR-4 keeps checking the clock on a page of drawings or of glyphs beyond the page cap`() {
+        val drawings = file()
+        PDDocument().use { document ->
+            val page = PDPage(PDRectangle.A5)
+            document.addPage(page)
+            PDPageContentStream(document, page).use { stream ->
+                repeat(2_000) {
+                    stream.addRect(10f, 10f, 5f, 5f)
+                    stream.fill()
+                }
+            }
+            document.save(drawings)
+        }
+        val longLine = PdfFixture(context).apply { page { line("x".repeat(3_000)) } }.writeTo(file())
+
+        assertThat(PdfLayoutExtractor(context, PdfLimits(), clockExpiringAfter(reads = 1)).extract(drawings))
+            .isEqualTo(failure(PdfError.LimitExceeded(PdfLimit.TIME_BUDGET)))
+        assertThat(
+            PdfLayoutExtractor(
+                context,
+                PdfLimits(maxGlyphsPerPage = 10),
+                clockExpiringAfter(reads = 1),
+            ).extract(longLine),
+        ).isEqualTo(failure(PdfError.LimitExceeded(PdfLimit.TIME_BUDGET)))
     }
 
     @Test
@@ -147,6 +191,17 @@ class PdfSecurityTest {
 
         assertThat(outline.map { it.title }).containsExactly("Um", "Dois").inOrder()
     }
+
+    /** A clock whose time is up after it has been read [reads] times. */
+    private fun clockExpiringAfter(reads: Int) =
+        object : TimeSource {
+            override fun markNow(): TimeMark =
+                object : TimeMark {
+                    private var done = 0
+
+                    override fun elapsedNow(): Duration = if (++done > reads) 1.hours else Duration.ZERO
+                }
+        }
 
     private fun textPages(count: Int) =
         PdfFixture(context).apply { repeat(count) { index -> page { line("Texto da página ${index + 1}.") } } }

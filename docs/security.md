@@ -69,10 +69,11 @@ Each requirement is testable; reference its ID in tests and reviews.
   `EpubSecurityTest`).
 - **SR-4** PDF extraction and OCR run with page, time and memory limits.
   (`PdfLayoutExtractor` with `PdfLimits`: documents over 3,000 pages are
-  refused before any text is read; extraction stops after 5 minutes, checked
-  before every page and every 1,024 glyphs, and as soon as its import is
-  cancelled; at most 20 million glyphs are read per document and 100,000 per
-  page; PdfBox buffers at most 16 MiB in memory and 512 MiB in all, the rest
+  refused, before any text is read when they declare it and while reading
+  when the declared count lies; extraction stops after 5 minutes, checked
+  before every page and every 1,024 glyphs or content stream operators, and
+  as soon as its import is cancelled; at most 20 million glyphs are met per
+  document and 100,000 kept per page; PdfBox buffers at most 16 MiB in memory and 512 MiB in all, the rest
   in a temporary file in the app cache; the outline reader visits at most
   5,000 entries, 32 levels deep, and stops at loops; running out of memory or
   stack ends in a typed failure. Verified by `PdfSecurityTest`.)
