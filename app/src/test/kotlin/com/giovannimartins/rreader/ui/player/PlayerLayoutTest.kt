@@ -51,6 +51,7 @@ class PlayerLayoutTest {
             compose.onNodeWithText("Sleep timer", useUnmergedTree = true),
             compose.onNodeWithText("Chapters", useUnmergedTree = true),
             compose.onNodeWithText("Text", useUnmergedTree = true),
+            compose.onNodeWithText("Voice", useUnmergedTree = true),
         ).forEach { it.assertFullyOnScreen() }
     }
 

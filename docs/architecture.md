@@ -85,7 +85,7 @@ Base package: `com.giovannimartins.rreader`.
 | `work` | Helpers shared by WorkManager jobs (`reportingProgress`: conflated progress publishing) | implemented |
 | `net` | `HttpsClient`, the only way to the network: HTTPS GETs through an `HttpTransport` (`UrlConnectionTransport` on `HttpsURLConnection`), every address and redirect checked by the client's `HostAllowlist`, media type, size and redirect limits, and resuming an interrupted download from where it stopped (`Range`, HTTP 206) | implemented |
 | `catalog` | Free public-domain catalogue (Project Gutenberg, [ADR 0017](decisions/0017-free-catalogue-from-project-gutenberg.md)): `CatalogHttp`, the `HttpsClient` for `CatalogHosts` with the `CatalogUserAgent`; `CuratedCatalog` (curated classics from an asset), `CatalogRepository` (OPDS search through `GutenbergEndpoints`, pages kept in memory by `SearchCache`), `CatalogDownloads` (`WorkManagerCatalogDownloads`: one unique `DownloadBookWorker` job per book, needing a connection) running `CatalogDownloader` (EPUB → temporary file → `BookIntake.importFile`), `NetworkStatus` (offline or not, from the system's default network) | implemented |
-| `ui` | Compose screens, ViewModels, navigation, theme, design system; `ui/player`: `PlaybackConnection` (`MediaController` while the app is visible), mini player, full player with speed, chapters, time left and the sleep timer; `ui/library`: progress and time left (`LibraryTimeLeft`); `ui/reader`: follow-along reader (`ReaderViewModel`, `ReaderChapter`); `ui/components`: `BookCover`, time-left text (`timeLeft`); `ui/explore`: Explore tab (`ExploreViewModel`: curated classics, search, downloads, offline state); `ui/voices`: Voices tab (`VoicesViewModel`: the nine neural voices with their emblems (`VoiceEmblem`, `VoiceLooks`), bundled samples (`VoiceSamplePlayer`), downloads, deletion, the phone's voice and its other voices named apart by `PhoneVoiceLabels`), `SystemSettings`; `ui/about`: About and licences (`AboutViewModel`, `AboutContent`, licence texts in `assets/licenses/`) | in progress (shell, library, explore, add book, voices, player) |
+| `ui` | Compose screens, ViewModels, navigation, theme, design system; `ui/player`: `PlaybackConnection` (`MediaController` while the app is visible), mini player, full player with speed, chapters, time left and the sleep timer; `ui/library`: progress and time left (`LibraryTimeLeft`); `ui/reader`: follow-along reader (`ReaderViewModel`, `ReaderChapter`); `ui/components`: `BookCover`, time-left text (`timeLeft`); `ui/explore`: Explore tab (`ExploreViewModel`: curated classics, search, downloads, offline state); `ui/voices`: Voices tab (`VoicesViewModel`: the nine neural voices with their emblems (`VoiceEmblem`, `VoiceLooks`), bundled samples (`VoiceSamplePlayer`), downloads, deletion, the phone's voice and its other voices named apart by `PhoneVoiceLabels`), `SystemSettings`; `ui/about`: About and licences (`AboutViewModel`, `AboutContent`, licence texts in `assets/licenses/`); `ui/player` also has the voice chooser (`VoiceChooserViewModel`, `VoiceChoices`, `VoiceChooserSheet`) | in progress (shell, library, explore, add book, voices, player) |
 | `di` | Hilt modules (dispatchers, application scope, database, WorkManager) | implemented |
 
 ## Layering rules
@@ -410,7 +410,9 @@ that follows the default continues with it at once (see
 [Voice changes](#voice-changes)); deleting the voice in use falls back to the
 phone's voice the same way. Samples play with ExoPlayer as media, so a book
 being listened to pauses while a sample plays; they stop when the tab is
-left.
+left. The player's "Voz" button opens a compact chooser with the same emblems
+and names (the installed neural voices and the phone's voice), which asks
+whether the choice is for this book only or for every book.
 
 ### About and licences
 

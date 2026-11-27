@@ -175,6 +175,13 @@
     <string name="player_open_voices">Open voices</string>
     <string name="player_retry">Try again</string>
     <string name="player_text">Text</string>
+    <string name="player_voice">Voice</string>
+    <string name="player_voice_title">Choose the voice</string>
+    <string name="player_voice_question">Read with %1$s:</string>
+    <string name="player_voice_this_book">This book only</string>
+    <string name="player_voice_all_books">All books</string>
+    <string name="player_voice_back">Back to the voices</string>
+    <string name="player_voice_more">Download more voices</string>
     <string name="player_sleep_timer">Sleep timer</string>
     <string name="player_sleep_timer_title">Stop listening after</string>
     <string name="player_sleep_timer_running">Sleep timer: stops in %1$s</string>

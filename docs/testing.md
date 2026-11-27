@@ -171,8 +171,10 @@ new version:
 22. Download Dora (132 MB, also brings Alex and Santa) and listen while the
     phone charges: after a while the next chapters play without "Preparando a
     voz…" (rendered ahead).
-23. Delete the voice in use: listening goes on with the phone's voice, and
+23. In the player, "Voz" lists the ready voices; choose one "Só neste livro"
+    and check another book still reads with the default voice.
+24. Delete the voice in use: listening goes on with the phone's voice, and
     "Voz do celular" shows "Em uso".
-24. "Sobre e licenças" opens from the bottom of Vozes, shows the version, the
+25. "Sobre e licenças" opens from the bottom of Vozes, shows the version, the
     source address, the GPL note and every licence text; "Abrir no
     navegador" opens the repository.

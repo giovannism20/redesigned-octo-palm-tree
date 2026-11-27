@@ -31,7 +31,7 @@ import com.giovannimartins.rreader.R
 import com.giovannimartins.rreader.playback.SleepTimerSetting
 import com.giovannimartins.rreader.playback.SleepTimerState
 
-/** Speed, sleep timer, chapters and the follow-along text, wrapping onto more lines when the text is large. */
+/** Speed, sleep timer, chapters, the follow-along text and the voice, wrapping onto lines as the text grows. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun PlayerOptions(
@@ -42,6 +42,9 @@ internal fun PlayerOptions(
     onCancelSleepTimer: () -> Unit,
     onShowChapters: () -> Unit,
     onOpenReader: () -> Unit,
+    voices: VoiceMenu,
+    onChooseVoice: (voiceId: String, forAllBooks: Boolean) -> Unit,
+    onMoreVoices: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     FlowRow(
@@ -61,6 +64,7 @@ internal fun PlayerOptions(
             Spacer(Modifier.width(8.dp))
             Text(stringResource(R.string.player_text), style = MaterialTheme.typography.labelLarge)
         }
+        VoiceButton(menu = voices, onChoose = onChooseVoice, onMoreVoices = onMoreVoices)
     }
 }
 

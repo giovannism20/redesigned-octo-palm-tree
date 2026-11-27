@@ -19,8 +19,9 @@ All notable user-visible changes are documented here. The format follows
 - The phone's own voice is one card, "Voz do celular", and its other voices
   are folded away under "Outras vozes do celular" with names that tell them
   apart ("Google · Voz 1", "Google · Voz 2").
-- Change the voice while listening: choosing a voice in Vozes takes over at
-  the sentence being read, without starting the book again.
+- Change the voice while listening: choosing a voice in Vozes, or with the
+  new "Voz" button in the player (for this book only or for every book),
+  takes over at the sentence being read, without starting the book again.
   Deleting the voice in use goes on with the phone's voice.
 - Voices that take longer to prepare (Dora, Alex, Santa) prepare the next
   chapters while the phone charges.

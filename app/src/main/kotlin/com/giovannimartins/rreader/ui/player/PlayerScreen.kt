@@ -76,9 +76,11 @@ fun PlayerRoute(
     onOpenReader: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PlayerViewModel = hiltViewModel(),
+    voiceViewModel: VoiceChooserViewModel = hiltViewModel(),
 ) {
     val nowPlaying by viewModel.nowPlaying.collectAsStateWithLifecycle()
     val sleepTimer by viewModel.sleepTimer.collectAsStateWithLifecycle()
+    val voices by voiceViewModel.menu.collectAsStateWithLifecycle()
     val current = nowPlaying ?: return
     PlayerScreen(
         nowPlaying = current,
@@ -96,6 +98,8 @@ fun PlayerRoute(
         onOpenVoices = onOpenVoices,
         onOpenReader = onOpenReader,
         modifier = modifier,
+        voices = voices,
+        onChooseVoice = voiceViewModel::choose,
     )
 }
 
@@ -117,6 +121,8 @@ fun PlayerScreen(
     onOpenVoices: () -> Unit,
     onOpenReader: () -> Unit,
     modifier: Modifier = Modifier,
+    voices: VoiceMenu = VoiceMenu(),
+    onChooseVoice: (voiceId: String, forAllBooks: Boolean) -> Unit = { _, _ -> },
 ) {
     var showChapters by rememberSaveable { mutableStateOf(false) }
     val title = nowPlaying.title.ifBlank { stringResource(R.string.library_untitled) }
@@ -158,6 +164,9 @@ fun PlayerScreen(
                 onCancelSleepTimer = onCancelSleepTimer,
                 onShowChapters = { showChapters = true },
                 onOpenReader = onOpenReader,
+                voices = voices,
+                onChooseVoice = onChooseVoice,
+                onMoreVoices = onOpenVoices,
             )
             PlayerStatus(nowPlaying = nowPlaying, onRetry = onRetry, onOpenVoices = onOpenVoices)
         }

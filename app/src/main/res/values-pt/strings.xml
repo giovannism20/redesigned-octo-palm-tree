@@ -172,6 +172,13 @@
     <string name="player_open_voices">Abrir vozes</string>
     <string name="player_retry">Tentar de novo</string>
     <string name="player_text">Texto</string>
+    <string name="player_voice">Voz</string>
+    <string name="player_voice_title">Escolha a voz</string>
+    <string name="player_voice_question">Ler com %1$s:</string>
+    <string name="player_voice_this_book">Só neste livro</string>
+    <string name="player_voice_all_books">Em todos os livros</string>
+    <string name="player_voice_back">Voltar às vozes</string>
+    <string name="player_voice_more">Baixar mais vozes</string>
     <string name="player_sleep_timer">Timer</string>
     <string name="player_sleep_timer_title">Parar de ler depois de</string>
     <string name="player_sleep_timer_running">Timer: para em %1$s</string>
