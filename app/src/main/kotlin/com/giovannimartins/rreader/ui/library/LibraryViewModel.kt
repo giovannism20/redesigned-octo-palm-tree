@@ -10,6 +10,7 @@ import com.giovannimartins.rreader.data.settings.AppSettings
 import com.giovannimartins.rreader.data.settings.SettingsRepository
 import com.giovannimartins.rreader.tts.SpeakingRateTracker
 import com.giovannimartins.rreader.tts.SpeakingRates
+import com.giovannimartins.rreader.ui.player.NowPlaying
 import com.giovannimartins.rreader.ui.player.PlaybackControls
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -17,6 +18,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -37,6 +40,8 @@ sealed interface LibraryUiState {
         val books: List<LibraryBook>,
         /** Estimated listening time left by book id, for books that are ready and not finished. */
         val timeLeft: Map<String, Duration> = emptyMap(),
+        /** The book being listened to right now, or null when nothing plays. */
+        val playingBookId: String? = null,
     ) : LibraryUiState
 }
 
@@ -64,12 +69,14 @@ class LibraryViewModel
          * for a cursor), which the screen explains instead of the app closing; [retry] reads it again.
          */
         val state: StateFlow<LibraryUiState> =
-            combine<List<LibraryBook>, AppSettings, SpeakingRates, LibraryUiState>(
+            combine<List<LibraryBook>, AppSettings, SpeakingRates, String?, LibraryUiState>(
                 repository.books,
                 preferences,
                 rates.rates,
-            ) { books, prefs, learned ->
+                playback.nowPlaying.map { it?.takeIf(NowPlaying::isPlaying)?.bookId }.distinctUntilChanged(),
+            ) { books, prefs, learned, playing ->
                 LibraryUiState.Content(
+                    playingBookId = playing,
                     continueListening = books.firstOrNull { it.status == BookStatus.READY && it.started },
                     books = books,
                     timeLeft =
@@ -87,6 +94,9 @@ class LibraryViewModel
 
         /** Starts or resumes listening to a book that is ready. */
         fun play(bookId: String) = playback.play(bookId)
+
+        /** Pauses the book being listened to. */
+        fun pause() = playback.pause()
 
         /** Reads the library again after it was [LibraryUiState.Unavailable]. */
         fun retry() {

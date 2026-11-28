@@ -15,6 +15,7 @@ import com.giovannimartins.rreader.importer.FakeImportJobs
 import com.giovannimartins.rreader.tts.InMemorySpeakingRateStore
 import com.giovannimartins.rreader.tts.SpeakingRateTracker
 import com.giovannimartins.rreader.ui.player.RecordingControls
+import com.giovannimartins.rreader.ui.player.previewNowPlaying
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -118,4 +119,18 @@ class LibraryViewModelTest {
 
         assertThat(controls.calls).contains("closeBook 00000000-0000-0000-0000-000000000009")
     }
+
+    @Test
+    fun `the library knows which book plays, and none once it pauses`() =
+        runBlocking<Unit> {
+            dao.broken = false
+            viewModel.retry()
+            controls.state.value = previewNowPlaying().copy(bookId = "book-1", isPlaying = true)
+            val playing = viewModel.state.first { (it as? LibraryUiState.Content)?.playingBookId != null }
+            assertThat((playing as LibraryUiState.Content).playingBookId).isEqualTo("book-1")
+
+            controls.state.value = previewNowPlaying().copy(bookId = "book-1", isPlaying = false)
+            val paused = viewModel.state.first { it is LibraryUiState.Content && it.playingBookId == null }
+            assertThat((paused as LibraryUiState.Content).playingBookId).isNull()
+        }
 }

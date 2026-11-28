@@ -97,12 +97,29 @@ class LibraryScreenTest {
         compose.assertAllTextReadableIn(RReaderLightColorScheme)
     }
 
+    @Test
+    fun `the continue card pauses the book while it plays, and listens otherwise`() {
+        show(ready("Helena"), playingBookId = "Helena")
+
+        compose.onNode(hasText("Pause") and hasClickAction()).performClick()
+        assertThat(events).containsExactly("pause")
+    }
+
+    @Test
+    fun `the continue card offers to listen while its book does not play`() {
+        show(ready("Helena"), playingBookId = "Iaiá Garcia")
+
+        compose.onNode(hasText("Listen") and hasClickAction()).performClick()
+        assertThat(events).containsExactly("play Helena")
+    }
+
     private fun countAddButtons() =
         compose.onAllNodes(hasText("Adicionar livro") and hasClickAction()).fetchSemanticsNodes().size
 
     private fun show(
         vararg books: LibraryBook,
         darkTheme: Boolean = true,
+        playingBookId: String? = null,
     ) {
         val started = books.firstOrNull { it.status == BookStatus.READY }
         compose.setContent {
@@ -114,9 +131,11 @@ class LibraryScreenTest {
                                 continueListening = started,
                                 books = books.toList(),
                                 timeLeft = started?.let { mapOf(it.id to 3.hours) }.orEmpty(),
+                                playingBookId = playingBookId,
                             ),
                         onAddBook = { events += "add" },
-                        onPlay = {},
+                        onPlay = { events += "play $it" },
+                        onPause = { events += "pause" },
                         onRemove = {},
                         onRetry = {},
                     )

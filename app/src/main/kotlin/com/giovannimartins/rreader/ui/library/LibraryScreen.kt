@@ -72,6 +72,7 @@ fun LibraryRoute(
             viewModel.play(bookId)
             onOpenPlayer()
         },
+        onPause = viewModel::pause,
         onRemove = viewModel::remove,
         onRetry = viewModel::retry,
         modifier = modifier,
@@ -90,6 +91,7 @@ fun LibraryScreen(
     onRemove: (String) -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    onPause: () -> Unit = {},
 ) {
     var pendingRemoval by rememberSaveable { mutableStateOf<String?>(null) }
     when (state) {
@@ -125,7 +127,9 @@ fun LibraryScreen(
                         ContinueListeningCard(
                             book = book,
                             timeLeft = state.timeLeft[book.id],
+                            playing = state.playingBookId == book.id,
                             onPlay = { onPlay(book.id) },
+                            onPause = onPause,
                         )
                     }
                 }
@@ -194,7 +198,9 @@ private fun LibraryEmptyState(modifier: Modifier = Modifier) {
 private fun ContinueListeningCard(
     book: LibraryBook,
     timeLeft: Duration?,
+    playing: Boolean,
     onPlay: () -> Unit,
+    onPause: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Card(onClick = onPlay, modifier = modifier.fillMaxWidth()) {
@@ -214,10 +220,17 @@ private fun ContinueListeningCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 ProgressLine(book = book, timeLeft = timeLeft)
-                Button(onClick = onPlay, modifier = Modifier.heightIn(min = 56.dp)) {
-                    Icon(painterResource(R.drawable.ic_play), contentDescription = null)
+                // While this book plays, the button pauses it, as the mini player's does.
+                Button(onClick = if (playing) onPause else onPlay, modifier = Modifier.heightIn(min = 56.dp)) {
+                    Icon(
+                        painterResource(if (playing) R.drawable.ic_pause else R.drawable.ic_play),
+                        contentDescription = null,
+                    )
                     Spacer(Modifier.width(8.dp))
-                    Text(text = stringResource(R.string.library_listen), style = MaterialTheme.typography.labelLarge)
+                    Text(
+                        text = stringResource(if (playing) R.string.player_pause else R.string.library_listen),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
                 }
             }
         }
