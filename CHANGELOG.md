@@ -8,6 +8,11 @@ All notable user-visible changes are documented here. The format follows
 
 ### Added
 
+- Dora, Alex and Santa now prepare the next part of the book whenever it is
+  paused, not only while the phone charges, so it plays without pauses
+  afterwards. A silent notification, "Preparando a leitura", shows while
+  they do; it stops when you press play or the battery gets low.
+
 - The library has two parts: Ouvindo, with every book you are in the
   middle of (the last one listened to first), and Na biblioteca, with the
   others (not started, finished or being prepared). Each book shows up once.

@@ -40,7 +40,7 @@ measured on the device.
   just ahead of playback like the system voice.
 - **Kokoro** is about real time on the PC; on a 2025 flagship it is estimated
   at 0.7–2.2× real time (worse under load), so chapters must be **rendered
-  ahead** (for example while charging) — the cache and render-ahead design of
+  ahead** (while nobody listens) — the cache and render-ahead design of
   ADR 0003 already supports this.
 - **Phonemizer licence:** since 2.0.0, sherpa-onnx no longer bundles
   espeak-ng; Portuguese needs `piper-phonemize` (espeak-ng data), which is

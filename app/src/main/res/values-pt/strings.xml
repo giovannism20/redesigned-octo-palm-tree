@@ -48,6 +48,10 @@
     <string name="import_failure_too_many_pages">Este PDF tem páginas demais (limite: 3.000).</string>
     <string name="import_failure_too_complex">Este livro é complexo demais para ser preparado neste celular.</string>
     <string name="import_recognizing_text">Reconhecendo texto: página %1$d de %2$d</string>
+    <string name="prerender_notification_title">Preparando a leitura</string>
+    <string name="prerender_notification_text">Adiantando o próximo trecho do livro para tocar sem pausas.</string>
+    <string name="prerender_notification_channel">Leitura em preparação</string>
+    <string name="prerender_notification_channel_description">Aparece enquanto o app adianta um livro lido por uma voz lenta.</string>
     <string name="import_notification_title">Preparando um livro</string>
     <string name="import_notification_channel">Livros em preparação</string>
     <string name="import_notification_channel_description">Mostra o andamento da preparação de um livro escaneado.</string>
@@ -127,7 +131,7 @@
     <string name="voices_retry_voice">Tentar baixar %1$s de novo</string>
     <string name="voices_remove_download">Remover</string>
     <string name="voices_remove_download_voice">Remover o download de %1$s</string>
-    <string name="voices_slow_here">Lenta neste celular: a leitura pode fazer pausas na sua velocidade. Diminua a velocidade, deixe o livro pausado com o celular carregando ou use o Cadu, o Faber ou a voz do celular, que acompanham.</string>
+    <string name="voices_slow_here">Lenta neste celular: a leitura pode fazer pausas na sua velocidade. Diminua a velocidade, deixe o livro pausado um tempo para o app adiantar a leitura ou use o Cadu, o Faber ou a voz do celular, que acompanham.</string>
     <string name="voices_delete">Apagar</string>
     <string name="voices_delete_voice">Apagar a voz %1$s</string>
     <string name="voices_delete_title">Apagar a voz %1$s?</string>

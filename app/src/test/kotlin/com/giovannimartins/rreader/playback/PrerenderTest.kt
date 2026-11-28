@@ -55,7 +55,8 @@ class PrerenderTest {
                         appContext: Context,
                         workerClassName: String,
                         workerParameters: WorkerParameters,
-                    ): ListenableWorker = PrerenderWorker(appContext, workerParameters, prerenderer)
+                    ): ListenableWorker =
+                        PrerenderWorker(appContext, workerParameters, prerenderer, PrerenderNotifications(appContext))
                 },
             ).build()
 
@@ -207,7 +208,8 @@ class PrerenderTest {
                 .getWorkInfosForUniqueWork(WorkManagerPrerenderJobs.UNIQUE_NAME)
                 .get()
                 .single { it.state == WorkInfo.State.ENQUEUED }
-        assertThat(job.constraints.requiresCharging()).isTrue()
+        // On battery too (ADR 0024), but never with the battery low.
+        assertThat(job.constraints.requiresCharging()).isFalse()
         assertThat(job.constraints.requiresBatteryNotLow()).isTrue()
         assertThat(job.tags.none { BOOK_ID in it }).isTrue()
     }

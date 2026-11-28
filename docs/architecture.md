@@ -719,13 +719,16 @@ sequenceDiagram
   connection (`NetworkType.CONNECTED`, or `UNMETERED` for a voice package
   waiting for Wi-Fi). The render-ahead window of the playing book runs inside
   the playback service instead.
-- **Rendering ahead while charging.** While a book whose voice may be slower
+- **Rendering ahead.** While a book whose voice may be slower
   than real time (`Voice.slowToRender`: the Kokoro voices) is open but not
   being listened to (just opened, paused, stopped), the player asks
   `PrerenderJobs` to render it ahead: when it opens or its voice changes
   that way, and each time listening stops. One WorkManager job for the whole
-  app (`prerender`; no tag names the book) runs only while the phone charges
-  with enough battery and storage, and stops when it is unplugged. Asking
+  app (`prerender`; no tag names the book) runs, on battery too, while the
+  battery is not low and storage is enough, in WorkManager's `dataSync`
+  foreground service with a silent progress notification
+  (`PrerenderNotifications`; an ordinary job when the platform refuses it),
+  see [ADR 0024](decisions/0024-render-ahead-on-battery.md). Asking
   again for the book and voice asked for last keeps the job as it is
   (`ExistingWorkPolicy.KEEP`: a running job goes on, and the count of its
   runs stays); another book or voice replaces it. The last request is kept

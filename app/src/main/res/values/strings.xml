@@ -49,6 +49,10 @@
     <string name="import_failure_too_many_pages">This PDF has too many pages (limit: 3,000).</string>
     <string name="import_failure_too_complex">This book is too complex to prepare on this phone.</string>
     <string name="import_recognizing_text">Recognizing text: page %1$d of %2$d</string>
+    <string name="prerender_notification_title">Preparing your reading</string>
+    <string name="prerender_notification_text">Getting the next part of the book ready so it plays without pauses.</string>
+    <string name="prerender_notification_channel">Reading being prepared</string>
+    <string name="prerender_notification_channel_description">Shows while the app gets a book ready ahead of listening with a slow voice.</string>
     <string name="import_notification_title">Preparing a book</string>
     <string name="import_notification_channel">Books being prepared</string>
     <string name="import_notification_channel_description">Shows how far the preparation of a scanned book got.</string>
@@ -128,7 +132,7 @@
     <string name="voices_retry_voice">Try downloading %1$s again</string>
     <string name="voices_remove_download">Remove</string>
     <string name="voices_remove_download_voice">Remove the download of %1$s</string>
-    <string name="voices_slow_here">Slow on this phone: listening may pause at your speed. Lower the speed, leave the book paused while the phone charges, or use Cadu, Faber or the phone voice, which keep up.</string>
+    <string name="voices_slow_here">Slow on this phone: listening may pause at your speed. Lower the speed, leave the book paused for a while so the app prepares it, or use Cadu, Faber or the phone voice, which keep up.</string>
     <string name="voices_delete">Delete</string>
     <string name="voices_delete_voice">Delete the voice %1$s</string>
     <string name="voices_delete_title">Delete the voice %1$s?</string>

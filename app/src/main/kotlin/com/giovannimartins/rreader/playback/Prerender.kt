@@ -19,6 +19,7 @@ import com.giovannimartins.rreader.tts.Voice
 import com.giovannimartins.rreader.tts.neural.NeuralVoices
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -79,7 +80,6 @@ class WorkManagerPrerenderJobs
                     .setConstraints(
                         Constraints
                             .Builder()
-                            .setRequiresCharging(true)
                             .setRequiresBatteryNotLow(true)
                             .setRequiresStorageNotLow(true)
                             .build(),
@@ -133,17 +133,19 @@ class Prerenderer
         @DefaultDispatcher private val cpu: CoroutineDispatcher,
     ) {
         /**
-         * Renders ahead in book [bookId], up to [ahead] of audio.
+         * Renders ahead in book [bookId], up to [ahead] of audio, telling [onProgress] the share of it that is ready
+         * (0 to 1) after each segment.
          *
          * @throws IOException when a chapter's text cannot be read.
          */
         suspend fun prerender(
             bookId: String,
             ahead: Duration = MAX_AHEAD,
+            onProgress: suspend (Float) -> Unit = {},
         ): PrerenderOutcome {
             val book = (content.load(bookId) as? BookLoad.Loaded)?.book
             val voice = book?.voice?.takeIf { it.slowToRender } ?: return PrerenderOutcome.NotNeeded
-            return untilHeldBack(voice) { renderAhead(book, voice, ahead) } ?: PrerenderOutcome.Yielded
+            return untilHeldBack(voice) { renderAhead(book, voice, ahead, onProgress) } ?: PrerenderOutcome.Yielded
         }
 
         /**
@@ -164,6 +166,7 @@ class Prerenderer
             book: PlaybackBook,
             voice: Voice,
             ahead: Duration,
+            onProgress: suspend (Float) -> Unit,
         ): PrerenderOutcome {
             val plans = ChapterPlans(content, planner, cpu).apply { reset(book) }
             var cursor = plans.locate(book.position)
@@ -179,7 +182,10 @@ class Prerenderer
                             speech,
                             book.speed,
                         )?.let { renderer.render(it, background = true) }
-                if (audio is SegmentAudio.Ready) millis += audio.durationMillis
+                if (audio is SegmentAudio.Ready) {
+                    millis += audio.durationMillis
+                    onProgress(millis.toFloat() / ahead.inWholeMilliseconds)
+                }
                 failed = audio is SegmentAudio.Failed
                 cursor = plans.after(cursor)
             }
@@ -203,9 +209,12 @@ internal fun ListeningSession?.holdsBack(voice: Voice): Boolean {
 }
 
 /**
- * The job of [WorkManagerPrerenderJobs]: renders ahead in one book while the phone charges ([Prerenderer]). WorkManager
- * runs a job again when the process died in it, so a job started [MAX_RUN_ATTEMPTS] times without ending is given up:
- * whatever kills the process there, it cannot keep doing so for good.
+ * The job of [WorkManagerPrerenderJobs]: renders ahead in one book while nobody listens ([Prerenderer]), in a
+ * `dataSync` foreground service with a silent notification ([PrerenderNotifications], ADR 0024), so the system does
+ * not stop it after about ten minutes; when the system refuses the foreground service (for example started from the
+ * background), it renders as an ordinary job. WorkManager runs a job again when the process died in it, so a job
+ * started [MAX_RUN_ATTEMPTS] times without ending is given up: whatever kills the process there, it cannot keep doing
+ * so for good.
  */
 @HiltWorker
 class PrerenderWorker
@@ -214,12 +223,20 @@ class PrerenderWorker
         @Assisted context: Context,
         @Assisted params: WorkerParameters,
         private val prerenderer: Prerenderer,
+        private val notifications: PrerenderNotifications,
     ) : CoroutineWorker(context, params) {
+        /** Whether the system refused the foreground service; then the job does not ask again. */
+        private var foregroundRefused = false
+
+        /** The last percentage shown, so the notification changes once per percent at most. */
+        private var shownPercent = -1
+
         override suspend fun doWork(): Result {
             val bookId = inputData.getString(BOOK_ID)
             if (bookId == null || runAttemptCount >= MAX_RUN_ATTEMPTS) return Result.failure()
             return try {
-                prerenderer.prerender(bookId)
+                showProgress(0f)
+                prerenderer.prerender(bookId, onProgress = ::showProgress)
                 Result.success()
             } catch (e: IOException) {
                 Diagnostics.recordHandled("render ahead", e)
@@ -227,10 +244,32 @@ class PrerenderWorker
             }
         }
 
+        private suspend fun showProgress(fraction: Float) {
+            val percent = (fraction * PERCENT).toInt()
+            if (foregroundRefused || percent == shownPercent) return
+            shownPercent = percent
+            foregroundRefused =
+                !runCatchingForeground { setForeground(notifications.foregroundInfo(fraction)) }
+        }
+
+        /** Runs [block], telling whether it worked; a refusal is recorded instead of stopping the job. */
+        @Suppress("TooGenericExceptionCaught") // The platform refuses foreground services in several ways.
+        private suspend fun runCatchingForeground(block: suspend () -> Unit): Boolean =
+            try {
+                block()
+                true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Diagnostics.recordHandled("render ahead in foreground", e)
+                false
+            }
+
         companion object {
             const val BOOK_ID = "book_id"
 
             /** Runs of one job, the first included, before it is given up. */
             const val MAX_RUN_ATTEMPTS: Int = 3
+            private const val PERCENT = 100
         }
     }

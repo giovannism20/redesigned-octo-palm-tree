@@ -1,6 +1,6 @@
 # 0018. Offline neural voices with sherpa-onnx; GPL-3.0 applies to the APK
 
-- **Status:** Accepted
+- **Status:** Accepted; rendering ahead only while charging replaced by [0024](0024-render-ahead-on-battery.md)
 - **Date:** 2026-11-27
 
 ## Context

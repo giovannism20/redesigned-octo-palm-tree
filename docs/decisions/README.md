@@ -24,9 +24,10 @@ record supersedes an old one, and the old one is marked
 | [0015](0015-on-device-ocr-with-bundled-ml-kit.md) | On-device OCR with bundled ML Kit, resumable per page, in a dataSync foreground job | Accepted |
 | [0016](0016-in-process-listening-state.md) | Share the spoken segment in-process; reader commands through the session | Accepted |
 | [0017](0017-free-catalogue-from-project-gutenberg.md) | Free catalogue from Project Gutenberg through an allowlisted HTTPS client | Accepted; allowlist replaced by 0019, download retries by 0020 |
-| [0018](0018-offline-neural-voices.md) | Offline neural voices with sherpa-onnx; GPL-3.0 applies to the APK | Accepted |
+| [0018](0018-offline-neural-voices.md) | Offline neural voices with sherpa-onnx; GPL-3.0 applies to the APK | Accepted; rendering ahead on battery by 0024 |
 | [0019](0019-gutenberg-site-and-mirror-only.md) | Allowlist exactly Gutenberg's site and its official mirror; download from the mirror when the site is down | Accepted |
 | [0020](0020-bounded-catalogue-downloads.md) | Bound catalogue downloads to about two minutes, and show and cancel them | Accepted |
 | [0021](0021-leave-the-app-out-of-android-backup.md) | Leave the app out of Android backup so a backup never stops playback | Accepted |
 | [0022](0022-render-at-the-listening-speed.md) | Render neural voices at the listening speed, and say when a voice cannot keep up | Accepted; player notice replaced by 0023 |
 | [0023](0023-no-slow-voice-notice-in-the-player.md) | No slow-voice notice in the player | Accepted |
+| [0024](0024-render-ahead-on-battery.md) | Render slow voices ahead on battery too, in a foreground job | Accepted |
