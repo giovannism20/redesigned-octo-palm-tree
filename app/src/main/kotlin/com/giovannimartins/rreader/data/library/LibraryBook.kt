@@ -27,4 +27,7 @@ data class LibraryBook(
 
     /** Whether listening ever started. */
     val started: Boolean get() = charsRead > 0
+
+    /** Whether the book is ready, started and not finished: one the listener is in the middle of. */
+    val inProgress: Boolean get() = status == BookStatus.READY && started && charsRead < totalChars
 }

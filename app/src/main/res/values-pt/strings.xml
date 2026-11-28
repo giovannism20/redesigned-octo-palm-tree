@@ -9,7 +9,8 @@
     <string name="library_add_book">Adicionar livro</string>
     <string name="library_empty_title">Sua biblioteca está vazia</string>
     <string name="library_empty_body">Adicione um PDF ou EPUB para começar a ouvir.</string>
-    <string name="library_continue">Continuar ouvindo</string>
+    <string name="library_listening">Ouvindo</string>
+    <string name="library_shelf">Na biblioteca</string>
     <string name="library_untitled">Sem título</string>
     <string name="library_preparing">Preparando o livro…</string>
     <string name="library_not_started">Não iniciado</string>

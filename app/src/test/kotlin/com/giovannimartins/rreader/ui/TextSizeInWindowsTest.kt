@@ -41,7 +41,7 @@ class TextSizeInWindowsTest {
     fun `the library's removal dialog`() {
         showLargest {
             LibraryScreen(
-                state = LibraryUiState.Content(continueListening = null, books = listOf(book())),
+                state = LibraryUiState.Content(listening = emptyList(), shelf = listOf(book())),
                 onAddBook = {},
                 onPlay = {},
                 onRemove = {},

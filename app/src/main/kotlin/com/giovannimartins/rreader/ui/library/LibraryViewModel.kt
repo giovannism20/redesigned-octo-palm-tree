@@ -35,9 +35,10 @@ sealed interface LibraryUiState {
     data object Unavailable : LibraryUiState
 
     data class Content(
-        /** The most recently listened book that is ready, shown as "Continue listening". */
-        val continueListening: LibraryBook?,
-        val books: List<LibraryBook>,
+        /** The books the listener is in the middle of ([LibraryBook.inProgress]), most recently listened first. */
+        val listening: List<LibraryBook>,
+        /** Every other book: not started, finished, being prepared or failed. */
+        val shelf: List<LibraryBook>,
         /** Estimated listening time left by book id, for books that are ready and not finished. */
         val timeLeft: Map<String, Duration> = emptyMap(),
         /** The book being listened to right now, or null when nothing plays. */
@@ -77,8 +78,8 @@ class LibraryViewModel
             ) { books, prefs, learned, playing ->
                 LibraryUiState.Content(
                     playingBookId = playing,
-                    continueListening = books.firstOrNull { it.status == BookStatus.READY && it.started },
-                    books = books,
+                    listening = books.filter(LibraryBook::inProgress),
+                    shelf = books.filterNot(LibraryBook::inProgress),
                     timeLeft =
                         books
                             .mapNotNull { book -> LibraryTimeLeft.of(book, prefs, learned)?.let { book.id to it } }

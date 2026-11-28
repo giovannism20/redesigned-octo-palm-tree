@@ -1,5 +1,6 @@
 package com.giovannimartins.rreader.ui.library
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -80,8 +81,9 @@ fun LibraryRoute(
 }
 
 /**
- * The library: a large "Add a book" action, "Continue listening", then every book with its progress. Tap a ready book
- * to listen. When the library cannot be read, it says so and offers to try again ([onRetry]).
+ * The library: a large "Add a book" action, then the books being listened to ("Listening") and every other
+ * book ("In your library"), each with its progress. Tap a ready book to listen. When the library cannot be
+ * read, it says so and offers to try again ([onRetry]).
  */
 @Composable
 fun LibraryScreen(
@@ -104,44 +106,14 @@ fun LibraryScreen(
         }
 
         is LibraryUiState.Content -> {
-            LazyColumn(
+            LibraryContent(
+                state = state,
+                onAddBook = onAddBook,
+                onPlay = onPlay,
+                onPause = onPause,
+                onRemove = { pendingRemoval = it },
                 modifier = modifier.fillMaxSize(),
-                contentPadding =
-                    androidx.compose.foundation.layout
-                        .PaddingValues(24.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp),
-            ) {
-                item {
-                    Text(
-                        text = stringResource(R.string.library_title),
-                        style = MaterialTheme.typography.headlineLarge,
-                        modifier = Modifier.semantics { heading() },
-                    )
-                }
-                item { AddBookButton(onClick = onAddBook) }
-                if (state.books.isEmpty()) {
-                    item { LibraryEmptyState() }
-                }
-                state.continueListening?.let { book ->
-                    item {
-                        ContinueListeningCard(
-                            book = book,
-                            timeLeft = state.timeLeft[book.id],
-                            playing = state.playingBookId == book.id,
-                            onPlay = { onPlay(book.id) },
-                            onPause = onPause,
-                        )
-                    }
-                }
-                items(state.books, key = { it.id }) { book ->
-                    LibraryBookRow(
-                        book = book,
-                        timeLeft = state.timeLeft[book.id],
-                        onPlay = { onPlay(book.id) }.takeIf { book.status == BookStatus.READY },
-                        onRemove = { pendingRemoval = book.id },
-                    )
-                }
-            }
+            )
         }
     }
     pendingRemoval?.let { bookId ->
@@ -157,7 +129,7 @@ fun LibraryScreen(
 
 /** The large action at the top of the library: it opens the page that adds a book from a file. */
 @Composable
-private fun AddBookButton(
+internal fun AddBookButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -169,7 +141,7 @@ private fun AddBookButton(
 }
 
 @Composable
-private fun LibraryEmptyState(modifier: Modifier = Modifier) {
+internal fun LibraryEmptyState(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.fillMaxWidth().padding(top = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -195,50 +167,7 @@ private fun LibraryEmptyState(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun ContinueListeningCard(
-    book: LibraryBook,
-    timeLeft: Duration?,
-    playing: Boolean,
-    onPlay: () -> Unit,
-    onPause: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Card(onClick = onPlay, modifier = modifier.fillMaxWidth()) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            BookCover(title = book.displayTitle(), coverFile = book.coverFile, modifier = Modifier.width(96.dp))
-            Spacer(Modifier.width(16.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = stringResource(R.string.library_continue),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    text = book.displayTitle(),
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                ProgressLine(book = book, timeLeft = timeLeft)
-                // While this book plays, the button pauses it, as the mini player's does.
-                Button(onClick = if (playing) onPause else onPlay, modifier = Modifier.heightIn(min = 56.dp)) {
-                    Icon(
-                        painterResource(if (playing) R.drawable.ic_pause else R.drawable.ic_play),
-                        contentDescription = null,
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(if (playing) R.string.player_pause else R.string.library_listen),
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun LibraryBookRow(
+internal fun LibraryBookRow(
     book: LibraryBook,
     timeLeft: Duration?,
     onPlay: (() -> Unit)?,
@@ -293,7 +222,7 @@ private fun LibraryBookRow(
 
 /** The book's progress, and how long listening to the rest takes at the listener's speed. */
 @Composable
-private fun ProgressLine(
+internal fun ProgressLine(
     book: LibraryBook,
     timeLeft: Duration?,
     modifier: Modifier = Modifier,
@@ -367,7 +296,7 @@ private fun RemoveBookDialog(
 }
 
 @Composable
-private fun LibraryBook.displayTitle(): String = title.ifBlank { stringResource(R.string.library_untitled) }
+internal fun LibraryBook.displayTitle(): String = title.ifBlank { stringResource(R.string.library_untitled) }
 
 private const val PERCENT = 100
 
@@ -389,8 +318,8 @@ private fun LibraryScreenPreview() {
         LibraryScreen(
             state =
                 LibraryUiState.Content(
-                    continueListening = book,
-                    books = listOf(book),
+                    listening = listOf(book),
+                    shelf = emptyList(),
                     timeLeft = mapOf(book.id to 3.hours + 20.minutes),
                 ),
             onAddBook = {},

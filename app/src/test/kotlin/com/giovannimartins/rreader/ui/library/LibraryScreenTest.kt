@@ -1,6 +1,7 @@
 package com.giovannimartins.rreader.ui.library
 
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -63,7 +64,7 @@ class LibraryScreenTest {
         val top = add.fetchSemanticsNode().boundsInRoot.top
         val firstBook =
             compose
-                .onNodeWithText("Continue listening")
+                .onNodeWithText("Listening")
                 .fetchSemanticsNode()
                 .boundsInRoot.top
         assertThat(top).isLessThan(firstBook)
@@ -113,6 +114,17 @@ class LibraryScreenTest {
         assertThat(events).containsExactly("play Helena")
     }
 
+    @Test
+    fun `books in progress are under Listening, the others under In your library`() {
+        show(ready("Helena"), ready("Iaiá Garcia").copy(charsRead = 0))
+
+        fun top(text: String) = compose.onNodeWithText(text).getUnclippedBoundsInRoot().top
+        assertThat(top("Listening")).isLessThan(top("In your library"))
+        assertThat(top("In your library")).isLessThan(top("Not started"))
+        // Only the book in progress has a Listen button; the other is listened to by tapping its row.
+        assertThat(compose.onAllNodes(hasText("Listen") and hasClickAction()).fetchSemanticsNodes()).hasSize(1)
+    }
+
     private fun countAddButtons() =
         compose.onAllNodes(hasText("Adicionar livro") and hasClickAction()).fetchSemanticsNodes().size
 
@@ -121,15 +133,15 @@ class LibraryScreenTest {
         darkTheme: Boolean = true,
         playingBookId: String? = null,
     ) {
-        val started = books.firstOrNull { it.status == BookStatus.READY }
+        val started = books.firstOrNull { it.inProgress }
         compose.setContent {
             RReaderTheme(darkTheme = darkTheme) {
                 ScreenSurface {
                     LibraryScreen(
                         state =
                             LibraryUiState.Content(
-                                continueListening = started,
-                                books = books.toList(),
+                                listening = books.filter { it.inProgress },
+                                shelf = books.filterNot { it.inProgress },
                                 timeLeft = started?.let { mapOf(it.id to 3.hours) }.orEmpty(),
                                 playingBookId = playingBookId,
                             ),

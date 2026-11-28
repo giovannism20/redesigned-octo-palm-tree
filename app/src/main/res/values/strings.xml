@@ -11,7 +11,8 @@
     <string name="library_add_book">Add a book</string>
     <string name="library_empty_title">Your library is empty</string>
     <string name="library_empty_body">Add a PDF or EPUB to start listening.</string>
-    <string name="library_continue">Continue listening</string>
+    <string name="library_listening">Listening</string>
+    <string name="library_shelf">In your library</string>
     <string name="library_untitled">Untitled</string>
     <string name="library_preparing">Preparing the book…</string>
     <string name="library_not_started">Not started</string>

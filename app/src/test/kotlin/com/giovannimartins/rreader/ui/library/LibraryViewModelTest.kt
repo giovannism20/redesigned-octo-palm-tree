@@ -89,7 +89,7 @@ class LibraryViewModelTest {
             viewModel.retry()
 
             val content = viewModel.state.first { it is LibraryUiState.Content } as LibraryUiState.Content
-            assertThat(content.books.map { it.title }).containsExactly("Dom Casmurro")
+            assertThat((content.listening + content.shelf).map { it.title }).containsExactly("Dom Casmurro")
         }
 
     private fun book() =

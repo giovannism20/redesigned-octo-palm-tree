@@ -41,7 +41,7 @@ Every design decision is checked against this person first.
 |------|----------|
 | Formats | EPUB 2/3 (without DRM), PDF with a text layer, scanned PDF via on-device OCR |
 | Import | System file picker, "Share to" / "Open with" from other apps |
-| Library | Cover, title, author, progress %, estimated time left, "Continue listening", search, edit title/author, archive, remove |
+| Library | Cover, title, author, progress %, estimated time left, two parts: "Ouvindo" (books in progress, each with Listen/Pause) and "Na biblioteca" (the others), search, edit title/author, archive, remove |
 | Player | Background playback, lock-screen/notification/headset controls, ±15 s, chapters, speed 0.75–2×, resume, small rewind after a long pause |
 | Reading | Follow-along text with the current sentence highlighted, tap a sentence to read from there, adjustable text size, a choice of reading font (Atkinson Hyperlegible or the serif Literata) |
 | Ajustes | Text size for every screen on top of the phone's (four steps), dark or light theme or the phone's choice, the reading font, with a live preview |

@@ -8,6 +8,10 @@ All notable user-visible changes are documented here. The format follows
 
 ### Added
 
+- The library has two parts: Ouvindo, with every book you are in the
+  middle of (the last one listened to first), and Na biblioteca, with the
+  others (not started, finished or being prepared). Each book shows up once.
+
 - Natural voices now speak at the chosen speed themselves instead of being
   sped up afterwards: they sound more natural above 1.0× and are prepared
   about a fifth faster, which helps Dora, Alex and Santa keep up.
@@ -137,6 +141,8 @@ All notable user-visible changes are documented here. The format follows
 
 ### Fixed
 
+- Removing the book open in the minimized player now closes the player.
+- The library's Listen button turns into Pause while its book is playing.
 - With very large text the player's cover no longer covers the book's title:
   it gives way to the controls when no room is left.
 - The icons of the status and navigation bars follow the app's colours
