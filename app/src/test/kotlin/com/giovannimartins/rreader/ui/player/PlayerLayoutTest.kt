@@ -18,7 +18,6 @@ import com.giovannimartins.rreader.playback.SleepTimerState
 import com.giovannimartins.rreader.ui.assertAllTextReadableIn
 import com.giovannimartins.rreader.ui.assertAllTextReadableOn
 import com.giovannimartins.rreader.ui.theme.Ink
-import com.giovannimartins.rreader.ui.theme.RReaderDarkColorScheme
 import com.giovannimartins.rreader.ui.theme.RReaderLightColorScheme
 import com.giovannimartins.rreader.ui.theme.RReaderTheme
 import com.google.common.truth.Truth.assertThat
@@ -73,22 +72,6 @@ class PlayerLayoutTest {
         show(darkTheme = false, replacedVoice = "Dora")
 
         compose.onNodeWithText("Dora", substring = true).assertExists()
-        compose.assertAllTextReadableIn(RReaderLightColorScheme)
-    }
-
-    @Test
-    fun `the slow-voice notice is readable in both themes and offers a faster voice`() {
-        show(slowVoice = "Dora")
-
-        compose.onNodeWithText("Dora", substring = true).assertExists()
-        compose.onNodeWithText("Choose a faster voice").assertExists()
-        compose.assertAllTextReadableIn(RReaderDarkColorScheme)
-    }
-
-    @Test
-    fun `the slow-voice notice is readable in the light theme`() {
-        show(darkTheme = false, slowVoice = "Dora")
-
         compose.assertAllTextReadableIn(RReaderLightColorScheme)
     }
 
@@ -167,7 +150,6 @@ class PlayerLayoutTest {
         textSize: TextSize = TextSize.NORMAL,
         darkTheme: Boolean = true,
         replacedVoice: String? = null,
-        slowVoice: String? = null,
     ) {
         compose.setContent {
             val density = LocalDensity.current
@@ -189,7 +171,6 @@ class PlayerLayoutTest {
                         onOpenVoices = {},
                         onOpenReader = {},
                         replacedVoice = replacedVoice,
-                        slowVoice = slowVoice,
                     )
                 }
             }

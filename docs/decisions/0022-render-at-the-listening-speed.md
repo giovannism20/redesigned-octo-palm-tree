@@ -1,6 +1,6 @@
 # 0022. Render neural voices at the listening speed, and say when a voice cannot keep up
 
-- **Status:** Accepted
+- **Status:** Accepted; the player's slow-voice notice replaced by [0023](0023-no-slow-voice-notice-in-the-player.md)
 - **Date:** 2026-11-27
 
 ## Context

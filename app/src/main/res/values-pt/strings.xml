@@ -126,7 +126,7 @@
     <string name="voices_retry_voice">Tentar baixar %1$s de novo</string>
     <string name="voices_remove_download">Remover</string>
     <string name="voices_remove_download_voice">Remover o download de %1$s</string>
-    <string name="voices_slow_here">Lenta neste celular: a leitura pode fazer pausas na sua velocidade. A voz do celular, o Cadu e o Faber acompanham.</string>
+    <string name="voices_slow_here">Lenta neste celular: a leitura pode fazer pausas na sua velocidade. Diminua a velocidade, deixe o livro pausado com o celular carregando ou use o Cadu, o Faber ou a voz do celular, que acompanham.</string>
     <string name="voices_delete">Apagar</string>
     <string name="voices_delete_voice">Apagar a voz %1$s</string>
     <string name="voices_delete_title">Apagar a voz %1$s?</string>
@@ -173,8 +173,6 @@
     <string name="player_time_left">faltam %1$s</string>
     <string name="player_preparing">Preparando a voz…</string>
     <string name="player_finished">Você chegou ao fim do livro.</string>
-    <string name="player_voice_slow">A voz %1$s é mais lenta que a sua velocidade de escuta neste celular, por isso a leitura faz pausas. Para evitar: diminua a velocidade, escolha uma voz mais rápida ou deixe o livro pausado com o celular carregando.</string>
-    <string name="player_choose_faster_voice">Escolher uma voz mais rápida</string>
     <string name="player_voice_fallback">Não foi possível usar a voz %1$s. O livro continua com a voz do celular.</string>
     <string name="player_error_no_voice">Nenhuma voz em português está instalada. Instale uma para ouvir este livro.</string>
     <string name="player_error_book">Não foi possível abrir este livro.</string>

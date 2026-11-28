@@ -22,7 +22,6 @@ import com.giovannimartins.rreader.textkit.model.ReadingPosition
 import com.giovannimartins.rreader.textkit.text.SegmentPlanner
 import com.giovannimartins.rreader.textkit.text.SpeechNormalizer
 import com.giovannimartins.rreader.tts.AudioCache
-import com.giovannimartins.rreader.tts.RenderCost
 import com.giovannimartins.rreader.tts.SegmentRenderer
 import com.giovannimartins.rreader.tts.SpeakingRateTracker
 import com.giovannimartins.rreader.tts.SynthesisFailure
@@ -237,53 +236,6 @@ class ReaderPlayerTest {
         // The render waiting at the gate had started at 1.25x; the ones after it are at the new speed.
         assertThat(engine.speeds.take(3)).containsExactly(1.25f, 1.25f, 1.25f)
         assertThat(engine.speeds.drop(3).toSet()).containsExactly(1.5f)
-    }
-
-    @Test
-    fun `when a voice too slow for this phone runs out of audio, the session says so until the speed is low enough`() {
-        val gate = CompletableDeferred<Unit>()
-        engine.rendersBeforeGate = 2
-        engine.gate = gate
-        content.book = book(texts, speed = 1.25f)
-        // A second of speech takes a second to render: too slow at 1.25x, enough at 0.75x.
-        repeat(RenderCost.TRUSTED_SAMPLES) {
-            fixture.renderSpeeds.record(voice().id, renderMillis = 10_000, speechMillis = 10_000)
-        }
-        open()
-        player.play()
-
-        runMainLooperUntil {
-            fixture.status.session.value
-                ?.slowVoice != null
-        }
-        assertThat(
-            fixture.status.session.value
-                ?.slowVoice,
-        ).isEqualTo(voice())
-
-        player.setPlaybackSpeed(0.75f)
-        assertThat(
-            fixture.status.session.value
-                ?.slowVoice,
-        ).isNull()
-        gate.complete(Unit)
-    }
-
-    @Test
-    fun `a voice not known to be slow runs out of audio without a slow-voice notice`() {
-        val gate = CompletableDeferred<Unit>()
-        engine.rendersBeforeGate = 2
-        engine.gate = gate
-        open()
-        player.play()
-        runMainLooperUntil { internal.playbackState == Player.STATE_ENDED }
-
-        assertThat(
-            fixture.status.session.value
-                ?.slowVoice,
-        ).isNull()
-        assertThat(player.playbackState).isEqualTo(Player.STATE_BUFFERING)
-        gate.complete(Unit)
     }
 
     @Test

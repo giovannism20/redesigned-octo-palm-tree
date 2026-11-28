@@ -18,16 +18,13 @@ data class SpokenSegment(
 /**
  * The book open in the player, the [voice] that reads it (null while it has none), and whether the listener is
  * [listening]: playing, or waiting for audio to be prepared. [replacedVoice] is the voice chosen for the book when it
- * could not start in this session, so the phone's voice reads instead; null otherwise. [slowVoice] is the voice that
- * reads when listening paused because it renders slower than the listener hears at this speed on this phone; null
- * otherwise.
+ * could not start in this session, so the phone's voice reads instead; null otherwise.
  */
 data class ListeningSession(
     val bookId: String,
     val voice: Voice?,
     val listening: Boolean,
     val replacedVoice: Voice? = null,
-    val slowVoice: Voice? = null,
 )
 
 /**

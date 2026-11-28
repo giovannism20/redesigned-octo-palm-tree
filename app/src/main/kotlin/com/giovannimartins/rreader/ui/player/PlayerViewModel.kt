@@ -35,18 +35,6 @@ class PlayerViewModel
 
         private fun replacedVoiceName(session: ListeningSession?): String? = session?.replacedVoice?.name
 
-        /** The name of the voice that made listening pause because it is too slow on this phone; or null. */
-        val slowVoice: StateFlow<String?> =
-            status.session
-                .map { it?.slowVoice?.name }
-                .stateIn(
-                    viewModelScope,
-                    SharingStarted.Eagerly,
-                    status.session.value
-                        ?.slowVoice
-                        ?.name,
-                )
-
         /** Pauses when listening, otherwise starts listening again (also after a problem or at the end). */
         fun togglePlayPause() {
             if (nowPlaying.value?.isPlaying == true) controls.pause() else controls.resume()

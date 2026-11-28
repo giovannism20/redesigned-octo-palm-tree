@@ -69,7 +69,6 @@ internal class ReaderPlayerFixture(
                 planner = SegmentPlanner(),
                 speech = SpeechNormalizer(),
                 rates = rates,
-                renderSpeeds = renderSpeeds,
                 status = status,
                 prerender = PrerenderJobs { bookId, _ -> prerendered += bookId },
                 saveScope = CoroutineScope(io),

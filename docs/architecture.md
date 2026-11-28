@@ -178,10 +178,9 @@ sequenceDiagram
 3. Rendered segments are appended to the internal ExoPlayer's playlist; the
    pauses the voice leaves around sentences sound natural. If the internal
    player runs out of audio, the facade reports buffering and playback
-   continues as soon as the next segment is queued; when the voice is measured
-   to render slower than the listening speed on this phone
-   (`RenderSpeedTracker`), the listening session names it so the player can
-   explain the pauses.
+   continues as soon as the next segment is queued. How fast each voice
+   renders on the phone is measured (`RenderSpeedTracker`); the Voices tab
+   marks the voices too slow there at the chosen speed.
 4. The facade player exposes one item per chapter with a position and
    duration derived from characters and the voice's speaking rate (media
    time, ADR 0006). Seeks map to a reading position, then to the segment that

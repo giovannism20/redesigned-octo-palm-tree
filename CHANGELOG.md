@@ -11,9 +11,8 @@ All notable user-visible changes are documented here. The format follows
 - Natural voices now speak at the chosen speed themselves instead of being
   sped up afterwards: they sound more natural above 1.0× and are prepared
   about a fifth faster, which helps Dora, Alex and Santa keep up.
-- When a voice is too slow for the phone at the chosen speed and reading
-  pauses, the player says why and offers to choose a faster voice; Vozes marks
-  such voices "Lenta neste celular".
+- Vozes marks the natural voices that are too slow for the phone at the
+  chosen speed "Lenta neste celular", with what to do about it.
 
 - Ajustes, a new tab, to make the app comfortable to read: the text size of
   every screen in four steps on top of the phone's own font size (Normal,

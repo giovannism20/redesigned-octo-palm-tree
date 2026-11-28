@@ -28,4 +28,5 @@ record supersedes an old one, and the old one is marked
 | [0019](0019-gutenberg-site-and-mirror-only.md) | Allowlist exactly Gutenberg's site and its official mirror; download from the mirror when the site is down | Accepted |
 | [0020](0020-bounded-catalogue-downloads.md) | Bound catalogue downloads to about two minutes, and show and cancel them | Accepted |
 | [0021](0021-leave-the-app-out-of-android-backup.md) | Leave the app out of Android backup so a backup never stops playback | Accepted |
-| [0022](0022-render-at-the-listening-speed.md) | Render neural voices at the listening speed, and say when a voice cannot keep up | Accepted |
+| [0022](0022-render-at-the-listening-speed.md) | Render neural voices at the listening speed, and say when a voice cannot keep up | Accepted; player notice replaced by 0023 |
+| [0023](0023-no-slow-voice-notice-in-the-player.md) | No slow-voice notice in the player | Accepted |
