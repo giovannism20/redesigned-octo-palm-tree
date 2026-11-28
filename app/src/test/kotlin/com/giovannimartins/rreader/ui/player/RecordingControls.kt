@@ -43,6 +43,10 @@ internal class RecordingControls : PlaybackControls {
         calls += "speed $speed"
     }
 
+    override fun closeBook(bookId: String) {
+        calls += "closeBook $bookId"
+    }
+
     override fun readFrom(position: ReadingPosition) {
         calls += "readFrom ${position.chapterIndex}:${position.charOffset}"
     }

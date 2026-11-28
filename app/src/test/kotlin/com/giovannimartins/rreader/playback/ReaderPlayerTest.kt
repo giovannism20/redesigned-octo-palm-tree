@@ -193,6 +193,21 @@ class ReaderPlayerTest {
     }
 
     @Test
+    fun `closing a removed book stops listening and leaves no book open`() {
+        open()
+        player.play()
+        advance(player).untilState(Player.STATE_READY)
+
+        assertThat(player.handle(ReaderCommand.CloseBook("00000000-0000-0000-0000-000000000002"))).isFalse()
+        assertThat(player.handle(ReaderCommand.CloseBook(BOOK_ID))).isTrue()
+
+        assertThat(player.currentTimeline.isEmpty).isTrue()
+        assertThat(player.playWhenReady).isFalse()
+        assertThat(internal.playWhenReady).isFalse()
+        assertThat(fixture.status.session.value).isNull()
+    }
+
+    @Test
     fun `a speed change keeps the pitch and is saved`() {
         open()
         advance(player).untilState(Player.STATE_READY)

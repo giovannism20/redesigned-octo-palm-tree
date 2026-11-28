@@ -30,6 +30,7 @@ class ReaderCommandsTest {
                 ReaderCommand.SetSleepTimer(SleepTimerSetting.EndOfChapter),
                 ReaderCommand.CancelSleepTimer,
                 ReaderCommand.RefreshVoice,
+                ReaderCommand.CloseBook("00000000-0000-0000-0000-000000000001"),
             )
 
         commands.forEach { readerCommand ->
@@ -56,5 +57,7 @@ class ReaderCommandsTest {
         assertThat(ReaderCommands.decode(command.customAction, Bundle())).isNull()
         assertThat(ReaderCommands.decode(command.customAction, negative)).isNull()
         assertThat(ReaderCommands.decode("com.example.UNKNOWN", args)).isNull()
+        val (close, _) = ReaderCommands.encode(ReaderCommand.CloseBook(BOOK_ID))
+        assertThat(ReaderCommands.decode(close.customAction, Bundle().apply { putString("book_id", "../x") })).isNull()
     }
 }

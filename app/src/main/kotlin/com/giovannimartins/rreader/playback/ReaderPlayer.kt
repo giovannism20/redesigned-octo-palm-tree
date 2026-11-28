@@ -304,7 +304,8 @@ class ReaderPlayer internal constructor(
      * reader's "read from here"), preparing the player again when it was stopped or failed; it does not apply
      * when no book is open or the position is not in it. An offset past the end of its chapter means the end
      * of that chapter. [ReaderCommand.SetSleepTimer] needs an open book; the timer then keeps running when
-     * another book is opened, and turns off at the end of a book.
+     * another book is opened, and turns off at the end of a book. [ReaderCommand.CloseBook] stops listening and
+     * closes the book when it is the one open or being opened, as if the player were given no book.
      */
     fun handle(command: ReaderCommand): Boolean =
         when (command) {
@@ -329,6 +330,18 @@ class ReaderPlayer internal constructor(
             ReaderCommand.CancelSleepTimer -> {
                 sleepTimer.cancel()
                 true
+            }
+
+            is ReaderCommand.CloseBook -> {
+                val open = book?.id == command.bookId || loader.request?.bookId == command.bookId
+                if (open) {
+                    playWhenReady = false
+                    exo.playWhenReady = false
+                    closeBook()
+                    loader.forget()
+                    invalidateState()
+                }
+                open
             }
 
             ReaderCommand.RefreshVoice -> {

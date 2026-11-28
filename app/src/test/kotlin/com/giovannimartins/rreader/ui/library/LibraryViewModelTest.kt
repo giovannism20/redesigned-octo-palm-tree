@@ -47,6 +47,8 @@ class LibraryViewModelTest {
     private lateinit var dao: BrokenLibraryDao
     private lateinit var viewModel: LibraryViewModel
 
+    private val controls = RecordingControls()
+
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -59,7 +61,7 @@ class LibraryViewModelTest {
         viewModel =
             LibraryViewModel(
                 repository = LibraryRepository(dao, BookFileStore(folder.root), FakeImportJobs(), Dispatchers.IO),
-                playback = RecordingControls(),
+                playback = controls,
                 settings =
                     SettingsRepository(
                         PreferenceDataStoreFactory.create(scope = scope) { File(folder.root, "s.preferences_pb") },
@@ -109,4 +111,11 @@ class LibraryViewModelTest {
             archived = false,
             voiceId = null,
         )
+
+    @Test
+    fun `removing a book closes it in the player first`() {
+        viewModel.remove("00000000-0000-0000-0000-000000000009")
+
+        assertThat(controls.calls).contains("closeBook 00000000-0000-0000-0000-000000000009")
+    }
 }

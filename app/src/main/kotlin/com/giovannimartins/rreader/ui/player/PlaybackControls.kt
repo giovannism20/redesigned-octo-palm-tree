@@ -44,4 +44,7 @@ interface PlaybackControls {
      * while no book is open.
      */
     fun refreshVoice()
+
+    /** Book [bookId] was removed: the player closes it when it is the open book, and the mini player goes away. */
+    fun closeBook(bookId: String)
 }

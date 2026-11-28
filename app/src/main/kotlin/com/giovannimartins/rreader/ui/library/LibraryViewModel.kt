@@ -93,7 +93,9 @@ class LibraryViewModel
             retries.trySend(Unit)
         }
 
+        /** Removes a book; the player closes it first when it is the open book. */
         fun remove(bookId: String) {
+            playback.closeBook(bookId)
             viewModelScope.launch { repository.remove(bookId) }
         }
 

@@ -26,6 +26,11 @@ sealed interface ReaderCommand {
      * asks which voice reads it now and, when it changed, continues with it from the segment being spoken.
      */
     data object RefreshVoice : ReaderCommand
+
+    /** Book [bookId] was removed from the library: the player closes it when it is the open book. */
+    data class CloseBook(
+        val bookId: String,
+    ) : ReaderCommand
 }
 
 /**
@@ -37,10 +42,15 @@ object ReaderCommands {
     private const val SET_SLEEP_TIMER = "com.giovannimartins.rreader.command.SET_SLEEP_TIMER"
     private const val CANCEL_SLEEP_TIMER = "com.giovannimartins.rreader.command.CANCEL_SLEEP_TIMER"
     private const val REFRESH_VOICE = "com.giovannimartins.rreader.command.REFRESH_VOICE"
+    private const val CLOSE_BOOK = "com.giovannimartins.rreader.command.CLOSE_BOOK"
+    private const val KEY_BOOK_ID = "book_id"
     private const val KEY_CHAPTER = "chapter"
     private const val KEY_OFFSET = "offset"
     private const val KEY_DURATION_MS = "duration_ms"
     private const val KEY_END_OF_CHAPTER = "end_of_chapter"
+
+    /** A book id as the library makes them (a UUID). */
+    private val BOOK_ID = Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
     /** The longest sleep timer accepted. */
     private val MAX_SLEEP = 12.hours
@@ -54,6 +64,7 @@ object ReaderCommands {
                 .add(command(SET_SLEEP_TIMER))
                 .add(command(CANCEL_SLEEP_TIMER))
                 .add(command(REFRESH_VOICE))
+                .add(command(CLOSE_BOOK))
                 .build()
 
     /** The session command and its arguments for [command]. */
@@ -84,6 +95,10 @@ object ReaderCommands {
             ReaderCommand.RefreshVoice -> {
                 command(REFRESH_VOICE) to Bundle()
             }
+
+            is ReaderCommand.CloseBook -> {
+                command(CLOSE_BOOK) to Bundle().apply { putString(KEY_BOOK_ID, command.bookId) }
+            }
         }
 
     /** The command sent as [action] with [args], or null when it is unknown or its arguments are invalid. */
@@ -96,6 +111,7 @@ object ReaderCommands {
             SET_SLEEP_TIMER -> sleepTimerSetting(args)?.let(ReaderCommand::SetSleepTimer)
             CANCEL_SLEEP_TIMER -> ReaderCommand.CancelSleepTimer
             REFRESH_VOICE -> ReaderCommand.RefreshVoice
+            CLOSE_BOOK -> args.getString(KEY_BOOK_ID)?.takeIf(BOOK_ID::matches)?.let(ReaderCommand::CloseBook)
             else -> null
         }
 

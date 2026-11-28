@@ -129,6 +129,8 @@ class PlaybackConnection
 
         override fun cancelSleepTimer() = send(ReaderCommand.CancelSleepTimer)
 
+        override fun closeBook(bookId: String) = send(ReaderCommand.CloseBook(bookId))
+
         override fun refreshVoice() {
             if (state.value != null) send(ReaderCommand.RefreshVoice)
         }
