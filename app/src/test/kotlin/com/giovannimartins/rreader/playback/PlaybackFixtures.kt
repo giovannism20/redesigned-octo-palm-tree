@@ -51,11 +51,17 @@ internal fun book(
     pausedFor = pausedFor,
 )
 
-/** Writes silent WAV files lasting [millisPerChar] per character of the text. */
+/**
+ * Writes silent WAV files lasting [millisPerChar] per character of the text, shorter or longer when a voice that
+ * renders at speed is asked for another speed.
+ */
 internal class FakeSpeechEngine(
     private val millisPerChar: Long = 10,
 ) : SpeechEngine {
     val spoken = mutableListOf<String>()
+
+    /** The speed each segment was asked to be rendered at, in order. */
+    val speeds = mutableListOf<Float>()
 
     /** The voice of each segment rendered, in order. */
     val voicesUsed = mutableListOf<String>()
@@ -89,6 +95,7 @@ internal class FakeSpeechEngine(
         text: String,
         voice: Voice,
         output: File,
+        speed: Float,
     ): SynthesisResult {
         val gate = gate?.takeIf { spoken.size >= rendersBeforeGate }
         if (gate != null) {
@@ -96,6 +103,7 @@ internal class FakeSpeechEngine(
             gate.await()
         }
         spoken += text
+        speeds += speed
         voicesUsed += voice.id
         val failure =
             failure ?: SynthesisFailure.VOICE_UNAVAILABLE.takeIf { voice.id in unavailableVoices }
@@ -103,7 +111,7 @@ internal class FakeSpeechEngine(
         return if (failure != null) {
             SynthesisResult.Failed(failure)
         } else {
-            val duration = text.length * millisPerChar
+            val duration = (text.length * millisPerChar / if (voice.rendersAtSpeed) speed else 1f).toLong()
             TestWav.write(output, duration)
             SynthesisResult.Rendered(duration)
         }

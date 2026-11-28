@@ -40,19 +40,20 @@ internal data class SegmentCursor(
     fun isHeading(): Boolean = index == 0 && plan.title?.trim()?.equals(text().trim(), ignoreCase = true) == true
 
     /**
-     * What to render for this segment of book [bookId] with [voice]: its text in speech form ([speech]); null when
-     * there is nothing to say, such as a "* * *" scene break. The feeder and the pre-renderer both use it, so they
-     * write the same cache files.
+     * What to render for this segment of book [bookId] with [voice], for listening at [speed]: its text in speech form
+     * ([speech]); null when there is nothing to say, such as a "* * *" scene break. The feeder and the pre-renderer
+     * both use it, so they write the same cache files.
      */
     fun request(
         bookId: String,
         voice: Voice,
         speech: SpeechNormalizer,
+        speed: Float,
     ): SegmentRequest? =
         speech
             .toSpeech(text(), isHeading())
             .takeIf(String::isNotBlank)
-            ?.let { SegmentRequest(bookId, voice, plan.index, range, it) }
+            ?.let { SegmentRequest(bookId, voice, plan.index, range, it, speed) }
 }
 
 /**

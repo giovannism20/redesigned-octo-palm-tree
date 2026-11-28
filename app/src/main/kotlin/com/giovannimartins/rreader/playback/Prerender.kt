@@ -171,7 +171,14 @@ class Prerenderer
             var failed = false
             while (cursor != null && millis < ahead.inWholeMilliseconds && !failed) {
                 currentCoroutineContext().ensureActive()
-                val audio = cursor.request(book.id, voice, speech)?.let { renderer.render(it, background = true) }
+                val audio =
+                    cursor
+                        .request(
+                            book.id,
+                            voice,
+                            speech,
+                            book.speed,
+                        )?.let { renderer.render(it, background = true) }
                 if (audio is SegmentAudio.Ready) millis += audio.durationMillis
                 failed = audio is SegmentAudio.Failed
                 cursor = plans.after(cursor)

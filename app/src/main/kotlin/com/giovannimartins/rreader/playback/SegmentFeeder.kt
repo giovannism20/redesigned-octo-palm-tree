@@ -8,6 +8,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.giovannimartins.rreader.Diagnostics
 import com.giovannimartins.rreader.textkit.model.ReadingPosition
 import com.giovannimartins.rreader.textkit.text.SpeechNormalizer
+import com.giovannimartins.rreader.tts.RenderSpeeds
 import com.giovannimartins.rreader.tts.SegmentAudio
 import com.giovannimartins.rreader.tts.SegmentRenderer
 import com.giovannimartins.rreader.tts.SynthesisFailure
@@ -59,6 +60,12 @@ internal class SegmentFeeder(
     private var last: SegmentCursor? = null
     private var job: Job? = null
 
+    /**
+     * The listening speed segments are rendered for from now on; set when the listener changes it. Segments already
+     * queued stay as they are (the player stretches them, see [SegmentSpeed]).
+     */
+    var speed: Float = RenderSpeeds.NORMAL
+
     /** Whether segments are being rendered right now. */
     val isRendering: Boolean get() = job?.isActive == true
 
@@ -71,15 +78,17 @@ internal class SegmentFeeder(
 
     /**
      * Clears the internal playlist and renders the book from the segment that holds [from], or, when
-     * [rewindChars] is positive, from a little before it (see [ResumeRewind.target]).
+     * [rewindChars] is positive, from a little before it (see [ResumeRewind.target]), for listening at [speed].
      */
     fun restart(
         bookId: String,
         voice: Voice,
         from: ReadingPosition,
         rewindChars: Int = 0,
+        speed: Float = RenderSpeeds.NORMAL,
     ) {
         clear()
+        this.speed = speed
         source = Source(bookId, voice)
         pendingStart = from
         pendingRewind = rewindChars
@@ -106,7 +115,7 @@ internal class SegmentFeeder(
         when {
             exo.currentMediaItem?.mediaId != segment.key -> 1.0
             exo.playbackState == Player.STATE_ENDED -> 1.0
-            else -> (exo.currentPosition.toDouble() / segment.durationMillis).coerceIn(0.0, 1.0)
+            else -> (exo.currentPosition.toDouble() / segment.mediaMillis).coerceIn(0.0, 1.0)
         }
 
     /** Audio left at 1.0× in the chapter being played; null while that is unknown (see [SegmentQueue]). */
@@ -114,7 +123,12 @@ internal class SegmentFeeder(
         get() =
             current()?.let { segment ->
                 plans.chapterLength(segment.chapterIndex)?.let { length ->
-                    queue.audioLeftInChapter(segment.key, exo.currentPosition, length, isExhausted)
+                    queue.audioLeftInChapter(
+                        segment.key,
+                        segment.atNormalSpeed(exo.currentPosition),
+                        length,
+                        isExhausted,
+                    )
                 }
             }
 
@@ -181,7 +195,8 @@ internal class SegmentFeeder(
     ): Boolean {
         last = cursor
         // For example a "* * *" scene break: nothing to say.
-        val request = cursor.request(source.bookId, source.voice, speech) ?: return true
+        // The latest speed: the listener may have changed it during this burst.
+        val request = cursor.request(source.bookId, source.voice, speech, speed) ?: return true
         var audio = renderer.render(request)
         // An engine that could not start released what it had loaded (a model, memory): a second try may work.
         if (audio is SegmentAudio.Failed && audio.reason == SynthesisFailure.ENGINE_UNAVAILABLE) {
@@ -211,6 +226,7 @@ internal class SegmentFeeder(
                 spanEnd = cursor.plan.spanEnd(cursor.index),
                 file = audio.file,
                 durationMillis = audio.durationMillis,
+                renderSpeed = audio.speed,
             )
         val item =
             MediaItem

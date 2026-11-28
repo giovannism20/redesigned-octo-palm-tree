@@ -1,5 +1,6 @@
 package com.giovannimartins.rreader.tts
 
+import com.giovannimartins.rreader.data.settings.RenderCostPreferences
 import com.giovannimartins.rreader.data.settings.SpeakingRatePreferences
 import dagger.Binds
 import dagger.Module
@@ -26,4 +27,8 @@ abstract class TtsModule {
     /** Learned speaking rates are kept in their own preferences file. */
     @Binds
     abstract fun speakingRateStore(store: SpeakingRatePreferences): SpeakingRateStore
+
+    /** Learned render costs sit beside the speaking rates. */
+    @Binds
+    abstract fun renderCostStore(store: RenderCostPreferences): RenderCostStore
 }

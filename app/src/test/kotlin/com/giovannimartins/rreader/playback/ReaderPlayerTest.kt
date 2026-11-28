@@ -22,6 +22,7 @@ import com.giovannimartins.rreader.textkit.model.ReadingPosition
 import com.giovannimartins.rreader.textkit.text.SegmentPlanner
 import com.giovannimartins.rreader.textkit.text.SpeechNormalizer
 import com.giovannimartins.rreader.tts.AudioCache
+import com.giovannimartins.rreader.tts.RenderCost
 import com.giovannimartins.rreader.tts.SegmentRenderer
 import com.giovannimartins.rreader.tts.SpeakingRateTracker
 import com.giovannimartins.rreader.tts.SynthesisFailure
@@ -202,6 +203,87 @@ class ReaderPlayerTest {
         assertThat(player.playbackParameters.speed).isEqualTo(1.5f)
         assertThat(internal.playbackParameters).isEqualTo(PlaybackParameters(1.5f))
         assertThat(content.savedSpeed).isEqualTo(1.5f)
+    }
+
+    @Test
+    fun `a voice that renders at speed is not stretched again by the player`() {
+        content.book = book(texts, voice = voice().copy(rendersAtSpeed = true), speed = 1.25f)
+        open()
+        advance(player).untilState(Player.STATE_READY)
+
+        assertThat(engine.speeds.toSet()).containsExactly(1.25f)
+        assertThat(player.playbackParameters.speed).isEqualTo(1.25f)
+        assertThat(internal.playbackParameters).isEqualTo(PlaybackParameters(1f))
+    }
+
+    @Test
+    fun `after a speed change, audio rendered before is stretched by the difference and new audio is not`() {
+        val gate = CompletableDeferred<Unit>()
+        engine.rendersBeforeGate = 2
+        engine.gate = gate
+        content.book = book(texts, voice = voice().copy(rendersAtSpeed = true), speed = 1.25f)
+        open()
+        player.play()
+        advance(player).untilState(Player.STATE_READY)
+        runMainLooperUntil { engine.atGate.isCompleted }
+
+        player.setPlaybackSpeed(1.5f)
+        gate.complete(Unit)
+        runMainLooperUntil { engine.speeds.size > 3 }
+
+        // The segment playing was rendered at 1.25x: 1.25 x 1.2 = 1.5.
+        assertThat(internal.playbackParameters.speed).isWithin(0.001f).of(1.2f)
+        assertThat(content.savedSpeed).isEqualTo(1.5f)
+        // The render waiting at the gate had started at 1.25x; the ones after it are at the new speed.
+        assertThat(engine.speeds.take(3)).containsExactly(1.25f, 1.25f, 1.25f)
+        assertThat(engine.speeds.drop(3).toSet()).containsExactly(1.5f)
+    }
+
+    @Test
+    fun `when a voice too slow for this phone runs out of audio, the session says so until the speed is low enough`() {
+        val gate = CompletableDeferred<Unit>()
+        engine.rendersBeforeGate = 2
+        engine.gate = gate
+        content.book = book(texts, speed = 1.25f)
+        // A second of speech takes a second to render: too slow at 1.25x, enough at 0.75x.
+        repeat(RenderCost.TRUSTED_SAMPLES) {
+            fixture.renderSpeeds.record(voice().id, renderMillis = 10_000, speechMillis = 10_000)
+        }
+        open()
+        player.play()
+
+        runMainLooperUntil {
+            fixture.status.session.value
+                ?.slowVoice != null
+        }
+        assertThat(
+            fixture.status.session.value
+                ?.slowVoice,
+        ).isEqualTo(voice())
+
+        player.setPlaybackSpeed(0.75f)
+        assertThat(
+            fixture.status.session.value
+                ?.slowVoice,
+        ).isNull()
+        gate.complete(Unit)
+    }
+
+    @Test
+    fun `a voice not known to be slow runs out of audio without a slow-voice notice`() {
+        val gate = CompletableDeferred<Unit>()
+        engine.rendersBeforeGate = 2
+        engine.gate = gate
+        open()
+        player.play()
+        runMainLooperUntil { internal.playbackState == Player.STATE_ENDED }
+
+        assertThat(
+            fixture.status.session.value
+                ?.slowVoice,
+        ).isNull()
+        assertThat(player.playbackState).isEqualTo(Player.STATE_BUFFERING)
+        gate.complete(Unit)
     }
 
     @Test

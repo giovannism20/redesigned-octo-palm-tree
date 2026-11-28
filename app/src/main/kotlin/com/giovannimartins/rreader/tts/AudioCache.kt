@@ -6,10 +6,12 @@ import java.io.File
 import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.roundToInt
 
 /**
  * Where rendered segment audio lives: `cache/tts/{bookId}/{voiceHash}/{chapter}-{start}-{end}.wav`, where
- * `voiceHash` hashes the voice's id and render version.
+ * `voiceHash` hashes the voice's id and render version; audio rendered at another speed than 1.0× ([RenderSpeeds])
+ * ends in `@x{speed × 100}.wav`.
  * Everything here can be regenerated, so the system may clear it at any time.
  */
 @Singleton
@@ -25,7 +27,7 @@ class AudioCache internal constructor(
 
     /**
      * File for one rendered segment of a chapter with a given voice, filed under [voiceKey] (a voice's `audioKey`: its
-     * id and render version).
+     * id and render version), rendered at [speed].
      */
     fun segmentFile(
         bookId: String,
@@ -33,9 +35,11 @@ class AudioCache internal constructor(
         chapterIndex: Int,
         start: Int,
         end: Int,
+        speed: Float = RenderSpeeds.NORMAL,
     ): File {
         require(BOOK_ID_PATTERN.matches(bookId)) { "Invalid book id" }
-        return File(File(File(root, bookId), hash(voiceKey)), "$chapterIndex-$start-$end.wav")
+        val suffix = if (speed == RenderSpeeds.NORMAL) "" else "@x${(speed * PERCENT).roundToInt()}"
+        return File(File(File(root, bookId), hash(voiceKey)), "$chapterIndex-$start-$end$suffix.wav")
     }
 
     /** Scratch file for one-off renders such as voice samples. */
@@ -72,6 +76,7 @@ class AudioCache internal constructor(
 
     private companion object {
         const val HASH_BYTES = 8
+        const val PERCENT = 100
         val BOOK_ID_PATTERN = Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
     }
 }

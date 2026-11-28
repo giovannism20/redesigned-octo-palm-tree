@@ -16,6 +16,7 @@ import com.giovannimartins.rreader.tts.AudioCache
 import com.giovannimartins.rreader.tts.InMemorySpeakingRateStore
 import com.giovannimartins.rreader.tts.SegmentRenderer
 import com.giovannimartins.rreader.tts.SpeakingRateTracker
+import com.giovannimartins.rreader.tts.testRenderSpeeds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -54,10 +55,13 @@ internal class ReaderPlayerFixture(
             .build()
     val player: ReaderPlayer
 
+    /** What the renderer learns about how fast voices render; tests can teach it a slow voice. */
+    val renderSpeeds = testRenderSpeeds()
+
     init {
         val io = UnconfinedTestDispatcher()
         val rates = SpeakingRateTracker(InMemorySpeakingRateStore(), CoroutineScope(io))
-        val renderer = SegmentRenderer(engine, AudioCache(cacheDir), rates, Clock.systemUTC(), io)
+        val renderer = SegmentRenderer(engine, AudioCache(cacheDir), rates, renderSpeeds, Clock.systemUTC(), io)
         val dependencies =
             ReaderPlayerDependencies(
                 content = content,
@@ -65,6 +69,7 @@ internal class ReaderPlayerFixture(
                 planner = SegmentPlanner(),
                 speech = SpeechNormalizer(),
                 rates = rates,
+                renderSpeeds = renderSpeeds,
                 status = status,
                 prerender = PrerenderJobs { bookId, _ -> prerendered += bookId },
                 saveScope = CoroutineScope(io),

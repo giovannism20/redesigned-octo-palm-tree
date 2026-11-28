@@ -40,6 +40,7 @@ class RoutingSpeechEngineTest {
             text: String,
             voice: Voice,
             output: File,
+            speed: Float,
         ): SynthesisResult {
             spoken += text
             return SynthesisResult.Rendered(1)

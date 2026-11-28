@@ -127,6 +127,7 @@
     <string name="voices_retry_voice">Try downloading %1$s again</string>
     <string name="voices_remove_download">Remove</string>
     <string name="voices_remove_download_voice">Remove the download of %1$s</string>
+    <string name="voices_slow_here">Slow on this phone: listening may pause at your speed. Phone voices and Cadu or Faber keep up.</string>
     <string name="voices_delete">Delete</string>
     <string name="voices_delete_voice">Delete the voice %1$s</string>
     <string name="voices_delete_title">Delete the voice %1$s?</string>
@@ -175,6 +176,8 @@
     <string name="player_time_left_short" translatable="false">−%1$s</string>
     <string name="player_preparing">Preparing the voice…</string>
     <string name="player_finished">You reached the end of the book.</string>
+    <string name="player_voice_slow">%1$s is slower than your listening speed on this phone, so reading pauses now and then. A lower speed, a faster voice, or leaving the book paused while the phone charges avoids it.</string>
+    <string name="player_choose_faster_voice">Choose a faster voice</string>
     <string name="player_voice_fallback">The voice %1$s could not be used, so the book goes on with the phone voice.</string>
     <string name="player_error_no_voice">No Portuguese voice is installed. Install one to listen to this book.</string>
     <string name="player_error_book">This book could not be opened.</string>

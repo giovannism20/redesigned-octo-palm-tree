@@ -1,10 +1,17 @@
 package com.giovannimartins.rreader.playback
 
+import androidx.media3.common.PlaybackParameters
 import com.giovannimartins.rreader.textkit.model.TextRange
+import com.giovannimartins.rreader.tts.RenderSpeeds
+import com.giovannimartins.rreader.tts.Voice
 import java.io.File
+import kotlin.math.roundToLong
 import kotlin.time.Duration.Companion.minutes
 
-/** A rendered segment in the internal player's playlist. */
+/**
+ * A rendered segment in the internal player's playlist: [file] was rendered at [renderSpeed] and lasts
+ * [durationMillis] heard at 1.0× of the voice's own pace (its own length times [renderSpeed]).
+ */
 internal data class QueuedSegment(
     val chapterIndex: Int,
     val range: TextRange,
@@ -12,12 +19,38 @@ internal data class QueuedSegment(
     val spanEnd: Int,
     val file: File,
     val durationMillis: Long,
+    val renderSpeed: Float = RenderSpeeds.NORMAL,
 ) {
+    /** The file's own length. */
+    val mediaMillis: Long get() = (durationMillis / renderSpeed).roundToLong()
+
+    /** A position in the file, as time heard at 1.0× of the voice's own pace. */
+    fun atNormalSpeed(mediaPositionMillis: Long): Long = (mediaPositionMillis * renderSpeed).roundToLong()
+
     /** Media id of the segment's item in the internal playlist. */
     val key: String = "$chapterIndex:${range.start}-${range.end}"
 
     /** Characters from the segment's start to the end of its span. */
     val spanLength: Int get() = spanEnd - range.start
+}
+
+/**
+ * How fast the internal player plays a segment so the listener hears it at the listening speed. A voice that renders
+ * at speed already spoke it faster or slower ([RenderSpeeds]), so only what is left is stretched: nothing when the
+ * segment was rendered at this speed, the difference for audio rendered before the speed changed. With no segment
+ * playing yet, the next one is assumed to be rendered for this speed. A pitch of 1.0 keeps the voice natural.
+ */
+internal object SegmentSpeed {
+    fun parameters(
+        listening: Float,
+        playing: QueuedSegment?,
+        voice: Voice?,
+    ): PlaybackParameters {
+        val rendered =
+            playing?.renderSpeed
+                ?: if (voice?.rendersAtSpeed == true) RenderSpeeds.of(listening) else RenderSpeeds.NORMAL
+        return PlaybackParameters(listening / rendered)
+    }
 }
 
 /** Rendered audio waiting after the playing segment. */
@@ -59,8 +92,8 @@ internal class SegmentQueue {
     }
 
     /**
-     * Audio left in the chapter of the segment whose media id is [currentKey], [positionMillis] into it, at
-     * 1.0×. Null when that segment is not queued, or the chapter's last segment may not be queued yet: no later
+     * Audio left in the chapter of the segment whose media id is [currentKey], [positionMillis] into it (both at
+     * 1.0×). Null when that segment is not queued, or the chapter's last segment may not be queued yet: no later
      * chapter is queued, the last queued segment of the chapter does not reach its end ([chapterLength]) and
      * the book has more to render ([exhausted] is false).
      */

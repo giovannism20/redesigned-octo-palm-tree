@@ -66,6 +66,7 @@ class SystemTtsEngine
             text: String,
             voice: Voice,
             output: File,
+            speed: Float,
         ): SynthesisResult =
             mutex.withLock {
                 val tts = client(voice.engine)

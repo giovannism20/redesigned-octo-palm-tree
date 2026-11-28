@@ -6,6 +6,7 @@ import com.giovannimartins.rreader.data.settings.SettingsRepository
 import com.giovannimartins.rreader.net.Connection
 import com.giovannimartins.rreader.playback.voice
 import com.giovannimartins.rreader.tts.AudioCache
+import com.giovannimartins.rreader.tts.RenderCost
 import com.giovannimartins.rreader.tts.VoiceIds
 import com.giovannimartins.rreader.tts.neural.FakeNeuralRuntime
 import com.giovannimartins.rreader.tts.neural.NeuralCallMarkers
@@ -16,6 +17,7 @@ import com.giovannimartins.rreader.tts.neural.VoiceDownloadFailure
 import com.giovannimartins.rreader.tts.neural.VoiceDownloadState
 import com.giovannimartins.rreader.tts.neural.VoicePackage
 import com.giovannimartins.rreader.tts.neural.VoicePackageStore
+import com.giovannimartins.rreader.tts.testRenderSpeeds
 import com.giovannimartins.rreader.ui.player.RecordingControls
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
@@ -49,6 +51,7 @@ class VoicesViewModelTest {
     private val downloads = FakeVoiceDownloads()
     private val controls = RecordingControls()
     private val samples = RecordingSamples()
+    private val renderSpeeds = testRenderSpeeds()
     private var connection = Connection.UNMETERED
     private val brazil = Locale.forLanguageTag("pt-BR")
     private val google1 = voice(id = "system:com.google.android.tts:pt-br-x-afs-local", locale = brazil)
@@ -172,6 +175,25 @@ class VoicesViewModelTest {
     }
 
     @Test
+    fun `voices measured too slow for the listening speed on this phone are marked, and not once it is lower`() {
+        install(NeuralVoices.KOKORO)
+        install(NeuralVoices.CADU)
+        runBlocking { settings.setPlaybackSpeed(1.25f) }
+        // 0.8 s to render a second of speech: too slow at 1.25x (1.0), enough at 1.0x.
+        repeat(RenderCost.TRUSTED_SAMPLES) { renderSpeeds.record(dora.id, renderMillis = 8_000, speechMillis = 10_000) }
+        val viewModel = viewModel()
+
+        val slow = state(viewModel) { state -> state.neural.any { it.slowHere } }
+        // Alex and Santa share Dora's model; Cadu does not.
+        assertThat(slow.neural.filter { it.slowHere }.map { it.voice })
+            .containsExactlyElementsIn(NeuralVoices.voicesOf(NeuralVoices.KOKORO))
+
+        runBlocking { settings.setPlaybackSpeed(1f) }
+        val notSlow = state(viewModel) { state -> state.neural.none { it.slowHere } }
+        assertThat(notSlow.neural.map { it.slowHere }).doesNotContain(true)
+    }
+
+    @Test
     fun `deleting the voice in use falls back to the phone's voice at once`() {
         install(NeuralVoices.KOKORO)
         runBlocking { settings.setDefaultVoice(dora.id) }
@@ -228,8 +250,16 @@ class VoicesViewModelTest {
         val calls = NeuralCallMarkers(File(folder.root, "neural.inflight"))
         val engine = SherpaOnnxEngine(store, FakeNeuralRuntime(), calls, Dispatchers.Unconfined, TestScope())
         val library = NeuralVoiceLibrary(store, downloads, engine, settings)
-        return VoicesViewModel(library, phone, settings, controls, { connection }, samples, AudioCache(folder.root))
-            .also { viewModels += it }
+        return VoicesViewModel(
+            library,
+            phone,
+            settings,
+            controls,
+            { connection },
+            samples,
+            AudioCache(folder.root),
+            renderSpeeds,
+        ).also { viewModels += it }
     }
 
     private fun state(

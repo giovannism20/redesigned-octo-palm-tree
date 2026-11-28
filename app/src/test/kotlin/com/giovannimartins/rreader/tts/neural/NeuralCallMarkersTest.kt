@@ -10,6 +10,7 @@ import com.giovannimartins.rreader.tts.SegmentRequest
 import com.giovannimartins.rreader.tts.SpeakingRateTracker
 import com.giovannimartins.rreader.tts.SynthesisFailure
 import com.giovannimartins.rreader.tts.SynthesisResult
+import com.giovannimartins.rreader.tts.testRenderSpeeds
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -180,7 +181,14 @@ class NeuralCallMarkersTest {
 
     private fun renderer(engine: SherpaOnnxEngine): SegmentRenderer {
         val rates = SpeakingRateTracker(InMemorySpeakingRateStore(), CoroutineScope(Dispatchers.Unconfined))
-        return SegmentRenderer(engine, AudioCache(File(folder.root, "cache")), rates, Clock.systemUTC(), Dispatchers.IO)
+        return SegmentRenderer(
+            engine,
+            AudioCache(File(folder.root, "cache")),
+            rates,
+            testRenderSpeeds(),
+            Clock.systemUTC(),
+            Dispatchers.IO,
+        )
     }
 
     private fun request() = SegmentRequest(BOOK_ID, cadu.toVoice(), 0, TextRange(0, TEXT.length), TEXT)

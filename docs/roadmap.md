@@ -86,6 +86,8 @@ primary user's phone (see [install-on-device](runbooks/install-on-device.md)).
 - [ ] Pre-rendering while charging when a voice is slower than real time (implemented; verify Kokoro's speed and the pre-render on the phone)
 - [x] Review findings: crash containment for native calls (SR-14), pre-render out of the listener's way, last voice change wins, fallback to the phone voice, download hygiene, espeak-ng memory-safety note and input bounds; Kokoro's 4.8/9.6 kHz whistle removed (measured on the phone)
 - [ ] On the phone: playback with the new session and pre-render rules, dialogue pauses with Kokoro and Piper, the fallback notice with TalkBack
+- [x] Neural voices render at the listening speed; a voice too slow for the phone is explained in the player and marked in Vozes ([ADR 0022](decisions/0022-render-at-the-listening-speed.md)); verified on a modest test phone (Kokoro renders at 1.4× real time there)
+- [ ] On the primary user's phone: Dora at 1.25× without pauses after ADR 0022, or the slow-voice notice
 - [ ] Rebuild piper-phonemize against espeak-ng 1.52+ (memory-safety fixes) and pin the AAR
 
 ## Phase 6 — Free catalogue

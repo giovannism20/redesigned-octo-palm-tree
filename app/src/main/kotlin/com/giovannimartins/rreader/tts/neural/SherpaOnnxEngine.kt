@@ -76,12 +76,13 @@ class SherpaOnnxEngine
             text: String,
             voice: Voice,
             output: File,
+            speed: Float,
         ): SynthesisResult {
             val neural = NeuralVoices.byId(voice.id) ?: return UNAVAILABLE
             return mutex.withLock {
                 idleRelease?.cancel()
                 try {
-                    withContext(dispatcher) { render(neural, text, output) }
+                    withContext(dispatcher) { render(neural, text, output, speed) }
                 } finally {
                     idleRelease =
                         scope.launch {
@@ -127,16 +128,17 @@ class SherpaOnnxEngine
             voice: NeuralVoice,
             text: String,
             output: File,
+            speed: Float,
         ): SynthesisResult {
             if (!store.isComplete(voice.pkg)) {
                 if (loaded?.first == voice.pkg) release()
                 return UNAVAILABLE
             }
             return try {
-                val speech = speechOf(voice, text)
+                val speech = speechOf(voice, text, speed)
                 output.parentFile?.mkdirs()
                 PcmWav.write(output, speech.pcm, speech.sampleRate)
-                SynthesisResult.Rendered(speech.pcm.size * MILLIS_PER_SECOND / speech.sampleRate)
+                SynthesisResult.Rendered(speech.pcm.size * MILLIS_PER_SECOND / speech.sampleRate, speech.renderMillis)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: NeuralRuntimeException) {
@@ -154,10 +156,14 @@ class SherpaOnnxEngine
             }
         }
 
-        /** The finished audio of [text] spoken by [voice], or a short pause when speaking it killed the app twice. */
+        /**
+         * The finished audio of [text] spoken by [voice] at [speed], or a short pause when speaking it killed the app
+         * twice.
+         */
         private suspend fun speechOf(
             voice: NeuralVoice,
             text: String,
+            speed: Float,
         ): Speech {
             val prepared = NeuralText.prepare(text)
             val speak = NeuralCalls.speak(voice, text)
@@ -170,18 +176,21 @@ class SherpaOnnxEngine
             startPhonemizer()
             val model = modelOf(voice.pkg)
             val job = currentCoroutineContext().job
+            val started = System.nanoTime()
             val samples =
                 calls.run(speak) {
                     prepared.parts.map { part ->
                         job.ensureActive()
-                        spoken(model, voice, part) { job.isActive }
+                        spoken(model, voice, part, speed) { job.isActive }
                     }
                 }
             job.ensureActive()
+            val renderMillis = (System.nanoTime() - started) / NANOS_PER_MILLI
             val tones = voice.pkg.family.artifactTones(model.sampleRate)
             return Speech(
                 NeuralAudio.finish(samples, model.sampleRate, voice.gainDb, prepared.leadingPauseMillis, tones),
                 model.sampleRate,
+                renderMillis,
             )
         }
 
@@ -202,19 +211,26 @@ class SherpaOnnxEngine
         }
 
         /**
-         * [text] spoken by [voice]'s [model]: its phoneme sentences, merged for Kokoro, without empty ones. Text
-         * without phonemes, such as a lone symbol, is silence.
+         * [text] spoken by [voice]'s [model] at [speed]: its phoneme sentences, merged for Kokoro, without empty ones.
+         * Text without phonemes, such as a lone symbol, is silence.
          */
         private fun spoken(
             model: NeuralModel,
             voice: NeuralVoice,
             text: String,
+            speed: Float,
             keepGoing: () -> Boolean,
         ): FloatArray {
             val raw = if (text.isBlank()) emptyList() else runtime.phonemize(text)
             val kokoro = voice.pkg.family == ModelFamily.KOKORO
             val sentences = raw.map { if (kokoro) KokoroPhonemes.fold(it) else it }.filter(IntArray::isNotEmpty)
-            return if (sentences.isEmpty()) FloatArray(0) else model.generate(sentences, voice.speakerId, keepGoing)
+            return if (sentences.isEmpty()) {
+                FloatArray(
+                    0,
+                )
+            } else {
+                model.generate(sentences, voice.speakerId, speed, keepGoing)
+            }
         }
 
         private fun modelOf(pkg: VoicePackage): NeuralModel {
@@ -238,10 +254,11 @@ class SherpaOnnxEngine
             loaded = null
         }
 
-        /** 16-bit PCM of a segment at [sampleRate]. */
+        /** 16-bit PCM of a segment at [sampleRate], which the model took [renderMillis] to speak (null: not spoken). */
         private class Speech(
             val pcm: ShortArray,
             val sampleRate: Int,
+            val renderMillis: Long? = null,
         )
 
         companion object {
@@ -249,6 +266,7 @@ class SherpaOnnxEngine
             val IDLE_RELEASE: Duration = 2.minutes
 
             private const val MILLIS_PER_SECOND = 1_000L
+            private const val NANOS_PER_MILLI = 1_000_000L
 
             /** The sample rate of the pause that replaces a segment the app cannot speak. */
             private const val PAUSE_RATE = 16_000
@@ -286,4 +304,5 @@ fun NeuralVoice.toVoice(): Voice =
         quality = NEURAL_QUALITY,
         slowToRender = slowToRender,
         renderVersion = NEURAL_RENDER_VERSION,
+        rendersAtSpeed = true,
     )

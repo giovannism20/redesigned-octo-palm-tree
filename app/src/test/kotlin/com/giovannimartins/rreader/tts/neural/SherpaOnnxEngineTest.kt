@@ -155,7 +155,8 @@ class SherpaOnnxEngineTest {
 
         val result = synthesize(cadu, "...")
 
-        assertThat(result).isEqualTo(SynthesisResult.Rendered(NeuralAudio.SEGMENT_PAUSE_MILLIS.toLong()))
+        assertThat((result as SynthesisResult.Rendered).durationMillis)
+            .isEqualTo(NeuralAudio.SEGMENT_PAUSE_MILLIS.toLong())
         assertThat(runtime.generated).isEmpty()
     }
 

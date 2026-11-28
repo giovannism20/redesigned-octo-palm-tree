@@ -20,6 +20,7 @@ import com.giovannimartins.rreader.tts.InMemorySpeakingRateStore
 import com.giovannimartins.rreader.tts.SegmentRenderer
 import com.giovannimartins.rreader.tts.SpeakingRateTracker
 import com.giovannimartins.rreader.tts.SynthesisFailure
+import com.giovannimartins.rreader.tts.testRenderSpeeds
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -68,7 +69,8 @@ class PrerenderTest {
     private val status = ListeningStatus()
     private val prerenderer by lazy {
         val rates = SpeakingRateTracker(InMemorySpeakingRateStore(), CoroutineScope(Dispatchers.Unconfined))
-        val renderer = SegmentRenderer(engine, cache, rates, Clock.systemUTC(), Dispatchers.Unconfined)
+        val renderer =
+            SegmentRenderer(engine, cache, rates, testRenderSpeeds(), Clock.systemUTC(), Dispatchers.Unconfined)
         Prerenderer(content, renderer, SegmentPlanner(), SpeechNormalizer(), status, Dispatchers.Unconfined)
     }
 

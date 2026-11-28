@@ -21,6 +21,7 @@ import com.giovannimartins.rreader.textkit.model.ReadingPosition
 import com.giovannimartins.rreader.textkit.model.TextRange
 import com.giovannimartins.rreader.textkit.text.SegmentPlanner
 import com.giovannimartins.rreader.textkit.text.SpeechNormalizer
+import com.giovannimartins.rreader.tts.RenderSpeedTracker
 import com.giovannimartins.rreader.tts.SegmentRenderer
 import com.giovannimartins.rreader.tts.SpeakingRateTracker
 import com.giovannimartins.rreader.tts.SynthesisFailure
@@ -51,6 +52,8 @@ data class ReaderPlayerDependencies
         val planner: SegmentPlanner,
         val speech: SpeechNormalizer,
         val rates: SpeakingRateTracker,
+        /** Tells whether a voice keeps up with listening on this phone. */
+        val renderSpeeds: RenderSpeedTracker,
         /** Where the segment being spoken is published for the UI. */
         val status: ListeningStatus,
         /** Renders slow voices ahead while the phone charges and the book is not being listened to. */
@@ -122,6 +125,9 @@ class ReaderPlayer internal constructor(
 
     /** Whether the next start rewinds a little because listening resumes after a long pause. */
     private var rewindOnStart = false
+
+    /** The voice whose audio ran out while the listener was listening to the open book; null when it did not. */
+    private var stalledVoice: Voice? = null
 
     /** The lookup of the voice asked for by the last [ReaderCommand.RefreshVoice]; a newer one cancels it. */
     private var voiceRefresh: Job? = null
@@ -291,8 +297,10 @@ class ReaderPlayer internal constructor(
     override fun handleSetPlaybackParameters(playbackParameters: PlaybackParameters): ListenableFuture<*> {
         val newSpeed = playbackParameters.speed.coerceIn(AppSettings.SPEED_RANGE)
         speed = newSpeed
-        // A pitch of 1.0 keeps the voice natural at any speed.
-        exo.playbackParameters = PlaybackParameters(newSpeed)
+        feeder.speed = newSpeed
+        exo.playbackParameters = SegmentSpeed.parameters(speed, feeder.current(), book?.voice)
+        // A slower speed may let the voice keep up again.
+        sessionHost.update()
         deps.saveScope.launch { deps.content.saveSpeed(newSpeed) }
         return Futures.immediateVoidFuture()
     }
@@ -380,10 +388,11 @@ class ReaderPlayer internal constructor(
             return
         }
         val loaded = voiceSwitch.adopt(found)
+        stalledVoice = null
         book = loaded
         plans.reset(loaded)
         speed = loaded.speed
-        exo.playbackParameters = PlaybackParameters(speed)
+        exo.playbackParameters = SegmentSpeed.parameters(speed, feeder.current(), book?.voice)
         position.clock = ChapterClock(deps.rates.rateFor(loaded.voice?.id))
         playlist = BookMediaItems.playlist(loaded, position.clock, labeler)
         bookMetadata = BookMediaItems.bookMetadata(loaded)
@@ -413,7 +422,7 @@ class ReaderPlayer internal constructor(
             if (exo.playbackState == Player.STATE_IDLE) exo.prepare()
             val rewindChars = if (rewindOnStart) position.clock.charsFor(MAX_REWIND_MS) else 0
             rewindOnStart = false
-            feeder.restart(book.id, voice, position.anchor, rewindChars)
+            feeder.restart(book.id, voice, position.anchor, rewindChars, speed)
         }
     }
 
@@ -486,6 +495,7 @@ class ReaderPlayer internal constructor(
             mediaItem: MediaItem?,
             reason: Int,
         ) {
+            exo.playbackParameters = SegmentSpeed.parameters(speed, feeder.current(), book?.voice)
             val segment = feeder.current()
             val book = book
             if (segment != null && book != null) {
@@ -506,9 +516,23 @@ class ReaderPlayer internal constructor(
 
         override fun onPlaybackStateChanged(playbackState: Int) {
             finishBookIfDrained()
+            noteStall(playbackState)
             // Out of rendered audio right at the end of a chapter: the chapter ended before the next one is ready.
             if (playbackState == Player.STATE_ENDED && !ended && feeder.isOnChapterEnd) sleepTimer.onChapterEnded()
             invalidateState()
+        }
+
+        /**
+         * The internal player ran out of audio while the listener listens and the book goes on: the voice did not
+         * render in time. Remembered so the session can say why when the voice is measured to be too slow here.
+         */
+        private fun noteStall(playbackState: Int) {
+            val voice = book?.voice ?: return
+            val ranOut = playbackState == Player.STATE_ENDED && !feeder.isExhausted
+            if (ranOut && playWhenReady && !ended) {
+                stalledVoice = voice
+                sessionHost.update()
+            }
         }
 
         override fun onPlayWhenReadyChanged(
@@ -655,7 +679,9 @@ class ReaderPlayer internal constructor(
         fun update() {
             val open = book
             val listening = open != null && prepared && playWhenReady && error == null && !ended
-            val session = open?.let { ListeningSession(it.id, it.voice, listening, voiceSwitch.replaced) }
+            val slow =
+                stalledVoice?.takeIf { it == open?.voice && deps.renderSpeeds.keepsUp(it.id, speed) == false }
+            val session = open?.let { ListeningSession(it.id, it.voice, listening, voiceSwitch.replaced, slow) }
             if (session != published) {
                 published = session
                 deps.status.publishSession(session)
@@ -700,6 +726,7 @@ class ReaderPlayer internal constructor(
         }
 
         override fun onQueueChanged() {
+            exo.playbackParameters = SegmentSpeed.parameters(speed, feeder.current(), book?.voice)
             finishBookIfDrained()
             invalidateState()
         }

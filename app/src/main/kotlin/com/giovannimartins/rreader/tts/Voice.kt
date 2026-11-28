@@ -27,6 +27,11 @@ data class Voice(
      * cached before is rendered again; empty when the app cannot tell, as for the phone's engines.
      */
     val renderVersion: String = "",
+    /**
+     * True when the engine speaks faster or slower itself ([RenderSpeeds]), so audio is rendered at the listening
+     * speed; false when it always renders at 1.0× and the player stretches the audio.
+     */
+    val rendersAtSpeed: Boolean = false,
 ) {
     /** What the audio cache files this voice's segments under: its id, and its [renderVersion] when it has one. */
     val audioKey: String get() = if (renderVersion.isEmpty()) id else "$id@$renderVersion"

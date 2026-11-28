@@ -44,14 +44,16 @@ interface NeuralModel : AutoCloseable {
     val sampleRate: Int
 
     /**
-     * Speaks [sentences] (phoneme code points, one array per sentence) as speaker [speakerId]: samples in [-1, 1] at
-     * [sampleRate]. [keepGoing] is asked as each sentence is done; when it answers false, generation stops early.
+     * Speaks [sentences] (phoneme code points, one array per sentence) as speaker [speakerId] at [speed] (1.0 is the
+     * model's own pace): samples in [-1, 1] at [sampleRate]. [keepGoing] is asked as each sentence is done; when it
+     * answers false, generation stops early.
      *
      * @throws NeuralRuntimeException when the model fails.
      */
     fun generate(
         sentences: List<IntArray>,
         speakerId: Int,
+        speed: Float,
         keepGoing: () -> Boolean,
     ): FloatArray
 }

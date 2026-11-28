@@ -134,10 +134,11 @@ private class SherpaOnnxModel(
     override fun generate(
         sentences: List<IntArray>,
         speakerId: Int,
+        speed: Float,
         keepGoing: () -> Boolean,
     ): FloatArray {
         val phonemes = sentences.toTypedArray()
-        val config = GenerationConfig(silenceScale = 1f, speed = 1f, sid = speakerId, phonemeCodepoints = phonemes)
+        val config = GenerationConfig(silenceScale = 1f, speed = speed, sid = speakerId, phonemeCodepoints = phonemes)
         // The text is empty: sherpa-onnx speaks the phonemes given in the configuration.
         val audio = tts.generateWithConfigAndCallback("", config, GenerationCallback(keepGoing))
         return audio.samples

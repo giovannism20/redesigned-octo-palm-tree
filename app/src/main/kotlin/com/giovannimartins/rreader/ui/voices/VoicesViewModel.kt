@@ -10,6 +10,7 @@ import com.giovannimartins.rreader.net.ConnectionCheck
 import com.giovannimartins.rreader.playback.VoiceSelector
 import com.giovannimartins.rreader.tts.AudioCache
 import com.giovannimartins.rreader.tts.PhoneEngine
+import com.giovannimartins.rreader.tts.RenderSpeedTracker
 import com.giovannimartins.rreader.tts.SpeechEngine
 import com.giovannimartins.rreader.tts.SynthesisResult
 import com.giovannimartins.rreader.tts.Voice
@@ -60,6 +61,11 @@ data class NeuralVoiceCard(
     val inUse: Boolean,
     /** The names of the other voices that come in the same download (the Kokoro voices share one). */
     val sharesWith: List<String>,
+    /**
+     * Whether the voice, or another voice of its package (same model), was measured to render slower than listening
+     * at the chosen speed on this phone.
+     */
+    val slowHere: Boolean = false,
 )
 
 /** One of the phone's own voices, in the "Other phone voices" section. */
@@ -101,13 +107,21 @@ class VoicesViewModel
         private val connection: ConnectionCheck,
         private val samples: VoiceSamplePlayer,
         private val audioCache: AudioCache,
+        private val renderSpeeds: RenderSpeedTracker,
     ) : ViewModel() {
         private val phoneVoices = MutableStateFlow<List<Voice>?>(null)
         private val ui = MutableStateFlow(UiChoices())
 
         val state: StateFlow<VoicesUiState> =
-            combine(library.packages, settings.settings, phoneVoices, ui) { packages, prefs, phoneList, choices ->
-                VoicesStates.of(packages, prefs.defaultVoiceId ?: VoiceIds.PHONE, phoneList, choices.screen())
+            combine(
+                library.packages,
+                settings.settings,
+                phoneVoices,
+                ui,
+                renderSpeeds.costs,
+            ) { packages, prefs, phoneList, choices, costs ->
+                val slow = costs.filterValues { it.isKnown && !it.keepsUpAt(prefs.playbackSpeed) }.keys
+                VoicesStates.of(packages, prefs.defaultVoiceId ?: VoiceIds.PHONE, phoneList, choices.screen(), slow)
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), VoicesUiState())
 
         init {
@@ -263,6 +277,7 @@ internal object VoicesStates {
         defaultVoiceId: String,
         phoneList: List<Voice>?,
         choices: VoicesUiState,
+        slowVoiceIds: Set<String> = emptySet(),
     ): VoicesUiState {
         val installed = packages.filterValues { it == PackageState.Installed }.keys
         val neuralDefault = NeuralVoices.byId(defaultVoiceId)?.takeIf { it.pkg.id in installed }
@@ -277,6 +292,9 @@ internal object VoicesStates {
                         status = statusOf(packages[voice.pkg.id]),
                         inUse = voice == neuralDefault,
                         sharesWith = NeuralVoices.voicesOf(voice.pkg).filter { it != voice }.map(NeuralVoice::name),
+                        // The voices of one package share its model, so they render equally fast.
+                        slowHere =
+                            voice.pkg.id in installed && NeuralVoices.voicesOf(voice.pkg).any { it.id in slowVoiceIds },
                     )
                 },
             phoneInUse = neuralDefault == null && systemDefault == null && !placing,

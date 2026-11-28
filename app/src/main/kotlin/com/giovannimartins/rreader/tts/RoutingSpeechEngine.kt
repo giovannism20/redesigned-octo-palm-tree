@@ -26,10 +26,11 @@ class RoutingSpeechEngine internal constructor(
         text: String,
         voice: Voice,
         output: File,
+        speed: Float,
     ): SynthesisResult =
         if (VoiceIds.neuralKey(voice.id) != null) {
-            neural.synthesize(text, voice, output)
+            neural.synthesize(text, voice, output, speed)
         } else {
-            system.synthesize(text, voice, output)
+            system.synthesize(text, voice, output, speed)
         }
 }

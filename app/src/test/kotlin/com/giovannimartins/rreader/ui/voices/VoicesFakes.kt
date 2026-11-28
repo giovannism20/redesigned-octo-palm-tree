@@ -46,6 +46,7 @@ internal class FakePhoneEngine(
         text: String,
         voice: Voice,
         output: File,
+        speed: Float,
     ): SynthesisResult {
         spoken += voice.id to text
         TestWav.write(output, 500)

@@ -29,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSliderState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -83,6 +84,7 @@ fun PlayerRoute(
     val nowPlaying by viewModel.nowPlaying.collectAsStateWithLifecycle()
     val sleepTimer by viewModel.sleepTimer.collectAsStateWithLifecycle()
     val replacedVoice by viewModel.replacedVoice.collectAsStateWithLifecycle()
+    val slowVoice by viewModel.slowVoice.collectAsStateWithLifecycle()
     val voices by voiceViewModel.menu.collectAsStateWithLifecycle()
     val current = nowPlaying ?: return
     PlayerScreen(
@@ -104,6 +106,7 @@ fun PlayerRoute(
         voices = voices,
         onChooseVoice = voiceViewModel::choose,
         replacedVoice = replacedVoice,
+        slowVoice = slowVoice,
     )
 }
 
@@ -131,6 +134,7 @@ fun PlayerScreen(
     voices: VoiceMenu = VoiceMenu(),
     onChooseVoice: (voiceId: String, forAllBooks: Boolean) -> Unit = { _, _ -> },
     replacedVoice: String? = null,
+    slowVoice: String? = null,
 ) {
     var showChapters by rememberSaveable { mutableStateOf(false) }
     val title = nowPlaying.title.ifBlank { stringResource(R.string.library_untitled) }
@@ -170,7 +174,7 @@ fun PlayerScreen(
                 onChooseVoice = onChooseVoice,
                 onMoreVoices = onOpenVoices,
             )
-            PlayerStatus(nowPlaying, replacedVoice, onRetry, onOpenVoices)
+            PlayerStatus(nowPlaying, replacedVoice, slowVoice, onRetry, onOpenVoices)
         }
         if (showChapters) {
             ChapterSheet(
@@ -353,13 +357,15 @@ private fun TransportControls(
 }
 
 /**
- * Buffering, end of the book, a problem with what to do next, or that the phone's voice reads because the book's voice
- * ([replacedVoice]) could not start.
+ * Buffering, end of the book, a problem with what to do next, that the phone's voice reads because the book's voice
+ * ([replacedVoice]) could not start, or that listening pauses because the voice ([slowVoice]) is too slow on this
+ * phone, with a way to choose another.
  */
 @Composable
 private fun PlayerStatus(
     nowPlaying: NowPlaying,
     replacedVoice: String?,
+    slowVoice: String?,
     onRetry: () -> Unit,
     onOpenVoices: () -> Unit,
     modifier: Modifier = Modifier,
@@ -387,6 +393,10 @@ private fun PlayerStatus(
                     textAlign = TextAlign.Center,
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
+            }
+
+            slowVoice != null -> {
+                SlowVoiceNotice(voice = slowVoice, onOpenVoices = onOpenVoices)
             }
 
             nowPlaying.isPlaying && nowPlaying.isBuffering -> {

@@ -112,7 +112,10 @@ internal fun NeuralVoiceItem(
     }
 }
 
-/** Where the download of a voice stands, or what else its download brings; nothing once it is ready. */
+/**
+ * Where the download of a voice stands, or what else its download brings; once it is ready, only that it is slow on
+ * this phone when it is.
+ */
 @Composable
 private fun DownloadStatus(
     card: NeuralVoiceCard,
@@ -160,8 +163,15 @@ private fun DownloadStatus(
                 )
             }
 
-            // A ready voice has nothing more to say about its download.
-            NeuralVoiceStatus.Ready -> {}
+            NeuralVoiceStatus.Ready -> {
+                if (card.slowHere) {
+                    Text(
+                        text = stringResource(R.string.voices_slow_here),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = muted,
+                    )
+                }
+            }
         }
     }
 }

@@ -51,6 +51,7 @@ internal class FakeNeuralRuntime(
             override fun generate(
                 sentences: List<IntArray>,
                 speakerId: Int,
+                speed: Float,
                 keepGoing: () -> Boolean,
             ): FloatArray {
                 if (failGenerating) throw IllegalStateException("Model failed")
